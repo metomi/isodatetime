@@ -28,7 +28,19 @@ WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
 
 class TimeRecurrenceParser(object):
 
-    """Parser for ISO 8601 recurrence expressions."""
+    """Parser for ISO 8601 recurrence expressions.
+
+    Keyword arguments:
+    timepoint_parser (default None) should be an instance of
+    TimePointParser, or None to use a normal TimePointParser instance.
+    timeinterval_parser (default None) should be an instance of
+    TimeIntervalParser, or None to generate a normal
+    TimeIntervalParser.
+
+    Callable (via self.parse method) with an ISO 8601-compliant
+    recurrence pattern - this returns a TimeRecurrence instance.
+
+    """
 
     RECURRENCE_REGEXES = [
          re.compile(r"^R(?P<reps>\d+)/(?P<start>[^P][^/]*)/(?P<end>[^P].*)$"),
@@ -46,6 +58,7 @@ class TimeRecurrenceParser(object):
             self.timepoint_parser = timeinterval_parser
 
     def parse(self, expression):
+        """Parse a recurrence string into a TimeRecurrence instance."""
         for regex in self.RECURRENCE_REGEXES:
             result = regex.search(expression)
             if not result:
@@ -71,6 +84,8 @@ class TimeRecurrenceParser(object):
         return SyntaxError("Not a supported ISO 8601 recurrence pattern: %s" %
                            expression)
 
+    __call__ = parse
+
 
 class TimePointParser(object):
 
@@ -84,6 +99,18 @@ class TimePointParser(object):
     allow_truncated (default False) specifies that ISO 8601:2000
     truncations are allowed (not allowed in the ISO 8601:2004
     standard which supersedes it).
+
+    allow_only_basic (default False) specifies that only the basic
+    forms of date and time in the ISO standard are allowed (no
+    extraneous punctuation). This means that "2000-01-02T01:14:02"
+    is not allowed, and must be written as "20000102T011402".
+
+    format_function (default None) should be a callable that takes a
+    TimePoint instance created by this parser and returns a custom
+    string representation such as "20150304T0103". This is called on
+    str(timepoint_instance). If None, the default TimePoint
+    formatting will be applied.
+
     """
 
     DATE_EXPRESSIONS = {"basic": {"complete": u"""
@@ -112,8 +139,8 @@ YYDDD
 -DDD
 YYWwwD
 YYWww
--YWwwD
--YWww
+-ỵWwwD
+-ỵWww
 -WwwD
 -Www
 -W-D
@@ -213,7 +240,9 @@ Z
                          (u"DDD", "(?P<day_of_year>\d\d)"),
                          (u"DD", "(?P<day_of_month>\d\d)"),
                          (u"Www", "(?P<week_of_year>W\d\d)"),
-                         (u"D", "(?P<day_of_week>\d)")]
+                         (u"D", "(?P<day_of_week>\d)"),
+                         (u"ỵ", "(?P<year_of_decade>\d)"),
+                         (u"-", "(?P<truncated>-)")]
     TIME_CHAR_REGEXES = [(u"(?<=^hh)mm", "(?P<minute_of_hour>\d\d)"),
                          (u"(?<=^hh:)mm", "(?P<minute_of_hour>\d\d)"),
                          (u"(?<=^-)mm", "(?P<minute_of_hour>\d\d)"),
@@ -221,7 +250,8 @@ Z
                          (u",hḣ", "[,.](?P<hour_of_day_decimal>\d+)"),
                          (u",mṁ", "[,.](?P<minute_of_hour_decimal>\d+)"),
                          (u"ss", "(?P<second_of_minute>\d\d)"),
-                         (u",sṡ", "(?P<second_of_minute_decimal>\s+)")]
+                         (u",sṡ", "(?P<second_of_minute_decimal>\s+)"),
+                         (u"-", "(?P<truncated>-)")]
     TIMEZONE_CHAR_REGEXES = [
                          (u"(?<=±hh)mm", "(?P<time_zone_minute>\d\d)"),
                          (u"(?<=±hh:)mm", "(?P<time_zone_minute>\d\d)"),
@@ -229,6 +259,166 @@ Z
                          (u"±", "(?P<time_zone_sign>[+-])"),
                          (u"Z", "(?P<time_zone_utc>Z)")]
     TIME_DESIGNATOR = "T"
+
+    # Note: test dates assume 2 expanded year digits.
+    TEST_DATE_EXPRESSIONS = {"basic": {"complete": {
+           "00440104": {"year": 44, "month_of_year": 1, "day_of_month": 4},
+           "+5002000830": {"year": 500200, "month_of_year": 8,
+                           "day_of_month": 30},
+           "-0000561113": {"year": -56, "month_of_year": 11,
+                           "day_of_month": 13},
+           "-1000240210": {"year": -100024, "month_of_year": 2,
+                           "day_of_month": 10},
+           "1967056": {"year": 1967, "day_of_year": 56},
+           "+123456078": {"year": 123456, "day_of_year": 78},
+           "-004560134": {"year": -4560, "day_of_year": 134},
+           "1001W011": {"year": 1001, "week_of_year": 1, "day_of_week": 1},
+           "+000001W457": {"year": 1, "week_of_year": 45, "day_of_week": 7},
+           "-010001W053": {"year": -10001, "week_of_year": 5,
+                           "day_of_week": 3}},
+                                       "reduced": {
+           "440103": {"year": 4401, "month_of_year": 3},
+           "1982": {"year": 1982},
+           "19": {"year": 1900},
+           "+05678901": {"year": 56789, "month_of_year": 1},
+           "-00000112": {"year": -11, "month_of_year": 2},
+           "-789123": {"year": -789123},
+           "+450001": {"year": 450001},
+           "-0023": {"year": -2300},
+           "+5678": {"year": 567800},
+           "1765W04": {"year": 1765, "week_of_year": 4},
+           "+001765W44": {"year": 1765, "week_of_year": 44},
+           "-123321W50": {"year": -123321, "week_of_year": 50}},
+                                       "truncated": {
+           "-9001": {"year": -9001}, # Wrong.
+           "-90": {"year": 90, "truncated": True},
+           "--0501": {"month_of_year": 5, "day_of_month": 1,
+                      "truncated": True},
+           "--12": {"month_of_year": 12, "truncated": True},
+           "---30": {"day_of_month": 30, "truncated": True},
+           "98354": {"year": 98, "day_of_year": 354, "truncated": True},
+           "-034": {"day_of_year": 34, "truncated": True},
+           "00W031": {"year": 0, "week_of_year": 3, "day_of_week": 1,
+                      "truncated": True},
+           "99W34": {"year": 99, "week_of_year": 34, "truncated": True},
+           "-1W02": {"year": 1, "week_of_year": 2,
+                     "truncated": True,
+                     "truncated_property": "year_of_decade"},
+           "-W031": {"week_of_year": 3, "day_of_week": 1, "truncated": True},
+           "-W32": {"week_of_year": 32, "truncated": True},
+           "-W-1": {"day_of_week": 1, "truncated": True}}},
+                          "extended": {"complete": {
+           "0044-01-04": {"year": 44, "month_of_year": 1, "day_of_month": 4},
+           "+500200-08-30": {"year": 500200, "month_of_year": 8,
+                             "day_of_month": 30},
+           "-000056-11-13": {"year": -56, "month_of_year": 11,
+                             "day_of_month": 13},
+           "-100024-02-10": {"year": -100024, "month_of_year": 2,
+                             "day_of_month": 10},
+           "1967-056": {"year": 1967, "day_of_year": 56},
+           "+123456-078": {"year": 123456, "day_of_year": 78},
+           "-004560-134": {"year": -4560, "day_of_year": 134},
+           "1001-W01-1": {"year": 1001, "week_of_year": 1, "day_of_week": 1},
+           "+000001-W45-7": {"year": 1, "week_of_year": 45, "day_of_week": 7},
+           "-010001-W05-3": {"year": -10001, "week_of_year": 5,
+                             "day_of_week": 3}},
+                                       "reduced": {
+           "4401-03": {"year": 4401, "month_of_year": 3},
+           "1982": {"year": 1982},
+           "19": {"year": 1900},
+           "+056789-01": {"year": 56789, "month_of_year": 1},
+           "-000001-12": {"year": -1, "month_of_year": 12},
+           "-789123": {"year": -789123},
+           "+450001": {"year": 450001},
+           "-0023": {"year": -2300},
+           "+5678": {"year": 567800},
+           "1765-W04": {"year": 1765, "week_of_year": 4},
+           "+001765-W44": {"year": 1765, "week_of_year": 44},
+           "-123321-W50": {"year": -123321, "week_of_year": 50}},
+                                       "truncated": {
+           "-9001": {"year": -9001}, # Wrong.
+           "-90": {"year": 90, "truncated": True},
+           "--05-01": {"month_of_year": 5, "day_of_month": 1,
+                      "truncated": True},
+           "--12": {"month_of_year": 12, "truncated": True},
+           "---30": {"day_of_month": 30, "truncated": True},
+           "98-354": {"year": 98, "day_of_year": 354, "truncated": True},
+           "-034": {"day_of_year": 34, "truncated": True},
+           "00-W03-1": {"year": 0, "week_of_year": 3, "day_of_week": 1,
+                        "truncated": True},
+           "99-W34": {"year": 99, "week_of_year": 34, "truncated": True},
+           "-1-W02": {"year": 1, "week_of_year": 2,
+                      "truncated": True,
+                      "truncated_property": "year_of_decade"},
+           "-W03-1": {"week_of_year": 3, "day_of_week": 1, "truncated": True},
+           "-W32": {"week_of_year": 32, "truncated": True},
+           "-W-1": {"day_of_week": 1, "truncated": True}}}}
+    TEST_TIME_EXPRESSIONS = {"basic": {"complete": {
+           "050102": {"hour_of_day": 5, "minute_of_hour": 1,
+                      "second_of_minute": 2},
+           "235902,345": {"hour_of_day": 23, "minute_of_hour": 59,
+                          "second_of_minute": 2.345},
+           "235902.345": {"hour_of_day": 23, "minute_of_hour": 59,
+                          "second_of_minute": 2.345},
+           "1201,4": {"hour_of_day": 12, "minute_of_hour": 1.4},
+           "1201.4": {"hour_of_day": 12, "minute_of_hour": 1.4},
+           "00,4356": {"hour_of_day": 0.4356},
+           "00.4356": {"hour_of_day": 0.4356}},
+                                  "reduced": {
+           "0203": {"hour_of_day": 2, "minute_of_hour": 3},
+           "17": {"hour_of_day": 17}},
+                                  "truncated":{
+           "-5612": {"minute_of_hour": 56, "second_of_minute": 12,
+                     "truncated": True},
+           "-12": {"minute_of_hour": 12, "truncated": True},
+           "--45": {"second_of_minute": 45, "truncated": True},
+           "-1234,45": {"minute_of_hour": 12, "second_of_minute": 34.45,
+                        "truncated": True},
+           "-1234.45": {"minute_of_hour": 12, "second_of_minute": 34.45,
+                        "truncated": True},
+           "-34,2": {"minute_of_hour": 34.2, "truncated": True},
+           "-34.2": {"minute_of_hour": 34.2, "truncated": True},
+           "--59,99": {"second_of_minute": 59.99, "truncated": True},
+           "--59.99": {"second_of_minute": 59.99, "truncated": True}}},
+                        "extended": {"complete": {
+           "05:01:02": {"hour_of_day": 5, "minute_of_hour": 1,
+                        "second_of_minute": 2},
+           "23:59:02,345": {"hour_of_day": 23, "minute_of_hour": 59,
+                            "second_of_minute": 2.345},
+           "23:59:02.345": {"hour_of_day": 23, "minute_of_hour": 59,
+                            "second_of_minute": 2.345},
+           "12:01,4": {"hour_of_day": 12, "minute_of_hour": 1.4},
+           "12:01.4": {"hour_of_day": 12, "minute_of_hour": 1.4},
+           "00,4356": {"hour_of_day": 0.4356},
+           "00.4356": {"hour_of_day": 0.4356}},
+                                  "reduced": {
+           "02:03": {"hour_of_day": 2, "minute_of_hour": 3},
+           "17": {"hour_of_day": 17}},
+                                  "truncated":{
+           "-56:12": {"minute_of_hour": 56, "second_of_minute": 12,
+                      "truncated": True},
+           "-12": {"minute_of_hour": 12, "truncated": True},
+           "--45": {"second_of_minute": 45, "truncated": True},
+           "-12:34,45": {"minute_of_hour": 12, "second_of_minute": 34.45,
+                         "truncated": True},
+           "-12:34.45": {"minute_of_hour": 12, "second_of_minute": 34.45,
+                         "truncated": True},
+           "-34,2": {"minute_of_hour": 34.2, "truncated": True},
+           "-34.2": {"minute_of_hour": 34.2, "truncated": True},
+           "--59,99": {"second_of_minute": 59.99, "truncated": True},
+           "--59.99": {"second_of_minute": 59.99, "truncated": True}}}}
+    TEST_TIMEZONE_EXPRESSIONS = {"basic": {
+           "Z": {"time_zone_utc": True},
+           "+01": {"time_zone_hour": 1},
+           "-05": {"time_zone_hour": -5},
+           "+2301": {"time_zone_hour": 23, "time_zone_minute": 1}
+           "-1230": {"time_zone_hour": -12, "time_zone_minute": 30}},
+                            "extended": {
+           "Z": {"time_zone_utc": True},
+           "+01": {"time_zone_hour": 1},
+           "-05": {"time_zone_hour": -5},
+           "+23:01": {"time_zone_hour": 23, "time_zone_minute": 1}
+           "-12:30": {"time_zone_hour": -12, "time_zone_minute": 30}}}
 
     def __init__(self, num_expanded_year_digits=2,
                  allow_truncated=False,
@@ -240,11 +430,10 @@ Z
         self.allow_truncated = allow_truncated
         self.allow_only_basic = allow_only_basic
         self.format_function = format_function
-        self.generate_regexes()
+        self._generate_regexes()
 
-    def generate_regexes(self):
+    def _generate_regexes(self):
         """Generate combined date time strings."""
-        self.date_time_map = {}
         date_map = self.DATE_EXPRESSIONS
         time_map = self.TIME_EXPRESSIONS
         timezone_map = self.TIMEZONE_EXPRESSIONS
@@ -259,7 +448,6 @@ Z
         if self.allow_only_basic:
             format_ok_keys = ["basic"]
         for format_type in format_ok_keys:
-            self.date_time_map.setdefault(format_type, [])
             self._date_regex_map.setdefault(format_type, [])
             self._time_regex_map.setdefault(format_type, [])
             self._timezone_regex_map.setdefault(format_type, [])
@@ -348,7 +536,11 @@ Z
             time_info = self.get_time_info(time, format_ok_keys=[format_key])
             time_info.update(timezone_info)
         info = {}
+        truncated_property = None
         year = int(date_info.get("year", 0))
+        if "year_of_decade" in date_info:
+            year += int(date_info.pop("year_of_decade"))
+            truncated_property = "year_of_decade"
         year += int(date_info.pop("year_of_century", 0))
         year += 100 * int(date_info.pop("century", 0))
         year += 10000 * int(date_info.pop("expanded_year", 0))
@@ -374,6 +566,10 @@ Z
                     value = -1
             time_info[key] = value
         info.update(time_info)
+        if info.pop("truncated", False):
+            info["truncated"] = True
+        if truncated_property is not None:
+            info["truncated_property"] = truncated_property
         if self.format_function is not None:
             info.update({"format_function": self.format_function})
         return TimePoint(**info)
@@ -409,23 +605,13 @@ Z
                     return result.groupdict()
         return {}
 
+    def test(self):
+        """Run a series of self-tests."""
+
 
 class TimeIntervalParser(object):
 
     """Parser for ISO 8601 Durations (time intervals)."""
-
-    INTERVAL_EXPRESSIONS = u"""
-PnY
-PnYnM
-PnYnMnD
-PnYnD
-PnH
-P
-±ΫccYYMMDD
-ccYYDDD
-±ΫccYYDDD
-ccYYWwwD
-±ΫccYYWwwD""",
              
     INTERVAL_REGEXES = [
              re.compile(r"""^P(?:(?P<years>\d+)Y)?
@@ -440,6 +626,7 @@ ccYYWwwD
              re.compile(r"""^P(?P<weeks>\d+)W$""", re.X)]
 
     def parse(self, expression):
+        """Parse an ISO duration expression into a TimeInterval instance."""
         for rec_regex in self.INTERVAL_REGEXES:
             result = rec_regex.search(expression)
             if not result:
@@ -452,11 +639,56 @@ ccYYWwwD
                 if key in ["years", "months", "days", "weeks"]:
                     value = int(value)
                 else:
+                    if "," in value:
+                        value = value.replace(",", ".")
                     value = float(value)
                 result_map[key] = value
             return TimeInterval(**result_map)
         raise SyntaxError("Not an ISO 8601 duration representation: %s" %
                           expression)
+
+    def test(self):
+        """Run a series of self-tests."""
+
+        self.TEST_EXPRESSIONS = {
+                "P3Y": str(TimeInterval(years=3)),
+                "P90Y": str(TimeInterval(years=90)),
+                "P1Y2M": str(TimeInterval(years=1, months=2)),
+                "P20Y2M": str(TimeInterval(years=20, months=2)),
+                "P2M": str(TimeInterval(months=2)),
+                "P52M": str(TimeInterval(months=52)),
+                "P20Y10M2D": str(TimeInterval(years=20, months=10, days=2)),
+                "P1Y3D": str(TimeInterval(years=1, days=3)),
+                "P4M1D": str(TimeInterval(months=4, days=1)),
+                "P3Y404D": str(TimeInterval(years=3, days=404)),
+                "P30Y2D": str(TimeInterval(years=30, days=2)),
+                "PT6H": str(TimeInterval(hours=6)),
+                "PT1034H": str(TimeInterval(hours=1034)),
+                "P3YT4H2M": str(TimeInterval(years=3, hours=4, minutes=2)),
+                "P30Y2DT10S": str(TimeInterval(years=30, days=2, seconds=10)),
+                "PT2S": str(TimeInterval(seconds=2)),
+                "PT2.5S": str(TimeInterval(seconds=2.5)),
+                "PT2,5S": str(TimeInterval(seconds=2.5)),
+                "PT5.5023H": str(TimeInterval(hours=5.5023)),
+                "P5W": str(TimeInterval(weeks=5)),
+                "P100W": str(TimeInterval(weeks=100))}
+        for expression, ctrl_result in self.TEST_EXPRESSIONS.items():
+            try:
+                test_result = str(self.parse(expression))
+            except SyntaxError:
+                raise ValueError(
+                           "TimeIntervalParser test failed to parse '%s'" %
+                           expression)
+            if test_result != ctrl_result:
+                raise ValueError(
+                           "TimeIntervalParser test failed for " +
+                           "'%s': returned %s not %s" % (expression,
+                                                         test_result,
+                                                         ctrl_result))
+            print "OK: '%s' returned '%s'" % (expression, ctrl_result)
+
+    __call__ = parse
+
 
 class TimePointInputError(ValueError):
 
@@ -1585,7 +1817,7 @@ def test():
     import datetime
     import random
     my_date = datetime.datetime(100, 11, 1)
-    while my_date <= datetime.datetime(111, 2, 1):
+    while my_date <= datetime.datetime(4001, 2, 1):
         ctrl_data = my_date.isocalendar()
         test_date = TimePoint(year=my_date.year, month_of_year=my_date.month,
                               day_of_month=my_date.day)
