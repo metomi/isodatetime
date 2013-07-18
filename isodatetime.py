@@ -86,6 +86,53 @@ class TimeRecurrenceParser(object):
         return SyntaxError("Not a supported ISO 8601 recurrence pattern: %s" %
                            expression)
 
+    def get_tests(self):
+        """Run a series of self-tests."""
+        for reps in [None, 1, 2, 3, 10]:
+            if reps is None:
+                reps_string = ""
+            else:
+                reps_string = str(reps)
+            point_parser = TimePointParser()
+            interval_parser = TimeIntervalParser()
+            for point_expr, point_result in point_parser.get_tests():
+                interval_tests = interval_parser.get_tests()
+                start_point = TimePoint(**point_result)
+                for interval_expr, interval_result in interval_tests:
+                    interval = interval_parser.parse(interval_expr)
+                    end_point = start_point + interval
+                    expr_1 = ("R/" + reps_string + "/" + str(start_point) + "/" +
+                              str(end_point))
+                    yield expr_1, {"repetitions": reps, "start_point": start_point,
+                                   "end_point": end_point}
+                    expr_3 = ("R/" + reps_string + "/" + str(start_point) + "/" +
+                              str(interval))
+                    yield expr_3, {"repetitions": reps, "start_point": start_point,
+                                   "interval": interval}
+                    expr_4 = ("R/" + reps_string + "/" + str(interval) + "/" +
+                              str(end_point))
+                    yield expr_4, {"repetitions": reps, "interval": interval,
+                                   "end_point": end_point}
+
+    def test(self):
+        """Run a series of self-tests."""
+        for test_expr, test_info in self.get_tests():
+            self._test(test_expr, test_info)
+
+    def _test(self, expression, timerecurrence_kwargs):
+        try:
+            test_data = str(self.parse(expression))
+        except SyntaxError:
+            raise ValueError("Parsing failed for %s" % expression)
+        ctrl_data = str(TimeRecurrence(**timerecurrence_kwargs))
+        if ctrl_data != test_data:
+            raise ValueError("Comparison failed for expression " +
+                             "'%s' - got %s, should be %s" % (expression,
+                                                              test_data,
+                                                              ctrl_data))
+        print "OK", expression, test_data
+
+
     __call__ = parse
 
 
@@ -710,6 +757,11 @@ Z
 
     def test(self):
         """Run a series of self-tests."""
+        for test_expr, test_info in self.get_tests():
+            self._test(test_expr, test_info)
+
+    def get_tests(self):
+        """Return self-tests as (str, TimePoint kwargs) tuples."""
         format_ok_keys = ["basic", "extended"]
         if self.allow_only_basic:
             format_ok_keys = ["basic"]  
@@ -728,7 +780,7 @@ Z
                 if not self.allow_truncated and date_key == "truncated":
                     continue
                 for date_expr, info in date_format_tests[date_key].items():
-                    self._test(date_expr, info)
+                    yield date_expr, info
             for date_key in date_combo_ok_keys:
                 date_tests = copy.deepcopy(date_format_tests[date_key])
                 # Add a blank date for time-only testing.
@@ -741,7 +793,7 @@ Z
                             combo_info = {}
                             for key, value in info.items() + time_info.items():
                                 combo_info[key] = value
-                            self._test(combo_expr, combo_info)
+                            yield combo_expr, combo_info
                             timezone_items = timezone_format_tests.items()
                             for timezone_expr, timezone_info in timezone_items:
                                 tz_expr = combo_expr + timezone_expr
@@ -749,7 +801,7 @@ Z
                                 for key, value in (combo_info.items() +
                                                    timezone_info.items()):
                                     tz_info[key] = value
-                                self._test(tz_expr, tz_info)
+                                yield tz_expr, tz_info
             if not self.allow_truncated:
                 continue
             for time_key in time_format_tests:
@@ -760,7 +812,7 @@ Z
                     combo_info = {"truncated": True}
                     for key, value in time_info.items():
                         combo_info[key] = value
-                    self._test(combo_expr, combo_info)
+                    yield combo_expr, combo_info
                     timezone_items = timezone_format_tests.items()
                     for timezone_expr, timezone_info in timezone_items:
                         tz_expr = combo_expr + timezone_expr
@@ -768,7 +820,7 @@ Z
                         for key, value in (combo_info.items() +
                                            timezone_info.items()):
                             tz_info[key] = value
-                            self._test(combo_expr, tz_info)
+                            yield combo_expr, tz_info
 
     def _test(self, expression, timepoint_kwargs):
         try:
@@ -822,8 +874,8 @@ class TimeIntervalParser(object):
         raise SyntaxError("Not an ISO 8601 duration representation: %s" %
                           expression)
 
-    def test(self):
-        """Run a series of self-tests."""
+    def get_tests(self):
+        """Yield self-tests as (input_string, output_string) tuples."""
 
         self.TEST_EXPRESSIONS = {
                 "P3Y": str(TimeInterval(years=3)),
@@ -849,19 +901,27 @@ class TimeIntervalParser(object):
                 "P5W": str(TimeInterval(weeks=5)),
                 "P100W": str(TimeInterval(weeks=100))}
         for expression, ctrl_result in self.TEST_EXPRESSIONS.items():
-            try:
-                test_result = str(self.parse(expression))
-            except SyntaxError:
-                raise ValueError(
-                           "TimeIntervalParser test failed to parse '%s'" %
-                           expression)
-            if test_result != ctrl_result:
-                raise ValueError(
-                           "TimeIntervalParser test failed for " +
-                           "'%s': returned %s not %s" % (expression,
-                                                         test_result,
-                                                         ctrl_result))
-            print "OK: '%s' returned '%s'" % (expression, ctrl_result)
+            yield expression, ctrl_result
+
+    def test(self):
+        """Run a series of self-tests."""
+        for expression, ctrl_result in self.get_tests():
+            self._test(expression, ctrl_result)
+
+    def _test(self):
+        try:
+            test_result = str(self.parse(expression))
+        except SyntaxError:
+            raise ValueError(
+                        "TimeIntervalParser test failed to parse '%s'" %
+                        expression)
+        if test_result != ctrl_result:
+            raise ValueError(
+                        "TimeIntervalParser test failed for " +
+                        "'%s': returned %s not %s" % (expression,
+                                                        test_result,
+                                                        ctrl_result))
+        print "OK: '%s' returned '%s'" % (expression, ctrl_result)
 
     __call__ = parse
 
