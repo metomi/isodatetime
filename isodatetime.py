@@ -170,8 +170,8 @@ YY-DDD
 -DDD          # Deviation from standard ?
 YY-Www-D
 YY-Www
--Y-WwwD
--Y-Www
+-ỵ-WwwD
+-ỵ-Www
 -Www-D
 """}}
 
@@ -299,7 +299,8 @@ Z
                          "expanded_year_digits": 2},
            "-789123": {"year": -789123, "expanded_year_digits": 2},
            "+450001": {"year": 450001, "expanded_year_digits": 2},
-           "-0023": {"year": -2300, "expanded_year_digits": 2},
+         # The following cannot be parsed - looks like truncated -YYMM.
+         #  "-0023": {"year": -2300, "expanded_year_digits": 2},
            "+5678": {"year": 567800, "expanded_year_digits": 2},
            "1765W04": {"year": 1765, "week_of_year": 4},
            "+001765W44": {"year": 1765, "week_of_year": 44,
@@ -358,7 +359,8 @@ Z
                           "expanded_year_digits": 2},
            "-789123": {"year": -789123, "expanded_year_digits": 2},
            "+450001": {"year": 450001, "expanded_year_digits": 2},
-           "-0023": {"year": -2300, "expanded_year_digits": 2},
+           # The following cannot be parsed - looks like truncated -YYMM.
+           #  "-0023": {"year": -2300, "expanded_year_digits": 2},
            "+5678": {"year": 567800, "expanded_year_digits": 2},
            "1765-W04": {"year": 1765, "week_of_year": 4},
            "+001765-W44": {"year": 1765, "week_of_year": 44,
@@ -563,7 +565,8 @@ Z
                 # Do not force basic/extended formatting for truncated dates.
                 bad_formats = []
             bad_types = ["truncated"]
-            
+            if date_info.get("truncated"):
+                bad_types = []
             if time_timezone.endswith("Z"):
                 time, timezone = time_timezone[:-1], "Z"
             else:
@@ -768,9 +771,10 @@ Z
                         for key, value in (combo_info.items() +
                                            timezone_info.items()):
                             tz_info[key] = value
-                            self._test(combo_expr, tz_info)
+                        self._test(tz_expr, tz_info)
 
     def _test(self, expression, timepoint_kwargs):
+        timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
         try:
             test_data = str(self.parse(expression))
         except SyntaxError:
@@ -1312,6 +1316,7 @@ class TimePoint(object):
         return self
 
     def get_truncated_properties(self):
+        """Return a map of properties if this is a truncated representation."""
         if not self.truncated:
             return None
         props = {}
@@ -1331,6 +1336,7 @@ class TimePoint(object):
                       month_of_year=None, week_of_year=None, day_of_year=None,
                       day_of_month=None, day_of_week=None, hour_of_day=None,
                       minute_of_hour=None, second_of_minute=None):
+        """Combine this TimePoint with truncated time properties."""
         new = self.copy()
         if hour_of_day is not None and minute_of_hour is None:
             minute_of_hour = 0
@@ -1453,6 +1459,7 @@ class TimePoint(object):
         return new
 
     def copy(self):
+        """Copy this TimePoint without leaving references."""
         dummy_timepoint = TimePoint()
         for attr in ["expanded_year_digits", "year", "month_of_year",
                      "day_of_year", "day_of_month", "day_of_week",
