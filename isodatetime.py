@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
+
+import copy
 import re
 
 
@@ -104,6 +106,10 @@ class TimePointParser(object):
     forms of date and time in the ISO standard are allowed (no
     extraneous punctuation). This means that "2000-01-02T01:14:02"
     is not allowed, and must be written as "20000102T011402".
+
+    assume_utc (default False) specifies that dates and times without
+    timezone information should be assumed UTC (Z). Otherwise, these
+    will be converted to the local timezone.
 
     format_function (default None) should be a callable that takes a
     TimePoint instance created by this parser and returns a custom
@@ -237,12 +243,15 @@ Z
                          (u"cc", "(?P<century>\d\d)"),
                          (u"YY", "(?P<year_of_century>\d\d)"),
                          (u"MM", "(?P<month_of_year>\d\d)"),
-                         (u"DDD", "(?P<day_of_year>\d\d)"),
+                         (u"DDD", "(?P<day_of_year>\d\d\d)"),
                          (u"DD", "(?P<day_of_month>\d\d)"),
-                         (u"Www", "(?P<week_of_year>W\d\d)"),
+                         (u"Www", "W(?P<week_of_year>\d\d)"),
                          (u"D", "(?P<day_of_week>\d)"),
                          (u"ỵ", "(?P<year_of_decade>\d)"),
-                         (u"-", "(?P<truncated>-)")]
+                         (u"^---", "(?P<truncated>---)"),
+                         (u"^--", "(?P<truncated>--)"),
+                         (u"^-", "(?P<truncated>-)"),
+                         (u"^~", "(?P<truncated>)")]
     TIME_CHAR_REGEXES = [(u"(?<=^hh)mm", "(?P<minute_of_hour>\d\d)"),
                          (u"(?<=^hh:)mm", "(?P<minute_of_hour>\d\d)"),
                          (u"(?<=^-)mm", "(?P<minute_of_hour>\d\d)"),
@@ -250,8 +259,9 @@ Z
                          (u",hḣ", "[,.](?P<hour_of_day_decimal>\d+)"),
                          (u",mṁ", "[,.](?P<minute_of_hour_decimal>\d+)"),
                          (u"ss", "(?P<second_of_minute>\d\d)"),
-                         (u",sṡ", "(?P<second_of_minute_decimal>\s+)"),
-                         (u"-", "(?P<truncated>-)")]
+                         (u",sṡ", "[,.](?P<second_of_minute_decimal>\d+)"),
+                         (u"^--", "(?P<truncated>--)"),
+                         (u"^-", "(?P<truncated>-)")]
     TIMEZONE_CHAR_REGEXES = [
                          (u"(?<=±hh)mm", "(?P<time_zone_minute>\d\d)"),
                          (u"(?<=±hh:)mm", "(?P<time_zone_minute>\d\d)"),
@@ -264,43 +274,56 @@ Z
     TEST_DATE_EXPRESSIONS = {"basic": {"complete": {
            "00440104": {"year": 44, "month_of_year": 1, "day_of_month": 4},
            "+5002000830": {"year": 500200, "month_of_year": 8,
-                           "day_of_month": 30},
+                           "day_of_month": 30, "expanded_year_digits": 2},
            "-0000561113": {"year": -56, "month_of_year": 11,
-                           "day_of_month": 13},
+                           "day_of_month": 13, "expanded_year_digits": 2},
            "-1000240210": {"year": -100024, "month_of_year": 2,
-                           "day_of_month": 10},
+                           "day_of_month": 10, "expanded_year_digits": 2},
            "1967056": {"year": 1967, "day_of_year": 56},
-           "+123456078": {"year": 123456, "day_of_year": 78},
-           "-004560134": {"year": -4560, "day_of_year": 134},
+           "+123456078": {"year": 123456, "day_of_year": 78,
+                          "expanded_year_digits": 2},
+           "-004560134": {"year": -4560, "day_of_year": 134,
+                          "expanded_year_digits": 2},
            "1001W011": {"year": 1001, "week_of_year": 1, "day_of_week": 1},
-           "+000001W457": {"year": 1, "week_of_year": 45, "day_of_week": 7},
+           "+000001W457": {"year": 1, "week_of_year": 45, "day_of_week": 7,
+                           "expanded_year_digits": 2},
            "-010001W053": {"year": -10001, "week_of_year": 5,
-                           "day_of_week": 3}},
+                           "day_of_week": 3, "expanded_year_digits": 2}},
                                        "reduced": {
            "440103": {"year": 4401, "month_of_year": 3},
            "1982": {"year": 1982},
            "19": {"year": 1900},
-           "+05678901": {"year": 56789, "month_of_year": 1},
-           "-00000112": {"year": -11, "month_of_year": 2},
-           "-789123": {"year": -789123},
-           "+450001": {"year": 450001},
-           "-0023": {"year": -2300},
-           "+5678": {"year": 567800},
+           "+05678901": {"year": 56789, "month_of_year": 1,
+                         "expanded_year_digits": 2},
+           "-00000112": {"year": -1, "month_of_year": 12,
+                         "expanded_year_digits": 2},
+           "-789123": {"year": -789123, "expanded_year_digits": 2},
+           "+450001": {"year": 450001, "expanded_year_digits": 2},
+           "-0023": {"year": -2300, "expanded_year_digits": 2},
+           "+5678": {"year": 567800, "expanded_year_digits": 2},
            "1765W04": {"year": 1765, "week_of_year": 4},
-           "+001765W44": {"year": 1765, "week_of_year": 44},
-           "-123321W50": {"year": -123321, "week_of_year": 50}},
+           "+001765W44": {"year": 1765, "week_of_year": 44,
+                          "expanded_year_digits": 2},
+           "-123321W50": {"year": -123321, "week_of_year": 50,
+                          "expanded_year_digits": 2}},
                                        "truncated": {
-           "-9001": {"year": -9001}, # Wrong.
-           "-90": {"year": 90, "truncated": True},
+           "-9001": {"year": 90, "month_of_year": 1,
+                     "truncated": True,
+                     "truncated_property": "year_of_century"},
+           "-90": {"year": 90, "truncated": True,
+                   "truncated_property": "year_of_century"},
            "--0501": {"month_of_year": 5, "day_of_month": 1,
                       "truncated": True},
            "--12": {"month_of_year": 12, "truncated": True},
            "---30": {"day_of_month": 30, "truncated": True},
-           "98354": {"year": 98, "day_of_year": 354, "truncated": True},
+           "98354": {"year": 98, "day_of_year": 354, "truncated": True,
+                     "truncated_property": "year_of_century"},
            "-034": {"day_of_year": 34, "truncated": True},
            "00W031": {"year": 0, "week_of_year": 3, "day_of_week": 1,
-                      "truncated": True},
-           "99W34": {"year": 99, "week_of_year": 34, "truncated": True},
+                      "truncated": True,
+                      "truncated_property": "year_of_century"},
+           "99W34": {"year": 99, "week_of_year": 34, "truncated": True,
+                     "truncated_property": "year_of_century"},
            "-1W02": {"year": 1, "week_of_year": 2,
                      "truncated": True,
                      "truncated_property": "year_of_decade"},
@@ -310,43 +333,56 @@ Z
                           "extended": {"complete": {
            "0044-01-04": {"year": 44, "month_of_year": 1, "day_of_month": 4},
            "+500200-08-30": {"year": 500200, "month_of_year": 8,
-                             "day_of_month": 30},
+                             "day_of_month": 30, "expanded_year_digits": 2},
            "-000056-11-13": {"year": -56, "month_of_year": 11,
-                             "day_of_month": 13},
+                             "day_of_month": 13, "expanded_year_digits": 2},
            "-100024-02-10": {"year": -100024, "month_of_year": 2,
-                             "day_of_month": 10},
+                             "day_of_month": 10, "expanded_year_digits": 2},
            "1967-056": {"year": 1967, "day_of_year": 56},
-           "+123456-078": {"year": 123456, "day_of_year": 78},
-           "-004560-134": {"year": -4560, "day_of_year": 134},
+           "+123456-078": {"year": 123456, "day_of_year": 78,
+                           "expanded_year_digits": 2},
+           "-004560-134": {"year": -4560, "day_of_year": 134,
+                           "expanded_year_digits": 2},
            "1001-W01-1": {"year": 1001, "week_of_year": 1, "day_of_week": 1},
-           "+000001-W45-7": {"year": 1, "week_of_year": 45, "day_of_week": 7},
+           "+000001-W45-7": {"year": 1, "week_of_year": 45, "day_of_week": 7,
+                             "expanded_year_digits": 2},
            "-010001-W05-3": {"year": -10001, "week_of_year": 5,
-                             "day_of_week": 3}},
+                             "day_of_week": 3, "expanded_year_digits": 2}},
                                        "reduced": {
            "4401-03": {"year": 4401, "month_of_year": 3},
            "1982": {"year": 1982},
            "19": {"year": 1900},
-           "+056789-01": {"year": 56789, "month_of_year": 1},
-           "-000001-12": {"year": -1, "month_of_year": 12},
-           "-789123": {"year": -789123},
-           "+450001": {"year": 450001},
-           "-0023": {"year": -2300},
-           "+5678": {"year": 567800},
+           "+056789-01": {"year": 56789, "month_of_year": 1,
+                          "expanded_year_digits": 2},
+           "-000001-12": {"year": -1, "month_of_year": 12,
+                          "expanded_year_digits": 2},
+           "-789123": {"year": -789123, "expanded_year_digits": 2},
+           "+450001": {"year": 450001, "expanded_year_digits": 2},
+           "-0023": {"year": -2300, "expanded_year_digits": 2},
+           "+5678": {"year": 567800, "expanded_year_digits": 2},
            "1765-W04": {"year": 1765, "week_of_year": 4},
-           "+001765-W44": {"year": 1765, "week_of_year": 44},
-           "-123321-W50": {"year": -123321, "week_of_year": 50}},
+           "+001765-W44": {"year": 1765, "week_of_year": 44,
+                           "expanded_year_digits": 2},
+           "-123321-W50": {"year": -123321, "week_of_year": 50,
+                           "expanded_year_digits": 2}},
                                        "truncated": {
-           "-9001": {"year": -9001}, # Wrong.
-           "-90": {"year": 90, "truncated": True},
+           "-9001": {"year": 90, "month_of_year": 1,
+                     "truncated": True,
+                     "truncated_property": "year_of_century"},
+           "-90": {"year": 90, "truncated": True,
+                   "truncated_property": "year_of_century"},
            "--05-01": {"month_of_year": 5, "day_of_month": 1,
                       "truncated": True},
            "--12": {"month_of_year": 12, "truncated": True},
            "---30": {"day_of_month": 30, "truncated": True},
-           "98-354": {"year": 98, "day_of_year": 354, "truncated": True},
+           "98-354": {"year": 98, "day_of_year": 354, "truncated": True,
+                      "truncated_property": "year_of_century"},
            "-034": {"day_of_year": 34, "truncated": True},
            "00-W03-1": {"year": 0, "week_of_year": 3, "day_of_week": 1,
-                        "truncated": True},
-           "99-W34": {"year": 99, "week_of_year": 34, "truncated": True},
+                        "truncated": True,
+                        "truncated_property": "year_of_century"},
+           "99-W34": {"year": 99, "week_of_year": 34, "truncated": True,
+                      "truncated_property": "year_of_century"},
            "-1-W02": {"year": 1, "week_of_year": 2,
                       "truncated": True,
                       "truncated_property": "year_of_decade"},
@@ -411,20 +447,22 @@ Z
            "Z": {"time_zone_utc": True},
            "+01": {"time_zone_hour": 1},
            "-05": {"time_zone_hour": -5},
-           "+2301": {"time_zone_hour": 23, "time_zone_minute": 1}
+           "+2301": {"time_zone_hour": 23, "time_zone_minute": 1},
            "-1230": {"time_zone_hour": -12, "time_zone_minute": 30}},
                             "extended": {
            "Z": {"time_zone_utc": True},
            "+01": {"time_zone_hour": 1},
            "-05": {"time_zone_hour": -5},
-           "+23:01": {"time_zone_hour": 23, "time_zone_minute": 1}
+           "+23:01": {"time_zone_hour": 23, "time_zone_minute": 1},
            "-12:30": {"time_zone_hour": -12, "time_zone_minute": 30}}}
 
     def __init__(self, num_expanded_year_digits=2,
                  allow_truncated=False,
                  allow_only_basic=False,
+                 assume_utc=False,
                  format_function=None):
         expanded_year_digit_regex = "\d" * num_expanded_year_digits
+        self.expanded_year_digits = num_expanded_year_digits
         self.DATE_CHAR_REGEXES.append((u"Ϋ", "(?P<expanded_year>" +
                                              expanded_year_digit_regex + ")"))
         self.allow_truncated = allow_truncated
@@ -437,10 +475,6 @@ Z
         date_map = self.DATE_EXPRESSIONS
         time_map = self.TIME_EXPRESSIONS
         timezone_map = self.TIMEZONE_EXPRESSIONS
-        date_ok_keys = ["complete"]
-        if self.allow_truncated:
-            date_ok_keys = ["complete", "truncated"]
-        time_ok_keys = ["complete", "reduced"]
         self._date_regex_map = {}
         self._time_regex_map = {}
         self._timezone_regex_map = {}
@@ -448,29 +482,31 @@ Z
         if self.allow_only_basic:
             format_ok_keys = ["basic"]
         for format_type in format_ok_keys:
-            self._date_regex_map.setdefault(format_type, [])
-            self._time_regex_map.setdefault(format_type, [])
+            self._date_regex_map.setdefault(format_type, {})
+            self._time_regex_map.setdefault(format_type, {})
             self._timezone_regex_map.setdefault(format_type, [])
-            for date_key in date_ok_keys:
+            for date_key in date_map[format_type].keys():
+                self._date_regex_map[format_type].setdefault(date_key, [])
+                regex_list = self._date_regex_map[format_type][date_key]
                 for date_expr in self.get_expressions(
                                           date_map[format_type][date_key]):
                     date_regex = self.parse_date_expression_to_regex(
                                                             date_expr)
-                    self._date_regex_map[format_type].append(re.compile(
-                                                                date_regex))
-            for time_key in time_ok_keys:
+                    regex_list.append([re.compile(date_regex), date_expr])
+            for time_key in time_map[format_type].keys():
+                self._time_regex_map[format_type].setdefault(time_key, [])
+                regex_list = self._time_regex_map[format_type][time_key]
                 for time_expr in self.get_expressions(
                                           time_map[format_type][time_key]):
                     time_regex = self.parse_time_expression_to_regex(
                                                             time_expr)
-                    self._time_regex_map[format_type].append(re.compile(
-                                                                time_regex))
+                    regex_list.append([re.compile(time_regex), time_expr])
             for timezone_expr in self.get_expressions(
                                           timezone_map[format_type]):
                 timezone_regex = self.parse_timezone_expression_to_regex(
                                                                 timezone_expr)
                 self._timezone_regex_map[format_type].append(
-                                                re.compile(timezone_regex))
+                               [re.compile(timezone_regex), timezone_expr])
                                           
     def get_expressions(self, text):
         """Yield valid expressions from text."""
@@ -506,12 +542,28 @@ Z
         """Parse a user-supplied timepoint string."""
         date_time_timezone = timepoint_string.split(self.TIME_DESIGNATOR)
         if len(date_time_timezone) == 1:
-            date = date_and_time[0]
-            format_key, date_info = self.get_date_info(date)
+            date = date_time_timezone[0]
+            keys, date_info = self.get_date_info(date)
             time_info = {}
         else:
-            date, time_timezone = date_time_timezone    
-            format_key, date_info = self.get_date_info(date)
+            date, time_timezone = date_time_timezone
+            if not date and self.allow_truncated:
+                keys = (None, "truncated")
+                date_info = {"truncated": True}
+            else:
+                keys, date_info = self.get_date_info(date,
+                                                     bad_types=["reduced"])
+            format_key, type_key = keys
+            bad_formats = []
+            if format_key == "basic":
+                bad_formats = ["extended"]
+            if format_key == "extended":
+                bad_formats = ["basic"]
+            if type_key == "truncated":
+                # Do not force basic/extended formatting for truncated dates.
+                bad_formats = []
+            bad_types = ["truncated"]
+            
             if time_timezone.endswith("Z"):
                 time, timezone = time_timezone[:-1], "Z"
             else:
@@ -519,8 +571,20 @@ Z
                     time, timezone = time_timezone.split("+")
                     timezone = "+" + timezone
                 elif "-" in time_timezone:
-                    time, timezone = time_timezone.split("-")
+                    time, timezone = time_timezone.rsplit("-", 1)
                     timezone = "-" + timezone
+                    # Make sure this isn't just a truncated time.
+                    try:
+                        time_info = self.get_time_info(
+                                             time,
+                                             bad_formats=bad_formats,
+                                             bad_types=bad_types)
+                        timezone_info = self.get_timezone_info(
+                                                timezone,
+                                                bad_formats=bad_formats)
+                    except SyntaxError:
+                        time = time_timezone
+                        timezone = None
                 else:
                     time = time_timezone
                     timezone = None
@@ -529,26 +593,42 @@ Z
             else:
                 timezone_info = self.get_timezone_info(
                                                   timezone,
-                                                  format_ok_keys=[format_key])
+                                                  bad_formats=bad_formats)
                 if timezone_info.pop("time_zone_sign", "+") == "-":
                     timezone_info["time_zone_hour"] = (
                              int(timezone_info["time_zone_hour"]) * -1)
-            time_info = self.get_time_info(time, format_ok_keys=[format_key])
+            time_info = self.get_time_info(time, bad_formats=bad_formats,
+                                           bad_types=bad_types)
             time_info.update(timezone_info)
         info = {}
         truncated_property = None
+        if date_info.get("truncated"):
+            if "year_of_decade" in date_info:
+                truncated_property = "year_of_decade"
+            if "year_of_century" in date_info:
+                truncated_property = "year_of_century" 
+        elif ("century" not in date_info and
+              "year_of_century" in date_info):
+            truncated_property = "year_of_century"
+            date_info["truncated"] = True
         year = int(date_info.get("year", 0))
         if "year_of_decade" in date_info:
             year += int(date_info.pop("year_of_decade"))
             truncated_property = "year_of_decade"
         year += int(date_info.pop("year_of_century", 0))
         year += 100 * int(date_info.pop("century", 0))
-        year += 10000 * int(date_info.pop("expanded_year", 0))
+        expanded_year = date_info.pop("expanded_year", 0)
+        if expanded_year:
+            date_info["expanded_year_digits"] = self.expanded_year_digits
+        year += 10000 * int(expanded_year)
         if date_info.pop("year_sign", "+") == "-":
             year *= -1
         date_info["year"] = year
         for key, value in date_info.items():
-            date_info[key] = int(value)
+            try:
+                date_info[key] = int(value)
+            except (TypeError, ValueError):
+                pass
         info.update(date_info)
         for key, value in time_info.items():
             if key.endswith("_decimal"):
@@ -574,40 +654,135 @@ Z
             info.update({"format_function": self.format_function})
         return TimePoint(**info)
 
-    def get_date_info(self, date_string):
+    def get_date_info(self, date_string, bad_types=None):
         """Return the format and properties from a date string."""
-        for format_ok_key, regex_list in self._date_regex_map.items():
-            for regex in regex_list:
-                result = regex.match(date_string)
-                if result:
-                    return format_ok_key, result.groupdict()
-        return None, {}
+        type_keys = ["complete", "truncated", "reduced"]
+        if bad_types is not None:
+            for type_key in bad_types:
+                type_keys.remove(type_key)
+        if not self.allow_truncated and "truncated" in type_keys:
+            type_keys.remove("truncated")
+        for format_key, type_regex_map in self._date_regex_map.items():
+            for type_key in type_keys:
+                regex_list = type_regex_map[type_key]
+                for regex, expr in regex_list:
+                    result = regex.match(date_string)
+                    if result:
+                        return (format_key, type_key), result.groupdict()
+        raise SyntaxError(
+                    "Not a valid ISO 8601 date representation: %s" %
+                    date_string)
 
-    def get_time_info(self, time_string, format_ok_keys=None):
+    def get_time_info(self, time_string, bad_formats=None, bad_types=None):
         """Return the properties from a time string."""
-        if format_ok_keys is None:
-            format_ok_keys = self._time_regex_map.keys()
-        for format_ok_key, regex_list in self._time_regex_map.items():
-            for regex in regex_list:
-                result = regex.match(time_string)
-                if result:
-                    return result.groupdict()
-        return {}
+        if bad_formats is None:
+            bad_formats = []
+        if bad_types is None:
+            bad_types = []
+        for format_key, type_regex_map in self._time_regex_map.items():
+            if format_key in bad_formats:
+                continue
+            for type_key, regex_list in type_regex_map.items():
+                if type_key in bad_types:
+                    continue
+                for regex, expr in regex_list:
+                    result = regex.match(time_string)
+                    if result:
+                        return result.groupdict()
+        raise SyntaxError(
+                    "Not a valid ISO 8601 time representation: %s" %
+                    time_string)
 
-    def get_timezone_info(self, timezone_string, format_ok_keys=None):
+    def get_timezone_info(self, timezone_string, bad_formats=None):
         """Return the properties from a timezone string."""
-        if format_ok_keys is None:
-            format_ok_keys = self._timezone_regex_map.keys()
-        for format_ok_key, regex_list in self._timezone_regex_map.items():
-            for regex in regex_list:
+        if bad_formats is None:
+            bad_formats = []
+        for format_key, regex_list in self._timezone_regex_map.items():
+            if format_key in bad_formats:
+                continue
+            for regex, expr in regex_list:
                 result = regex.match(timezone_string)
                 if result:
                     return result.groupdict()
-        return {}
+        raise SyntaxError(
+                    "Not a valid ISO 8601 timezone representation: %s" %
+                    timezone_string)
 
     def test(self):
         """Run a series of self-tests."""
+        format_ok_keys = ["basic", "extended"]
+        if self.allow_only_basic:
+            format_ok_keys = ["basic"]  
+        date_combo_ok_keys = ["complete"]
+        if self.allow_truncated:
+            date_combo_ok_keys = ["complete", "truncated"]
+        time_combo_ok_keys = ["complete", "reduced"]
+        test_date_map = self.TEST_DATE_EXPRESSIONS
+        test_time_map = self.TEST_TIME_EXPRESSIONS
+        test_timezone_map = self.TEST_TIMEZONE_EXPRESSIONS
+        for format_type in format_ok_keys:
+            date_format_tests = test_date_map[format_type]
+            time_format_tests = test_time_map[format_type]
+            timezone_format_tests = test_timezone_map[format_type]
+            for date_key in date_format_tests:
+                if not self.allow_truncated and date_key == "truncated":
+                    continue
+                for date_expr, info in date_format_tests[date_key].items():
+                    self._test(date_expr, info)
+            for date_key in date_combo_ok_keys:
+                date_tests = copy.deepcopy(date_format_tests[date_key])
+                # Add a blank date for time-only testing.
+                for date_expr, info in date_tests.items():
+                    for time_key in time_combo_ok_keys:
+                        time_items = time_format_tests[time_key].items()
+                        for time_expr, time_info in time_items:
+                            combo_expr = (date_expr + self.TIME_DESIGNATOR +
+                                          time_expr)
+                            combo_info = {}
+                            for key, value in info.items() + time_info.items():
+                                combo_info[key] = value
+                            self._test(combo_expr, combo_info)
+                            timezone_items = timezone_format_tests.items()
+                            for timezone_expr, timezone_info in timezone_items:
+                                tz_expr = combo_expr + timezone_expr
+                                tz_info = {}
+                                for key, value in (combo_info.items() +
+                                                   timezone_info.items()):
+                                    tz_info[key] = value
+                                self._test(tz_expr, tz_info)
+            if not self.allow_truncated:
+                continue
+            for time_key in time_format_tests:
+                time_tests = time_format_tests[time_key]
+                for time_expr, time_info in time_tests.items():
+                    combo_expr = self.TIME_DESIGNATOR + time_expr
+                    # Add truncated (no date).
+                    combo_info = {"truncated": True}
+                    for key, value in time_info.items():
+                        combo_info[key] = value
+                    self._test(combo_expr, combo_info)
+                    timezone_items = timezone_format_tests.items()
+                    for timezone_expr, timezone_info in timezone_items:
+                        tz_expr = combo_expr + timezone_expr
+                        tz_info = {}
+                        for key, value in (combo_info.items() +
+                                           timezone_info.items()):
+                            tz_info[key] = value
+                            self._test(combo_expr, tz_info)
 
+    def _test(self, expression, timepoint_kwargs):
+        try:
+            test_data = str(self.parse(expression))
+        except SyntaxError:
+            raise ValueError("Parsing failed for %s" % expression)
+        ctrl_data = str(TimePoint(**timepoint_kwargs))
+        if ctrl_data != test_data:
+            raise ValueError("Comparison failed for expression " +
+                             "'%s' - got %s, should be %s" % (expression,
+                                                              test_data,
+                                                              ctrl_data))
+        print "OK", expression, test_data
+                        
 
 class TimeIntervalParser(object):
 
@@ -670,6 +845,7 @@ class TimeIntervalParser(object):
                 "PT2.5S": str(TimeInterval(seconds=2.5)),
                 "PT2,5S": str(TimeInterval(seconds=2.5)),
                 "PT5.5023H": str(TimeInterval(hours=5.5023)),
+                "PT5,5023H": str(TimeInterval(hours=5.5023)),
                 "P5W": str(TimeInterval(weeks=5)),
                 "P100W": str(TimeInterval(weeks=100))}
         for expression, ctrl_result in self.TEST_EXPRESSIONS.items():
@@ -946,6 +1122,8 @@ class TimePoint(object):
     def __init__(self, **kwargs):
         self.format_function = kwargs.get("format_function")
         self.expanded_year_digits = kwargs.get("expanded_year_digits", 0)
+        self.truncated = kwargs.get("truncated", False)
+        self.truncated_property = kwargs.get("truncated_property")
         self.year = kwargs.get("year")
         self.month_of_year = kwargs.get("month_of_year")
         self.day_of_year = kwargs.get("day_of_year")
@@ -988,6 +1166,16 @@ class TimePoint(object):
             self.time_zone.hours = kwargs.get("time_zone_hour")
         if "time_zone_minute" in kwargs:
             self.time_zone.minutes = kwargs.get("time_zone_minute")
+        if not self.truncated:
+            # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
+            if (self.month_of_year is None and self.week_of_year is None and
+                self.day_of_year is None):
+                self.month_of_year = 1
+            if self.month_of_year is not None and self.day_of_month is None:
+                self.day_of_month = 1
+            if self.week_of_year is not None and self.day_of_week is None:
+                self.day_of_week = 1
+            
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""
@@ -1123,10 +1311,26 @@ class TimePoint(object):
         self.day_of_week = None
         return self
 
-    def add_truncated(self, year_of_century=None, month_of_year=None,
-                      week_of_year=None, day_of_year=None, day_of_month=None,
-                      day_of_week=None, hour_of_day=None, minute_of_hour=None,
-                      second_of_minute=None):
+    def get_truncated_properties(self):
+        if not self.truncated:
+            return None
+        props = {}
+        if self.truncated_property == "year_of_decade":
+            props.update({"year_of_decade": self.year % 10})
+        if self.truncated_property == "year_of_century":
+            props.update({"year_of_century": self.year % 100})
+        for attr in ["month_of_year", "week_of_year", "day_of_year",
+                     "day_of_month", "day_of_week", "hour_of_day",
+                     "minute_of_hour", "second_of_minute"]:
+            value = getattr(self, attr)
+            if value is not None:
+                props.update({attr: value})
+        return props
+
+    def add_truncated(self, year_of_century=None, year_of_decade=None,
+                      month_of_year=None, week_of_year=None, day_of_year=None,
+                      day_of_month=None, day_of_week=None, hour_of_day=None,
+                      minute_of_hour=None, second_of_minute=None):
         new = self.copy()
         if hour_of_day is not None and minute_of_hour is None:
             minute_of_hour = 0
@@ -1172,6 +1376,12 @@ class TimePoint(object):
             while new.month_of_year != month_of_year:
                 new.month_of_year += 1
                 new._tick_over()
+        if year_of_decade is not None:
+            new.to_calendar_date()
+            new_year_of_decade = new.year % 10
+            while new_year_of_decade != year_of_decade:
+                new.year += 1
+                new_year_of_decade = new.year % 10
         if year_of_century is not None:
             new.to_calendar_date()
             new_year_of_century = new.year % 100
@@ -1181,10 +1391,21 @@ class TimePoint(object):
         return new
 
     def __add__(self, other, no_copy=False):
+        if isinstance(other, TimePoint):
+            if self.truncated and not other.truncated:
+                new = self.copy()
+                new.set_time_zone(other.get_time_zone())
+                return other.add_truncated(
+                             **new.get_truncated_properties())
+            if other.truncated and not self.truncated:
+                new = other.copy()
+                new.set_time_zone(self.get_time_zone())
+                return self.add_truncated(
+                             **new.get_truncated_properties())
         if not isinstance(other, TimeInterval):
             raise TypeError(
-                      "Invalid addition type '%s' - should be TimeInterval." %
-                      type(other).__name__)
+                      "Invalid addition: can only add TimeInterval or "
+                      "truncated TimePoint to TimePoint.")
         duration = other
         if no_copy:
             new = self
@@ -1435,20 +1656,47 @@ class TimePoint(object):
                 year_string = "-" + year_string % abs(self.year)
             else:
                 year_string = "+" + year_string % abs(self.year)
-        elif self.year < 0:
+        elif self.year is not None and self.year < 0:
             raise OverflowError(
                       "Year %s can only be represented in expanded format" %
                       self.year)
-        else:
+        elif self.year is not None:
             year_string = year_string % self.year
-        if self.get_is_calendar_date():
-            date_string = year_string + "-%02d-%02d" % (self.month_of_year,
-                                                        self.day_of_month)
-        if self.get_is_ordinal_date():
-            date_string = year_string + "-%03d" % self.day_of_year
-        if self.get_is_week_date():
-            date_string = year_string + "-W%02d-%01d" % (self.week_of_year,
-                                                         self.day_of_week)
+        if self.truncated:
+            year_string = "-"
+            if self.truncated_property == "year_of_decade":
+                year_string = "-" + str(self.year % 10)
+            elif self.truncated_property == "year_of_century":
+                year_string = "-" + str(self.year % 100)
+        date_string = year_string
+        if self.truncated:
+            if self.month_of_year is not None:
+                date_string = year_string + "-%02d" % self.month_of_year
+                if self.day_of_month is not None:
+                    date_string += "-%02d" % self.day_of_month
+            elif self.day_of_month is not None:
+                date_string = year_string + "-%02d" % self.day_of_month
+            if self.day_of_year is not None:
+                day_string = "%03d" % self.day_of_year
+                if year_string == "-":
+                    date_string = year_string + day_string
+                else:
+                    date_string = year_string + "-" + day_string
+            if self.week_of_year is not None:
+                date_string = year_string + "-W%02d" % self.week_of_year
+                if self.day_of_week is not None:
+                    date_string += "-%01d" % self.day_of_week
+            elif self.day_of_week is not None:
+                date_string = year_string + "-W-%01d" % self.day_of_week
+        else:
+            if self.get_is_calendar_date():
+                date_string = year_string + "-%02d-%02d" % (self.month_of_year,
+                                                            self.day_of_month)
+            if self.get_is_ordinal_date():
+                date_string = year_string + "-%03d" % self.day_of_year
+            if self.get_is_week_date():
+                date_string = year_string + "-W%02d-%01d" % (self.week_of_year,
+                                                             self.day_of_week)
         time_string = ""
         if self.hour_of_day is not None:
             time_string = "T%02d" % int(self.hour_of_day)
