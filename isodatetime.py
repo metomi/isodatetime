@@ -169,10 +169,10 @@ ccYYDDD
 ccYYWwwD
 ±ΫccYYWwwD""",
                                   "reduced": u"""
-ccYYMM       # Deviation (can technically be confused with hhmmss).
+ccYY-MM       # Deviation? Not clear if "basic" or "extended" in standard.
 ccYY
 cc
-±ΫccYYMM     # Deviation (see above).
+±ΫccYY-MM     # Deviation? Not clear if "basic" or "extended" in standard.
 ±ΫccYY
 ±Ϋcc
 ccYYWww
@@ -183,6 +183,7 @@ ccYYWww
 --MMDD
 --MM
 ---DD
+YYMMDD
 YYDDD
 -DDD
 YYWwwD
@@ -208,6 +209,7 @@ ccYY-Www
                                      "truncated": u"""
 -YY-MM
 --MM-DD
+YY-MM-DD
 YY-DDD
 -DDD          # Deviation from standard ?
 YY-Www-D
@@ -332,13 +334,13 @@ Z
            "-010001W053": {"year": -10001, "week_of_year": 5,
                            "day_of_week": 3, "expanded_year_digits": 2}},
                                        "reduced": {
-           "440103": {"year": 4401, "month_of_year": 3},
+           "4401-03": {"year": 4401, "month_of_year": 3},
            "1982": {"year": 1982},
            "19": {"year": 1900},
-           "+05678901": {"year": 56789, "month_of_year": 1,
-                         "expanded_year_digits": 2},
-           "-00000112": {"year": -1, "month_of_year": 12,
-                         "expanded_year_digits": 2},
+           "+056789-01": {"year": 56789, "month_of_year": 1,
+                          "expanded_year_digits": 2},
+           "-000001-12": {"year": -1, "month_of_year": 12,
+                          "expanded_year_digits": 2},
            "-789123": {"year": -789123, "expanded_year_digits": 2},
            "+450001": {"year": 450001, "expanded_year_digits": 2},
          # The following cannot be parsed - looks like truncated -YYMM.
@@ -353,6 +355,10 @@ Z
            "-9001": {"year": 90, "month_of_year": 1,
                      "truncated": True,
                      "truncated_property": "year_of_century"},
+           "960328": {"year": 96, "month_of_year": 3,
+                      "day_of_month": 28,
+                      "truncated": True,
+                      "truncated_property": "year_of_century"},
            "-90": {"year": 90, "truncated": True,
                    "truncated_property": "year_of_century"},
            "--0501": {"month_of_year": 5, "day_of_month": 1,
@@ -413,6 +419,10 @@ Z
            "-9001": {"year": 90, "month_of_year": 1,
                      "truncated": True,
                      "truncated_property": "year_of_century"},
+           "96-03-28": {"year": 96, "month_of_year": 3,
+                        "day_of_month": 28,
+                        "truncated": True,
+                        "truncated_property": "year_of_century"},
            "-90": {"year": 90, "truncated": True,
                    "truncated_property": "year_of_century"},
            "--05-01": {"month_of_year": 5, "day_of_month": 1,
@@ -1045,20 +1055,60 @@ class TimeInterval(object):
                  hours=0.0, minutes=0.0, seconds=0.0):
         self.years = years
         self.months = months
-        self.days = days + 7 * weeks
+        self.weeks = None
+        self.days = days
+        if weeks is not None:
+            if days is None:
+                self.days = 7 * weeks
+            else:
+                self.days += 7 * weeks
         self.hours = hours
         self.minutes = minutes
         self.seconds = seconds
+        if (not self.years and not self.months and not self.hours and
+            not self.minutes and not self.seconds and
+            weeks and not days):
+            self.weeks = self.days / 7
+            self.years, self.months, self.days = (None, None, None)
+            self.hours, self.minutes, self.seconds = (None, None, None)
 
     def copy(self):
         """Return an unlinked copy of this instance."""
         return TimeInterval(years=self.years, months=self.months,
+                            weeks=self.weeks,
                             days=self.days, hours=self.hours,
                             minutes=self.minutes, seconds=self.seconds)
+
+    def get_is_in_weeks(self):
+        """Return whether we are in week representation."""
+        return (self.weeks is not None)
+
+    def to_days(self):
+        """Convert to day representation rather than weeks."""
+        if self.get_is_in_weeks():
+            for attribute in [self.years, self.months, self.hours,
+                              self.minutes, self.seconds]:
+                if attribute is None:
+                    attribute = 0
+            self.days = self.weeks * 7
+            self.weeks = None
+
+    def to_weeks(self):
+        if not self.get_is_in_weeks():
+            self.weeks = self.days / 7
+            self.years, self.months, self.days = (None, None, None)
+            self.hours, self.minutes, self.seconds = (None, None, None)
 
     def __add__(self, other):
         new = self.copy()
         if isinstance(other, TimeInterval):
+            if new.get_is_in_weeks():
+                if other.get_is_in_weeks():
+                    new.weeks += other.weeks
+                    return new
+                new.to_days()
+            elif other.get_is_in_weeks():
+                other = other.copy().to_days()
             new.years += other.years
             new.months += other.months
             new.days += other.days
@@ -1076,6 +1126,13 @@ class TimeInterval(object):
     def __sub__(self, other):
         new = self.copy()
         if isinstance(other, TimeInterval):
+            if new.get_is_in_weeks():
+                if other.get_is_in_weeks():
+                    new.weeks -= other.weeks
+                    return new
+                new.to_days()
+            elif other.get_is_in_weeks():
+                other = other.copy().to_days()
             new.years -= other.years
             new.months -= other.months
             new.days -= other.days
@@ -1098,6 +1155,9 @@ class TimeInterval(object):
                   "Invalid type for multiplication: " +
                   "'%s' should be integer." %
                   type(other).__name__)
+        if self.get_is_in_weeks():
+            new.weeks *= other
+            return new
         new.years *= other
         new.months *= other
         new.days *= other
@@ -1114,6 +1174,9 @@ class TimeInterval(object):
                   "Invalid type for division: " +
                   "'%s' should be integer." %
                   type(other).__name__)
+        if self.get_is_in_weeks():
+            new.weeks //= other
+            return new
         new.years //= other
         new.months //= other
         new.days //= other
@@ -1125,6 +1188,8 @@ class TimeInterval(object):
         start_string = "P"
         date_string = ""
         time_string = ""
+        if self.get_is_in_weeks():
+            return (start_string + str(self.weeks) + "W").replace(".", ",")
         if self.years:
             date_string += str(self.years) + "Y"
         if self.months:
@@ -1151,18 +1216,26 @@ class TimeInterval(object):
         elif not date_string:
             # Zero duration.
             date_string = "0Y"
-        return start_string + date_string + time_string
+        total_string = start_string + date_string + time_string
+        return total_string.replace(".", ",")
 
 
 class TimeZone(TimeInterval):
 
     """Represent a time zone offset."""
 
+    def __init__(self, *args, **kwargs):
+        self.unknown = kwargs.pop("unknown", False)
+        super(TimeZone, self).__init__(*args, **kwargs)
+
     def copy(self):
         """Return an unlinked copy of this instance."""
-        return TimeZone(hours=self.hours, minutes=self.minutes)
+        return TimeZone(hours=self.hours, minutes=self.minutes,
+                        unknown=self.unknown)
 
     def __str__(self):
+        if self.unknown:
+            return ""
         if self.hours == 0 and self.minutes == 0:
             return "Z"
         else:
@@ -1187,7 +1260,11 @@ class TimePoint(object):
         self.day_of_month = kwargs.get("day_of_month")
         self.day_of_week = kwargs.get("day_of_week")
         self.week_of_year = kwargs.get("week_of_year")
-        self.hour_of_day = kwargs.get("hour_of_day", 0)
+        if self.truncated:
+            time_default = None
+        else:
+            time_default = 0
+        self.hour_of_day = kwargs.get("hour_of_day", time_default)
         if "hour_of_day_decimal" in kwargs:
             if self.hour_of_day is None:
                 raise TimePointInputError(
@@ -1209,7 +1286,7 @@ class TimePoint(object):
                 raise TimePointInputError(
                           "Invalid input: seconds - already have minute decimals")
         else:
-            self.minute_of_hour = kwargs.get("minute_of_hour", 0)
+            self.minute_of_hour = kwargs.get("minute_of_hour", time_default)
         if "second_of_minute_decimal" in kwargs:
             if "second_of_minute" not in kwargs:
                 raise TimePointInputError(
@@ -1217,12 +1294,17 @@ class TimePoint(object):
             self.second_of_minute = kwargs["second_of_minute"]
             self.second_of_minute += kwargs["second_of_minute_decimal"]
         else:
-            self.second_of_minute = kwargs.get("second_of_minute", 0)
+            self.second_of_minute = kwargs.get("second_of_minute", time_default)
         self.time_zone = TimeZone()
+        has_unknown_tz = True
         if "time_zone_hour" in kwargs:
+            has_unknown_tz = False
             self.time_zone.hours = kwargs.get("time_zone_hour")
         if "time_zone_minute" in kwargs:
+            has_unknown_tz = False
             self.time_zone.minutes = kwargs.get("time_zone_minute")
+        has_unknown_tz = self.truncated and has_unknown_tz
+        self.time_zone.unknown = has_unknown_tz
         if not self.truncated:
             # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
             if (self.month_of_year is None and self.week_of_year is None and
@@ -1232,7 +1314,6 @@ class TimePoint(object):
                 self.day_of_month = 1
             if self.week_of_year is not None and self.day_of_week is None:
                 self.day_of_week = 1
-            
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""
@@ -1302,6 +1383,8 @@ class TimePoint(object):
 
     def get_time_zone_utc(self):
         """Return whether the time zone is explicitly in UTC."""
+        if self.time_zone.unknown:
+            return False
         return self.time_zone.hours == 0 and self.time_zone.minutes == 0
 
     def get_week_date(self):
@@ -1330,6 +1413,8 @@ class TimePoint(object):
 
     def get_time_zone_offset(self, other):
         """Get the difference in hours and minutes between time zones."""
+        if other.get_time_zone().unknown or self.get_time_zone().unknown:
+            return TimeInterval()
         return other.get_time_zone() - self.get_time_zone()
 
     def set_time_zone(self, dest_time_zone):
@@ -1339,12 +1424,9 @@ class TimePoint(object):
         from UTC, if any.
 
         """
-        import os
-        f = open(os.path.expanduser("~") + "/foo", "w")
-        f.write("#### TZ SET %s %s %s " % (dest_time_zone, self.get_time_zone(), dest_time_zone - self.get_time_zone()))
+        if dest_time_zone.unknown:
+            return
         self.apply_time_zone_offset(dest_time_zone - self.get_time_zone())
-        f.write(str(dest_time_zone))
-        f.close()
         self.time_zone = dest_time_zone 
 
     def to_calendar_date(self):
@@ -1479,14 +1561,11 @@ class TimePoint(object):
             if self.truncated and not other.truncated:
                 new = self.copy()
                 new_other = other.copy()
-                print new_other, " + ", new
                 prev_time_zone = new_other.get_time_zone()
-                print "PREV TIME ZONE", new_other.get_time_zone(), new.time_zone, new_other
                 new_other.set_time_zone(new.get_time_zone())
                 new_other = new_other.add_truncated(
                                   **new.get_truncated_properties())
                 new_other.set_time_zone(prev_time_zone)
-                print "NEW TIME ZONE", new_other.time_zone, new_other
                 return new_other
             if other.truncated and not self.truncated:
                 return other + self
@@ -1495,6 +1574,9 @@ class TimePoint(object):
                       "Invalid addition: can only add TimeInterval or "
                       "truncated TimePoint to TimePoint.")
         duration = other
+        if duration.get_is_in_weeks():
+            duration = other.copy()
+            duration.to_days()
         if no_copy:
             new = self
         else:
@@ -1804,13 +1886,22 @@ class TimePoint(object):
             if int(self.hour_of_day) != self.hour_of_day:
                 time_string += "," + str(self.hour_of_day - int(self.hour_of_day))[2:]
             else:
-                time_string += ":%02d" % int(self.minute_of_hour)
-                if int(self.minute_of_hour) != self.minute_of_hour:
-                    time_string += "," + str(self.minute_of_hour - int(self.minute_of_hour))[2:]
+                if self.truncated and self.minute_of_hour is None:
+                    time_string += ":00:00"
                 else:
-                    time_string += ":%02d" % int(self.second_of_minute)
-                    if int(self.second_of_minute) != self.second_of_minute:
-                        time_string += "," + str(self.second_of_minute - int(self.second_of_minute))[2:]
+                    time_string += ":%02d" % int(self.minute_of_hour)
+                    if int(self.minute_of_hour) != self.minute_of_hour:
+                        time_string += "," + str(self.minute_of_hour -
+                                                 int(self.minute_of_hour))[2:]
+                    else:
+                        if self.truncated and self.second_of_minute is None:
+                            time_string += ":00"
+                        else:
+                            seconds_int = int(self.second_of_minute)
+                            time_string += ":%02d" % seconds_int
+                            if seconds_int != self.second_of_minute:
+                                time_string += "," + str(
+                                      self.second_of_minute - seconds_int)[2:]
         if time_string:
             time_string += str(self.time_zone)
         return date_string + time_string
