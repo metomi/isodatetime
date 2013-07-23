@@ -18,6 +18,7 @@
 
 import copy
 import re
+import unittest
 
 
 DAYS_OF_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -46,8 +47,8 @@ class TimeRecurrenceParser(object):
 
     RECURRENCE_REGEXES = [
          re.compile(r"^R(?P<reps>\d+)/(?P<start>[^P][^/]*)/(?P<end>[^P].*)$"),
-         re.compile(r"^R(?P<reps>\d+)?/(?P<start>[^P][^/]*)/(?P<interval>P.+)$"),
-         re.compile(r"^R(?P<reps>\d+)?/(?P<interval>P.+)/(?P<end>[^P].*)$")]
+         re.compile(r"^R(?P<reps>\d+)?/(?P<start>[^P][^/]*)/(?P<intv>P.+)$"),
+         re.compile(r"^R(?P<reps>\d+)?/(?P<intv>P.+)/(?P<end>[^P].*)$")]
 
     def __init__(self, timepoint_parser=None, timeinterval_parser=None):
         if timepoint_parser is None:
@@ -69,22 +70,63 @@ class TimeRecurrenceParser(object):
             repetitions = None
             start_point = None
             end_point = None
-            duration = None
+            interval = None
             if "reps" in result_map and result_map["reps"] is not None:
                 repetitions = int(result_map["reps"])
             if "start" in result_map:
                 start_point = self.timepoint_parser.parse(result_map["start"])
             if "end" in result_map:
                 end_point = self.timepoint_parser.parse(result_map["end"])
-            if "interval" in result_map:
+            if "intv" in result_map:
                 interval = self.timeinterval_parser.parse(
-                                             result_map["interval"])
+                                             result_map["intv"])
             return TimeRecurrence(repetitions=repetitions,
                                   start_point=start_point,
                                   end_point=end_point,
                                   interval=interval)
-        return SyntaxError("Not a supported ISO 8601 recurrence pattern: %s" %
-                           expression)
+        raise TimeSyntaxError("Not a supported ISO 8601 recurrence pattern: %s" %
+                              expression)
+
+    def get_tests(self):
+        """Run a series of self-tests.
+
+        The amount of parsing in this class is quite small, so not many
+        tests are needed for this part.
+
+        """
+        test_points = ["-100024-02-10T17:00:00-12:30",
+                       "+000001-W45-7T06Z", "1001W011",
+                       "1955W051T06,5Z", "1999-06-01",
+                       "1967-056", "+5002000830T235902,345",
+                       "1765-W04"]
+        for reps in [None, 1, 2, 3, 10]:
+            if reps is None:
+                reps_string = ""
+            else:
+                reps_string = str(reps)
+            point_parser = TimePointParser()
+            interval_parser = TimeIntervalParser()
+            for point_expr in test_points:
+                interval_tests = interval_parser.get_tests()
+                start_point = point_parser.parse(point_expr)
+                for interval_expr, interval_result in interval_tests:
+                    interval = interval_parser.parse(interval_expr)
+                    end_point = start_point + interval
+                    if reps is not None:
+                        expr_1 = ("R" + reps_string + "/" + str(start_point) +
+                                  "/" + str(end_point))
+                        yield expr_1, {"repetitions": reps,
+                                       "start_point": start_point,
+                                       "end_point": end_point}
+                    expr_3 = ("R" + reps_string + "/" + str(start_point) +
+                              "/" + str(interval))
+                    yield expr_3, {"repetitions": reps,
+                                   "start_point": start_point,
+                                   "interval": interval}
+                    expr_4 = ("R" + reps_string + "/" + str(interval) + "/" +
+                              str(end_point))
+                    yield expr_4, {"repetitions": reps, "interval": interval,
+                                   "end_point": end_point}
 
     __call__ = parse
 
@@ -127,10 +169,10 @@ ccYYDDD
 ccYYWwwD
 ±ΫccYYWwwD""",
                                   "reduced": u"""
-ccYYMM       # Deviation (can technically be confused with hhmmss).
+ccYY-MM       # Deviation? Not clear if "basic" or "extended" in standard.
 ccYY
 cc
-±ΫccYYMM     # Deviation (see above).
+±ΫccYY-MM     # Deviation? Not clear if "basic" or "extended" in standard.
 ±ΫccYY
 ±Ϋcc
 ccYYWww
@@ -141,6 +183,7 @@ ccYYWww
 --MMDD
 --MM
 ---DD
+YYMMDD
 YYDDD
 -DDD
 YYWwwD
@@ -166,6 +209,7 @@ ccYY-Www
                                      "truncated": u"""
 -YY-MM
 --MM-DD
+YY-MM-DD
 YY-DDD
 -DDD          # Deviation from standard ?
 YY-Www-D
@@ -290,13 +334,13 @@ Z
            "-010001W053": {"year": -10001, "week_of_year": 5,
                            "day_of_week": 3, "expanded_year_digits": 2}},
                                        "reduced": {
-           "440103": {"year": 4401, "month_of_year": 3},
+           "4401-03": {"year": 4401, "month_of_year": 3},
            "1982": {"year": 1982},
            "19": {"year": 1900},
-           "+05678901": {"year": 56789, "month_of_year": 1,
-                         "expanded_year_digits": 2},
-           "-00000112": {"year": -1, "month_of_year": 12,
-                         "expanded_year_digits": 2},
+           "+056789-01": {"year": 56789, "month_of_year": 1,
+                          "expanded_year_digits": 2},
+           "-000001-12": {"year": -1, "month_of_year": 12,
+                          "expanded_year_digits": 2},
            "-789123": {"year": -789123, "expanded_year_digits": 2},
            "+450001": {"year": 450001, "expanded_year_digits": 2},
          # The following cannot be parsed - looks like truncated -YYMM.
@@ -311,6 +355,10 @@ Z
            "-9001": {"year": 90, "month_of_year": 1,
                      "truncated": True,
                      "truncated_property": "year_of_century"},
+           "960328": {"year": 96, "month_of_year": 3,
+                      "day_of_month": 28,
+                      "truncated": True,
+                      "truncated_property": "year_of_century"},
            "-90": {"year": 90, "truncated": True,
                    "truncated_property": "year_of_century"},
            "--0501": {"month_of_year": 5, "day_of_month": 1,
@@ -371,6 +419,10 @@ Z
            "-9001": {"year": 90, "month_of_year": 1,
                      "truncated": True,
                      "truncated_property": "year_of_century"},
+           "96-03-28": {"year": 96, "month_of_year": 3,
+                        "day_of_month": 28,
+                        "truncated": True,
+                        "truncated_property": "year_of_century"},
            "-90": {"year": 90, "truncated": True,
                    "truncated_property": "year_of_century"},
            "--05-01": {"month_of_year": 5, "day_of_month": 1,
@@ -585,7 +637,7 @@ Z
                         timezone_info = self.get_timezone_info(
                                                 timezone,
                                                 bad_formats=bad_formats)
-                    except SyntaxError:
+                    except TimeSyntaxError:
                         time = time_timezone
                         timezone = None
                 else:
@@ -600,6 +652,9 @@ Z
                 if timezone_info.pop("time_zone_sign", "+") == "-":
                     timezone_info["time_zone_hour"] = (
                              int(timezone_info["time_zone_hour"]) * -1)
+                    if "time_zone_minute" in timezone_info:
+                        timezone_info["time_zone_minute"] = (
+                                 int(timezone_info["time_zone_minute"]) * -1)
             time_info = self.get_time_info(time, bad_formats=bad_formats,
                                            bad_types=bad_types)
             time_info.update(timezone_info)
@@ -672,7 +727,7 @@ Z
                     result = regex.match(date_string)
                     if result:
                         return (format_key, type_key), result.groupdict()
-        raise SyntaxError(
+        raise TimeSyntaxError(
                     "Not a valid ISO 8601 date representation: %s" %
                     date_string)
 
@@ -692,7 +747,7 @@ Z
                     result = regex.match(time_string)
                     if result:
                         return result.groupdict()
-        raise SyntaxError(
+        raise TimeSyntaxError(
                     "Not a valid ISO 8601 time representation: %s" %
                     time_string)
 
@@ -707,12 +762,12 @@ Z
                 result = regex.match(timezone_string)
                 if result:
                     return result.groupdict()
-        raise SyntaxError(
+        raise TimeSyntaxError(
                     "Not a valid ISO 8601 timezone representation: %s" %
                     timezone_string)
 
-    def test(self):
-        """Run a series of self-tests."""
+    def get_tests(self):
+        """Return self-tests as (str, TimePoint kwargs) tuples."""
         format_ok_keys = ["basic", "extended"]
         if self.allow_only_basic:
             format_ok_keys = ["basic"]  
@@ -731,7 +786,7 @@ Z
                 if not self.allow_truncated and date_key == "truncated":
                     continue
                 for date_expr, info in date_format_tests[date_key].items():
-                    self._test(date_expr, info)
+                    yield date_expr, info
             for date_key in date_combo_ok_keys:
                 date_tests = copy.deepcopy(date_format_tests[date_key])
                 # Add a blank date for time-only testing.
@@ -744,7 +799,7 @@ Z
                             combo_info = {}
                             for key, value in info.items() + time_info.items():
                                 combo_info[key] = value
-                            self._test(combo_expr, combo_info)
+                            yield combo_expr, combo_info
                             timezone_items = timezone_format_tests.items()
                             for timezone_expr, timezone_info in timezone_items:
                                 tz_expr = combo_expr + timezone_expr
@@ -752,7 +807,7 @@ Z
                                 for key, value in (combo_info.items() +
                                                    timezone_info.items()):
                                     tz_info[key] = value
-                                self._test(tz_expr, tz_info)
+                                yield tz_expr, tz_info
             if not self.allow_truncated:
                 continue
             for time_key in time_format_tests:
@@ -763,7 +818,7 @@ Z
                     combo_info = {"truncated": True}
                     for key, value in time_info.items():
                         combo_info[key] = value
-                    self._test(combo_expr, combo_info)
+                    yield combo_expr, combo_info
                     timezone_items = timezone_format_tests.items()
                     for timezone_expr, timezone_info in timezone_items:
                         tz_expr = combo_expr + timezone_expr
@@ -771,21 +826,7 @@ Z
                         for key, value in (combo_info.items() +
                                            timezone_info.items()):
                             tz_info[key] = value
-                        self._test(tz_expr, tz_info)
-
-    def _test(self, expression, timepoint_kwargs):
-        timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
-        try:
-            test_data = str(self.parse(expression))
-        except SyntaxError:
-            raise ValueError("Parsing failed for %s" % expression)
-        ctrl_data = str(TimePoint(**timepoint_kwargs))
-        if ctrl_data != test_data:
-            raise ValueError("Comparison failed for expression " +
-                             "'%s' - got %s, should be %s" % (expression,
-                                                              test_data,
-                                                              ctrl_data))
-        print "OK", expression, test_data
+                        yield tz_expr, tz_info
                         
 
 class TimeIntervalParser(object):
@@ -823,11 +864,11 @@ class TimeIntervalParser(object):
                     value = float(value)
                 result_map[key] = value
             return TimeInterval(**result_map)
-        raise SyntaxError("Not an ISO 8601 duration representation: %s" %
-                          expression)
+        raise TimeSyntaxError("Not an ISO 8601 duration representation: %s" %
+                              expression)
 
-    def test(self):
-        """Run a series of self-tests."""
+    def get_tests(self):
+        """Yield self-tests as (input_string, output_string) tuples."""
 
         self.TEST_EXPRESSIONS = {
                 "P3Y": str(TimeInterval(years=3)),
@@ -853,31 +894,39 @@ class TimeIntervalParser(object):
                 "P5W": str(TimeInterval(weeks=5)),
                 "P100W": str(TimeInterval(weeks=100))}
         for expression, ctrl_result in self.TEST_EXPRESSIONS.items():
-            try:
-                test_result = str(self.parse(expression))
-            except SyntaxError:
-                raise ValueError(
-                           "TimeIntervalParser test failed to parse '%s'" %
-                           expression)
-            if test_result != ctrl_result:
-                raise ValueError(
-                           "TimeIntervalParser test failed for " +
-                           "'%s': returned %s not %s" % (expression,
-                                                         test_result,
-                                                         ctrl_result))
-            print "OK: '%s' returned '%s'" % (expression, ctrl_result)
-
-    __call__ = parse
+            yield expression, ctrl_result
 
 
-class TimePointInputError(ValueError):
+class TimeSyntaxError(ValueError):
 
-    """An error denoting invalid inputs to the TimePoint class."""
+    """An error denoting invalid input syntax."""
 
 
 class TimeRecurrence(object):
 
     """Represent a recurring time interval."""
+
+    TEST_EXPRESSIONS = [
+            ("R3/1001-W01-1T00:00:00Z/1002-W52-6T00:00:00-05:30",
+             ["1001-W01-1T00:00:00Z", "1001-W53-3T14:45:00Z",
+              "1002-W52-6T05:30:00Z" ]), 
+            ("R3/P700D/1957-W01-1T06,5Z",
+             ["1953-W10-1T06,5Z", "1955-W05-1T06,5Z", "1957-W01-1T06,5Z"]),
+            ("R3/P5DT2,5S/1001-W11-1T00:30:02,5-02:00",
+             ["1001-W09-5T00:29:57,5-02:00", "1001-W10-3T00:30:00-02:00",
+              "1001-W11-1T00:30:02,5-02:00"]),
+            ("R/+000001W457T060000Z/P4M1D",
+             ["+000001-W45-7T06:00:00Z", "+000002-W11-2T06:00:00Z",
+              "+000002-W28-6T06:00:00Z"]),
+            ("R/P4M1DT6M/+002302-002T06:00:00-00:30",
+             ["+002302-002T06:00:00-00:30", "+002301-244T05:54:00-00:30",
+              "+002301-120T05:48:00-00:30"]),
+            ("R/P30Y2DT15H/-099994-02-12T17:00:00-02:30",
+             ["-099994-02-12T17:00:00-02:30", "-100024-02-10T02:00:00-02:30",
+              "-100054-02-07T11:00:00-02:30"]),
+            ("R/-100024-02-10T17:00:00-12:30/PT5.5H",
+             ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22,5-12:30",
+              "-100024-02-11T04:00:00-12:30"])]
 
     def __init__(self, repetitions=None, start_point=None,
                  interval=None, end_point=None, min_point=None,
@@ -894,8 +943,9 @@ class TimeRecurrence(object):
             self.format_number = 1
             start_year, start_days = self.start_point.get_ordinal_date()
             start_seconds = self.start_point.get_second_of_day()
+            self.end_point.set_time_zone(self.start_point.time_zone)
             end_year, end_days = self.end_point.get_ordinal_date()
-            end_seconds = self.start_point.get_second_of_day()
+            end_seconds = self.end_point.get_second_of_day()
             diff_days = end_days - start_days
             while end_year != start_year:
                 diff_days += get_days_in_year(start_year)
@@ -907,8 +957,17 @@ class TimeRecurrence(object):
             while diff_seconds >= 86400:
                 diff_days += 1
                 diff_seconds -= 86400
-            self.interval = TimeInterval(days=diff_days,
-                                         seconds=diff_seconds)
+            if self.repetitions == 1:
+                self.interval = TimeInterval(years=0)
+            else:
+                diff_days_float = diff_days / float(
+                                       self.repetitions - 1)
+                diff_seconds_float = diff_seconds / float(
+                                       self.repetitions - 1)
+                diff_days = int(diff_days_float)
+                diff_seconds_float += (diff_days_float - diff_days) * 86400
+                self.interval = TimeInterval(days=diff_days,
+                                             seconds=diff_seconds_float)
         elif self.end_point is None:
             # Third form.
             self.format_number = 3
@@ -936,8 +995,16 @@ class TimeRecurrence(object):
             point = self.start_point
             in_reverse = False
         
+        if self.repetitions == 1 or not self.interval:
+            if self.get_is_valid(point):
+                yield point
+            point = None
+
         while point is not None:
-            yield point
+            if self.get_is_valid(point):
+                yield point
+            else:
+                break
             if in_reverse:
                 point = self.get_prev(point)
             else:
@@ -945,6 +1012,8 @@ class TimeRecurrence(object):
 
     def get_is_valid(self, timepoint):
         """Return whether the timepoint is within this recurrence series."""
+        if timepoint is None:
+            return False
         if self.start_point is not None and timepoint < self.start_point:
             return False
         if self.min_point is not None and timepoint < self.min_point:
@@ -960,13 +1029,17 @@ class TimeRecurrence(object):
         next_timepoint = timepoint + self.interval
         if self.get_is_valid(next_timepoint):
             return next_timepoint
+        if (self.format_number == 1 and next_timepoint > self.end_point):
+            diff = next_timepoint - self.end_point
+            if 2 * diff < self.interval and self.get_is_valid(self.end_point):
+                return self.end_point
         return None
 
     def get_prev(self, timepoint):
         """Return the previous timepoint before this timepoint, or None."""
         prev_timepoint = timepoint - self.interval
         if self.get_is_valid(prev_timepoint):
-            return next_timepoint
+            return prev_timepoint
         return None
 
     def __str__(self):
@@ -982,6 +1055,11 @@ class TimeRecurrence(object):
             return prefix + str(self.interval) + "/" + str(self.end_point)
         return "R/?/?"
 
+    def get_tests(self):
+        """Return a series of self-tests."""
+        for recur_expression, result_points in self.TEST_EXPRESSIONS:
+            yield recur_expression, result_points
+
 
 class TimeInterval(object):
 
@@ -991,20 +1069,85 @@ class TimeInterval(object):
                  hours=0.0, minutes=0.0, seconds=0.0):
         self.years = years
         self.months = months
-        self.days = days + 7 * weeks
+        self.weeks = None
+        self.days = days
+        if weeks is not None:
+            if days is None:
+                self.days = 7 * weeks
+            else:
+                self.days += 7 * weeks
         self.hours = hours
         self.minutes = minutes
         self.seconds = seconds
+        if (not self.years and not self.months and not self.hours and
+            not self.minutes and not self.seconds and
+            weeks and not days):
+            self.weeks = self.days / 7
+            self.years, self.months, self.days = (None, None, None)
+            self.hours, self.minutes, self.seconds = (None, None, None)
 
     def copy(self):
         """Return an unlinked copy of this instance."""
         return TimeInterval(years=self.years, months=self.months,
+                            weeks=self.weeks,
                             days=self.days, hours=self.hours,
                             minutes=self.minutes, seconds=self.seconds)
+
+    def get_days_and_seconds(self):
+        """Return a roughly-converted duration in days and seconds.
+
+        This is not particularly nice, as years have to be assumed
+        equal to 365 days, months to 30, in order to work (no context
+        can be supplied). This code needs improving.
+        
+        Seconds are returned in the range 0 <= seconds < 86400, which
+        means that a TimeInterval which has self.seconds = 86500 will
+        return 1 day, 100 seconds or (1, 100) from this method.
+
+        """
+        # TODO: Implement error calculation for the below quantities.
+        new = self.copy()
+        new.to_days()
+        new_days = new.years * 365 + new.months * 30 + new.days
+        new_seconds = new.hours * 3600 + new.minutes * 60 + new.seconds
+        while new_seconds >= 86400:
+            new_days += 1
+            new_seconds -= 86400
+        while new_seconds < 0:
+            new_days -= 1
+            new_seconds += 86400
+        return new_days, new_seconds
+
+    def get_is_in_weeks(self):
+        """Return whether we are in week representation."""
+        return (self.weeks is not None)
+
+    def to_days(self):
+        """Convert to day representation rather than weeks."""
+        if self.get_is_in_weeks():
+            for attribute in [self.years, self.months, self.hours,
+                              self.minutes, self.seconds]:
+                if attribute is None:
+                    attribute = 0
+            self.days = self.weeks * 7
+            self.weeks = None
+
+    def to_weeks(self):
+        if not self.get_is_in_weeks():
+            self.weeks = self.days / 7
+            self.years, self.months, self.days = (None, None, None)
+            self.hours, self.minutes, self.seconds = (None, None, None)
 
     def __add__(self, other):
         new = self.copy()
         if isinstance(other, TimeInterval):
+            if new.get_is_in_weeks():
+                if other.get_is_in_weeks():
+                    new.weeks += other.weeks
+                    return new
+                new.to_days()
+            elif other.get_is_in_weeks():
+                other = other.copy().to_days()
             new.years += other.years
             new.months += other.months
             new.days += other.days
@@ -1022,6 +1165,13 @@ class TimeInterval(object):
     def __sub__(self, other):
         new = self.copy()
         if isinstance(other, TimeInterval):
+            if new.get_is_in_weeks():
+                if other.get_is_in_weeks():
+                    new.weeks -= other.weeks
+                    return new
+                new.to_days()
+            elif other.get_is_in_weeks():
+                other = other.copy().to_days()
             new.years -= other.years
             new.months -= other.months
             new.days -= other.days
@@ -1044,6 +1194,9 @@ class TimeInterval(object):
                   "Invalid type for multiplication: " +
                   "'%s' should be integer." %
                   type(other).__name__)
+        if self.get_is_in_weeks():
+            new.weeks *= other
+            return new
         new.years *= other
         new.months *= other
         new.days *= other
@@ -1051,6 +1204,9 @@ class TimeInterval(object):
         new.minutes *= other
         new.seconds *= other
         return new
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def __floordiv__(self, other):
         # TODO: support float division?
@@ -1060,6 +1216,9 @@ class TimeInterval(object):
                   "Invalid type for division: " +
                   "'%s' should be integer." %
                   type(other).__name__)
+        if self.get_is_in_weeks():
+            new.weeks //= other
+            return new
         new.years //= other
         new.months //= other
         new.days //= other
@@ -1067,10 +1226,29 @@ class TimeInterval(object):
         new.minutes //= other
         new.seconds //= other
 
+    def __cmp__(self, other):
+        if not isinstance(other, TimeInterval):
+            raise TypeError(
+                  "Invalid type for comparison: " +
+                  "'%s' should be TimeInterval." %
+                  type(other).__name__)
+        my_data = self.get_days_and_seconds()
+        other_data = other.get_days_and_seconds()
+        return cmp(my_data, other_data)
+
+    def __nonzero__(self):
+        for attr in ["years", "months", "weeks", "days", "hours",
+                     "minutes", "seconds"]:
+            if getattr(self, attr, None):
+                return True
+        return False
+
     def __str__(self):
         start_string = "P"
         date_string = ""
         time_string = ""
+        if self.get_is_in_weeks():
+            return (start_string + str(self.weeks) + "W").replace(".", ",")
         if self.years:
             date_string += str(self.years) + "Y"
         if self.months:
@@ -1081,42 +1259,49 @@ class TimeInterval(object):
             if int(self.hours) == self.hours:
                 time_string += str(int(self.hours)) + "H"
             else:
-                time_string += str(self.hours) + "H"
+                time_string += ("%f" % self.hours).rstrip("0") + "H"
         if self.minutes:
             if int(self.minutes) == self.minutes:
                 time_string += str(int(self.minutes)) + "M"
             else:
-                time_string += str(self.minutes) + "M"
+                time_string += ("%f" % self.minutes).rstrip("0") + "M"
         if self.seconds:
             if int(self.seconds) == self.seconds:
                 time_string += str(int(self.seconds)) + "S"
             else:
-                time_string += str(self.seconds) + "S"
+                time_string += ("%f" % self.seconds).rstrip("0") + "S"
         if time_string:
             time_string = "T" + time_string
         elif not date_string:
             # Zero duration.
             date_string = "0Y"
-        return start_string + date_string + time_string
+        total_string = start_string + date_string + time_string
+        return total_string.replace(".", ",")
 
 
 class TimeZone(TimeInterval):
 
     """Represent a time zone offset."""
 
+    def __init__(self, *args, **kwargs):
+        self.unknown = kwargs.pop("unknown", False)
+        super(TimeZone, self).__init__(*args, **kwargs)
+
     def copy(self):
         """Return an unlinked copy of this instance."""
-        return TimeZone(hours=self.hours, minutes=self.minutes)
+        return TimeZone(hours=self.hours, minutes=self.minutes,
+                        unknown=self.unknown)
 
     def __str__(self):
+        if self.unknown:
+            return ""
         if self.hours == 0 and self.minutes == 0:
             return "Z"
         else:
-            if self.hours > 0:
-                time_string = "+%02d" % self.hours
-            else:
-                time_string = "-%02d" % abs(self.hours)
-            return time_string + ":%02d" % self.minutes
+            time_string = "+%02d:%02d"
+            if self.hours < 0 or (self.hours == 0 and self.minutes < 0):
+                time_string = "-%02d:%02d"
+            return time_string % (abs(self.hours), abs(self.minutes))
 
 
 class TimePoint(object):
@@ -1134,7 +1319,11 @@ class TimePoint(object):
         self.day_of_month = kwargs.get("day_of_month")
         self.day_of_week = kwargs.get("day_of_week")
         self.week_of_year = kwargs.get("week_of_year")
-        self.hour_of_day = kwargs.get("hour_of_day", 0)
+        if self.truncated:
+            time_default = None
+        else:
+            time_default = 0
+        self.hour_of_day = kwargs.get("hour_of_day", time_default)
         if "hour_of_day_decimal" in kwargs:
             if self.hour_of_day is None:
                 raise TimePointInputError(
@@ -1156,7 +1345,7 @@ class TimePoint(object):
                 raise TimePointInputError(
                           "Invalid input: seconds - already have minute decimals")
         else:
-            self.minute_of_hour = kwargs.get("minute_of_hour", 0)
+            self.minute_of_hour = kwargs.get("minute_of_hour", time_default)
         if "second_of_minute_decimal" in kwargs:
             if "second_of_minute" not in kwargs:
                 raise TimePointInputError(
@@ -1164,12 +1353,17 @@ class TimePoint(object):
             self.second_of_minute = kwargs["second_of_minute"]
             self.second_of_minute += kwargs["second_of_minute_decimal"]
         else:
-            self.second_of_minute = kwargs.get("second_of_minute", 0)
+            self.second_of_minute = kwargs.get("second_of_minute", time_default)
         self.time_zone = TimeZone()
+        has_unknown_tz = True
         if "time_zone_hour" in kwargs:
+            has_unknown_tz = False
             self.time_zone.hours = kwargs.get("time_zone_hour")
         if "time_zone_minute" in kwargs:
+            has_unknown_tz = False
             self.time_zone.minutes = kwargs.get("time_zone_minute")
+        has_unknown_tz = self.truncated and has_unknown_tz
+        self.time_zone.unknown = has_unknown_tz
         if not self.truncated:
             # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
             if (self.month_of_year is None and self.week_of_year is None and
@@ -1179,7 +1373,6 @@ class TimePoint(object):
                 self.day_of_month = 1
             if self.week_of_year is not None and self.day_of_week is None:
                 self.day_of_week = 1
-            
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""
@@ -1249,6 +1442,8 @@ class TimePoint(object):
 
     def get_time_zone_utc(self):
         """Return whether the time zone is explicitly in UTC."""
+        if self.time_zone.unknown:
+            return False
         return self.time_zone.hours == 0 and self.time_zone.minutes == 0
 
     def get_week_date(self):
@@ -1263,6 +1458,24 @@ class TimePoint(object):
         if self.get_is_week_date():
             return self.year, self.week_of_year, self.day_of_week
 
+    def apply_time_zone_offset(self, offset):
+        """Apply a time zone shift represented by a TimeInterval."""
+        if offset.minutes:
+            if self.minute_of_hour is None:
+                self.hour_of_day += offset.minutes / 60.0
+            else:
+                self.minute_of_hour += offset.minutes
+            self._tick_over()
+        if offset.hours:
+            self.hour_of_day += offset.hours
+            self._tick_over()
+
+    def get_time_zone_offset(self, other):
+        """Get the difference in hours and minutes between time zones."""
+        if other.get_time_zone().unknown or self.get_time_zone().unknown:
+            return TimeInterval()
+        return other.get_time_zone() - self.get_time_zone()
+
     def set_time_zone(self, dest_time_zone):
         """Adjust to the new time zone.
 
@@ -1270,17 +1483,10 @@ class TimePoint(object):
         from UTC, if any.
 
         """
-        offset = dest_time_zone - self.time_zone
-        if offset.minutes:
-            if self.minute_of_hour is None:
-                self.hour_of_day += offset.minutes / 3600.0
-            else:
-                self.minute_of_hour += offset.minutes
-            self._tick_over()
-        if offset.hours:
-            self.hour_of_day += offset.hours
-            self._tick_over()
-        self.time_zone = dest_time_zone          
+        if dest_time_zone.unknown:
+            return
+        self.apply_time_zone_offset(dest_time_zone - self.get_time_zone())
+        self.time_zone = dest_time_zone 
 
     def to_calendar_date(self):
         """Reformat the date in years, month-of-year, day-of-month."""
@@ -1314,6 +1520,19 @@ class TimePoint(object):
         self.week_of_year = None
         self.day_of_week = None
         return self
+
+    def get_largest_truncated_property_name(self):
+        """Return the largest unit in a truncated representation."""
+        if not self.truncated:
+            return None
+        prop_dict = self.get_truncated_properties()
+        for attr in ["year_of_century", "year_of_decade", "month_of_year",
+                     "week_of_year", "day_of_year", "day_of_month",
+                     "day_of_week", "hour_of_day", "minute_of_hour",
+                     "second_of_minute"]:
+            if attr in prop_dict:
+                return attr
+        return None
 
     def get_truncated_properties(self):
         """Return a map of properties if this is a truncated representation."""
@@ -1400,19 +1619,23 @@ class TimePoint(object):
         if isinstance(other, TimePoint):
             if self.truncated and not other.truncated:
                 new = self.copy()
-                new.set_time_zone(other.get_time_zone())
-                return other.add_truncated(
-                             **new.get_truncated_properties())
+                new_other = other.copy()
+                prev_time_zone = new_other.get_time_zone()
+                new_other.set_time_zone(new.get_time_zone())
+                new_other = new_other.add_truncated(
+                                  **new.get_truncated_properties())
+                new_other.set_time_zone(prev_time_zone)
+                return new_other
             if other.truncated and not self.truncated:
-                new = other.copy()
-                new.set_time_zone(self.get_time_zone())
-                return self.add_truncated(
-                             **new.get_truncated_properties())
+                return other + self
         if not isinstance(other, TimeInterval):
             raise TypeError(
                       "Invalid addition: can only add TimeInterval or "
                       "truncated TimePoint to TimePoint.")
         duration = other
+        if duration.get_is_in_weeks():
+            duration = other.copy()
+            duration.to_days()
         if no_copy:
             new = self
         else:
@@ -1448,14 +1671,23 @@ class TimePoint(object):
             new._add_months(duration.months)
         if duration.years:
             new.year += duration.years
-            month_index = (self.month_of_year - 1) % 12
-            if get_is_leap_year(new.year):
-                max_day_in_new_month = DAYS_OF_MONTHS_LEAP[month_index]
-            else:
-                max_day_in_new_month = DAYS_OF_MONTHS[month_index]
-            if new.day_of_month > max_day_in_new_month:
-                # For example, when Feb 29 - 1 year = Feb 28.
-                new.day_of_month = max_day_in_new_month
+            if new.get_is_calendar_date():
+                month_index = (new.month_of_year - 1) % 12
+                if get_is_leap_year(new.year):
+                    max_day_in_new_month = DAYS_OF_MONTHS_LEAP[month_index]
+                else:
+                    max_day_in_new_month = DAYS_OF_MONTHS[month_index]
+                if new.day_of_month > max_day_in_new_month:
+                    # For example, when Feb 29 - 1 year = Feb 28.
+                    new.day_of_month = max_day_in_new_month
+            elif new.get_is_ordinal_date():
+                max_days_in_year = get_days_in_year(new.year)
+                if max_days_in_year > new.day_of_year:
+                    new.day_of_year = max_days_in_year
+            elif new.get_is_week_date():
+                max_weeks_in_year = get_weeks_in_year(new.year)
+                if max_weeks_in_year > new.week_of_year:
+                    new.week_of_year = max_weeks_in_year
         return new
 
     def copy(self):
@@ -1464,7 +1696,8 @@ class TimePoint(object):
         for attr in ["expanded_year_digits", "year", "month_of_year",
                      "day_of_year", "day_of_month", "day_of_week",
                      "week_of_year", "hour_of_day", "minute_of_hour",
-                     "second_of_minute"]:
+                     "second_of_minute", "truncated", "truncated_property",
+                     "format_function"]:
             setattr(dummy_timepoint, attr, getattr(self, attr))
         dummy_timepoint.time_zone = self.time_zone.copy()
         return dummy_timepoint
@@ -1483,12 +1716,13 @@ class TimePoint(object):
             my_date = self.get_ordinal_date()
             other_date = other.get_ordinal_date()
         my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [self.get_second_of_day()]
+        other_datetime = list(other_date) + [other.get_second_of_day()]
         return cmp(my_datetime, other_datetime)
 
     def __sub__(self, other):
         if isinstance(other, TimePoint):
-            other = other.copy().set_time_zone(self.get_time_zone())
+            other = other.copy()
+            other.set_time_zone(self.get_time_zone())
             my_year, my_day_of_year = self.get_ordinal_date()
             other_year, other_day_of_year = other.get_ordinal_date()
             diff_year = my_year - other_year
@@ -1499,8 +1733,8 @@ class TimePoint(object):
             else:
                 for year in range(my_year, other_year):
                     diff_day += get_days_in_year(year)
-            my_time = self.get_time()
-            other_time = other.get_time()
+            my_time = self.get_hour_minute_second()
+            other_time = other.get_hour_minute_second()
             diff_hour = my_time[0] - other_time[0]
             diff_minute = my_time[1] - other_time[1]
             diff_second = my_time[2] - other_time[2]
@@ -1621,6 +1855,8 @@ class TimePoint(object):
                     for month, day in iter_months_days(
                                             start_year, in_reverse=True):
                         num_days -= 1
+                        if num_days == self.day_of_month:
+                            break
                 self.year = start_year
                 self.month_of_year = month
                 self.day_of_month = day
@@ -1653,8 +1889,8 @@ class TimePoint(object):
                                 self.day_of_month = day
                                 return
 
-    def __str__(self):
-        if self.format_function is not None:
+    def __str__(self, override_custom=False):
+        if self.format_function is not None and not override_custom:
             return self.format_function(self)
         year_digits = 4 + self.expanded_year_digits
         year_string = "%0" + str(year_digits) + "d"
@@ -1708,15 +1944,25 @@ class TimePoint(object):
         if self.hour_of_day is not None:
             time_string = "T%02d" % int(self.hour_of_day)
             if int(self.hour_of_day) != self.hour_of_day:
-                time_string += "," + str(self.hour_of_day - int(self.hour_of_day))[2:]
+                remainder = self.hour_of_day - int(self.hour_of_day)
+                time_string += _format_remainder(remainder)
             else:
-                time_string += ":%02d" % int(self.minute_of_hour)
-                if int(self.minute_of_hour) != self.minute_of_hour:
-                    time_string += "," + str(self.minute_of_hour - int(self.minute_of_hour))[2:]
+                if self.truncated and self.minute_of_hour is None:
+                    time_string += ":00:00"
                 else:
-                    time_string += ":%02d" % int(self.second_of_minute)
-                    if int(self.second_of_minute) != self.second_of_minute:
-                        time_string += "," + str(self.second_of_minute - int(self.second_of_minute))[2:]
+                    time_string += ":%02d" % int(self.minute_of_hour)
+                    if int(self.minute_of_hour) != self.minute_of_hour:
+                        remainder = self.minute_of_hour - int(self.minute_of_hour)
+                        time_string += _format_remainder(remainder)
+                    else:
+                        if self.truncated and self.second_of_minute is None:
+                            time_string += ":00"
+                        else:
+                            seconds_int = int(self.second_of_minute)
+                            time_string += ":%02d" % seconds_int
+                            if seconds_int != self.second_of_minute:
+                                remainder = self.second_of_minute - seconds_int
+                                time_string += _format_remainder(remainder)
         if time_string:
             time_string += str(self.time_zone)
         return date_string + time_string
@@ -1743,6 +1989,14 @@ def cache_results(func):
                 cache[key] = results
             return results
     return wrap_func
+
+
+def _format_remainder(float_time_number):
+    """Format a floating point remainder of a time unit."""
+    string = "," + ("%f" % float_time_number)[2:].rstrip("0")
+    if string == ",":
+        return ""
+    return string
 
 
 @cache_results
@@ -1997,7 +2251,12 @@ def get_days_since_1_ad(year):
         return get_days_in_year(year)
     elif year < 1:
         return 0
-    return get_days_since_1_ad(year - 1) + get_days_in_year(year)
+    start_year = 0
+    days = 0
+    while start_year < year:
+        start_year += 1
+        days += get_days_in_year(start_year)
+    return days
 
 
 @cache_results
@@ -2063,88 +2322,124 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
                     yield i + 1, day
 
 
-def parse_timepoint_expression(timepoint_expression):
-    parser = TimePointParser()
-    return parser.parse_timepoint_expression(timepoint_expression)
+class TestSuite(unittest.TestCase):
+
+    """Test the functionality of parsers and data model manipulation."""
+
+    def assertEqual(self, test, control, source=None):
+        """Override the assertEqual method to provide more information."""
+        if source is None:
+            info = None
+        else:
+            info = ("Source %s produced\n%s, should be\n%s" %
+                    (source, test, control))
+        super(TestSuite, self).assertEqual(test, control, info)
+
+    def test_timeinterval_parser(self):
+        """Test the time interval parsing."""
+        parser = TimeIntervalParser()
+        for expression, ctrl_result in parser.get_tests():
+            try:
+                test_result = str(parser.parse(expression))
+            except TimeSyntaxError:
+                raise ValueError(
+                            "TimeIntervalParser test failed to parse '%s'" %
+                            expression)
+            self.assertEqual(test_result, ctrl_result, expression)
+
+    def test_timepoint(self):
+        """Test the manipulation of dates and times (takes a while)."""
+        import datetime
+        import random
+        my_date = datetime.datetime(1801, 1, 1)
+        while my_date <= datetime.datetime(2401, 2, 1):
+            ctrl_data = my_date.isocalendar()
+            test_date = TimePoint(year=my_date.year, month_of_year=my_date.month,
+                                  day_of_month=my_date.day)
+            test_data = test_date.get_week_date()
+            self.assertEqual(test_data, ctrl_data)
+            ctrl_data = (my_date.year, my_date.month, my_date.day)
+            test_data = test_date.to_week_date().get_calendar_date()
+            self.assertEqual(test_data, ctrl_data)
+            ctrl_data = my_date.toordinal()
+            year, day_of_year = test_date.get_ordinal_date()
+            test_data = day_of_year
+            test_data += get_days_since_1_ad(year - 1)
+            self.assertEqual(test_data, ctrl_data)
+            for attribute, attr_max in [("weeks", 110),
+                                        ("days", 770),
+                                        ("hours", 770*24),
+                                        ("minutes", 770 * 24 * 60),
+                                        ("seconds", 770 * 24 * 60 * 60)]:
+                delta_attr = random.randrange(0, attr_max)
+                kwargs = {attribute: delta_attr}
+                ctrl_data = my_date + datetime.timedelta(**kwargs)
+                ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
+                test_data = (test_date + TimeInterval(**kwargs)).get_calendar_date()
+                self.assertEqual(test_data, ctrl_data)
+                ctrl_data = (my_date - datetime.timedelta(**kwargs))
+                ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
+                test_data = (test_date - TimeInterval(**kwargs)).get_calendar_date()
+                self.assertEqual(test_data, ctrl_data)
+            ctrl_data = (my_date + datetime.timedelta(minutes=450) +
+                         datetime.timedelta(hours=5) -
+                         datetime.timedelta(seconds=500, weeks=5))
+            ctrl_data = [(ctrl_data.year, ctrl_data.month, ctrl_data.day),
+                         (ctrl_data.hour, ctrl_data.minute, ctrl_data.second)]
+            test_data = (test_date + TimeInterval(minutes=450) +
+                         TimeInterval(hours=5) - TimeInterval(weeks=5, seconds=500))
+            test_data = [test_data.get_calendar_date(),
+                         test_data.get_hour_minute_second()]
+            self.assertEqual(test_data, ctrl_data)
+            timedelta = datetime.timedelta(days=1)
+            my_date += timedelta
+
+    def test_timepoint_parser(self):
+        """Test the parsing of date/time expressions."""
+        parser = TimePointParser(allow_truncated=True)
+        for expression, timepoint_kwargs in parser.get_tests():
+            timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
+            try:
+                test_data = str(parser.parse(expression))
+            except TimeSyntaxError:
+                raise ValueError("Parsing failed for %s" % expression)
+            ctrl_data = str(TimePoint(**timepoint_kwargs))
+            self.assertEqual(test_data, ctrl_data, expression)
+
+    def test_timerecurrence(self):
+        """Test the recurring date/time series data model."""
+        parser = TimeRecurrenceParser()
+        for expression, ctrl_results in TimeRecurrence.TEST_EXPRESSIONS:
+            try:
+                test_recurrence = parser.parse(expression)
+            except TimeSyntaxError:
+                raise ValueError(
+                            "TimeRecurrenceParser test failed to parse '%s'" %
+                            expression)
+            test_results = []
+            for i, time_point in enumerate(test_recurrence):
+                if i > 2:
+                    break
+                test_results.append(str(time_point))
+            self.assertEqual(test_results, ctrl_results, expression)
+
+    def test_timerecurrence_parser(self):
+        """Test the recurring date/time series parsing."""
+        parser = TimeRecurrenceParser()
+        for expression, test_info in parser.get_tests():
+            try:
+                test_data = str(parser.parse(expression))
+            except TimeSyntaxError:
+                raise ValueError("Parsing failed for %s" % expression)
+            ctrl_data = str(TimeRecurrence(**test_info))
+            self.assertEqual(test_data, ctrl_data, expression)
 
 
-def test():
-    import datetime
-    import random
-    my_date = datetime.datetime(100, 11, 1)
-    while my_date <= datetime.datetime(4001, 2, 1):
-        ctrl_data = my_date.isocalendar()
-        test_date = TimePoint(year=my_date.year, month_of_year=my_date.month,
-                              day_of_month=my_date.day)
-        test_data = test_date.get_week_date()
-        if ctrl_data == test_data:
-            pass
-        else:
-            print "DIFF", my_date.isoformat(), ctrl_data, test_data
-            raise ValueError("week date conversion test failed for %s" % my_date.isoformat())
-        ctrl_data = (my_date.year, my_date.month, my_date.day)
-        test_data = test_date.to_week_date().get_calendar_date()
-        if ctrl_data == test_data:
-            pass
-        else:
-            print "DIFF", my_date.isoformat(), ctrl_data, test_data
-            raise ValueError("calendar->week->calendar test failed for %s" % my_date.isoformat())
-        ctrl_data = my_date.toordinal()
-        year, day_of_year = test_date.get_ordinal_date()
-        test_data = day_of_year
-        test_data += get_days_since_1_ad(year - 1)
-        if test_data == ctrl_data:
-            pass
-        else:
-            print "DIFF", my_date.isoformat(), ctrl_data, test_data
-            raise ValueError("ordinal test failed for %s" % my_date.isoformat())
-        for attribute, attr_max in [("weeks", 110),
-                                    ("days", 770),
-                                    ("hours", 770*24),
-                                    ("minutes", 770 * 24 * 60),
-                                    ("seconds", 770 * 24 * 60 * 60)]:
-            delta_attr = random.randrange(0, attr_max)
-            kwargs = {attribute: delta_attr}
-            ctrl_data = my_date + datetime.timedelta(**kwargs)
-            ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
-            test_data = (test_date + TimeInterval(**kwargs)).get_calendar_date()
-            if test_data == ctrl_data:
-                pass
-            else:
-                print "DIFF", my_date.isoformat(), ctrl_data, test_data
-                raise ValueError("add num test failed for %s + %s" % my_date.isoformat(), datetime.timedelta(**kwargs))
-            ctrl_data = (my_date - datetime.timedelta(**kwargs))
-            ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
-            test_data = (test_date - TimeInterval(**kwargs)).get_calendar_date()
-            if test_data == ctrl_data:
-                pass
-            else:
-                print "DIFF", my_date.isoformat(), ctrl_data, test_data
-                raise ValueError("subtract num test failed for %s" % my_date.isoformat(), datetime.timedelta(**kwargs))
-        ctrl_data = (my_date + datetime.timedelta(minutes=450) +
-                     datetime.timedelta(hours=5) -
-                     datetime.timedelta(seconds=500, weeks=5))
-        ctrl_data = [(ctrl_data.year, ctrl_data.month, ctrl_data.day),
-                     (ctrl_data.hour, ctrl_data.minute, ctrl_data.second)]
-        test_data = (test_date + TimeInterval(minutes=450) +
-                     TimeInterval(hours=5) - TimeInterval(weeks=5, seconds=500))
-        test_data = [test_data.get_calendar_date(),
-                     test_data.get_hour_minute_second()]
-        if test_data == ctrl_data:
-            pass
-        else:
-            print "DIFF", my_date.isoformat(), ctrl_data, test_data
-            raise ValueError("complex duration test failed for %s" % my_date.isoformat())
-        print my_date.isoformat()
-        timedelta = datetime.timedelta(days=1)
-        my_date += timedelta
-        
+def parse_timepoint_expression(timepoint_expression, **kwargs):
+    parser = TimePointParser(**kwargs)
+    return parser.parse(timepoint_expression)
 
 
-def test_and_profile():
-    import cProfile, pstats
-    import tempfile
-    f = tempfile.NamedTemporaryFile()
-    cProfile.runctx("test()", globals(), locals(), f.name)
-    stats = pstats.Stats(f.name)
-    stats.strip_dirs().sort_stats('cumulative').print_stats(200)
+if __name__ == "__main__":
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestSuite)
+    unittest.TextTestRunner(verbosity=2).run(suite)
