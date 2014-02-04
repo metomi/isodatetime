@@ -18,6 +18,15 @@
 
 """This provides ISO 8601 parsing functionality."""
 
+import re
+
+import isodata
+
+
+class TimeSyntaxError(ValueError):
+
+    """An error denoting invalid input syntax."""
+
 
 class TimeRecurrenceParser(object):
 
@@ -70,10 +79,10 @@ class TimeRecurrenceParser(object):
             if "intv" in result_map:
                 interval = self.timeinterval_parser.parse(
                     result_map["intv"])
-            return TimeRecurrence(repetitions=repetitions,
-                                  start_point=start_point,
-                                  end_point=end_point,
-                                  interval=interval)
+            return isodata.TimeRecurrence(repetitions=repetitions,
+                                          start_point=start_point,
+                                          end_point=end_point,
+                                          interval=interval)
         raise TimeSyntaxError(
             "Not a supported ISO 8601 recurrence pattern: %s" %
             expression)
@@ -456,12 +465,10 @@ Z
             except (IOError, ValueError) as e:
                 pass
             if key == "time_zone_utc" and value == "Z":
-                value = True
-            if key == "year_sign":
-                if value == "+":
-                    value = 1
-                else:
-                    value = -1
+                time_info.pop(key)
+                time_info.update({"time_zone_hour": 0,
+                                  "time_zone_minute": 0})
+                continue
             time_info[key] = value
         info.update(time_info)
         if info.pop("truncated", False):
@@ -470,7 +477,7 @@ Z
             info["truncated_property"] = truncated_property
         if self.format_function is not None:
             info.update({"format_function": self.format_function})
-        return TimePoint(**info)
+        return isodata.TimePoint(**info)
 
     def get_date_info(self, date_string, bad_types=None):
         """Return the format and properties from a date string."""
@@ -561,7 +568,7 @@ class TimeIntervalParser(object):
                         value = value.replace(",", ".")
                     value = float(value)
                 result_map[key] = value
-            return TimeInterval(**result_map)
+            return isodata.TimeInterval(**result_map)
         raise TimeSyntaxError("Not an ISO 8601 duration representation: %s" %
                               expression)
 

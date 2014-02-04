@@ -16,11 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
 
-"""This provides ISO 8601 parsing and data model functionality."""
-
-import copy
-import re
-import unittest
+"""This provides ISO 8601 data model functionality."""
 
 
 DAYS_OF_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -30,41 +26,28 @@ WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
                             "ordinal": (2000, 3)}
 
 
-class TimeSyntaxError(ValueError):
+class BadInputError(ValueError):
 
-    """An error denoting invalid input syntax."""
+    """An error raised when constructor inputs are invalid."""
+
+    pass
 
 
 class TimeRecurrence(object):
 
     """Represent a recurring time interval."""
 
-    TEST_EXPRESSIONS = [
-        ("R3/1001-W01-1T00:00:00Z/1002-W52-6T00:00:00-05:30",
-         ["1001-W01-1T00:00:00Z", "1001-W53-3T14:45:00Z",
-          "1002-W52-6T05:30:00Z"]),
-        ("R3/P700D/1957-W01-1T06,5Z",
-         ["1953-W10-1T06,5Z", "1955-W05-1T06,5Z", "1957-W01-1T06,5Z"]),
-        ("R3/P5DT2,5S/1001-W11-1T00:30:02,5-02:00",
-         ["1001-W09-5T00:29:57,5-02:00", "1001-W10-3T00:30:00-02:00",
-          "1001-W11-1T00:30:02,5-02:00"]),
-        ("R/+000001W457T060000Z/P4M1D",
-         ["+000001-W45-7T06:00:00Z", "+000002-W11-2T06:00:00Z",
-          "+000002-W28-6T06:00:00Z"]),
-        ("R/P4M1DT6M/+002302-002T06:00:00-00:30",
-         ["+002302-002T06:00:00-00:30", "+002301-244T05:54:00-00:30",
-          "+002301-120T05:48:00-00:30"]),
-        ("R/P30Y2DT15H/-099994-02-12T17:00:00-02:30",
-         ["-099994-02-12T17:00:00-02:30", "-100024-02-10T02:00:00-02:30",
-          "-100054-02-07T11:00:00-02:30"]),
-        ("R/-100024-02-10T17:00:00-12:30/PT5.5H",
-         ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22,5-12:30",
-          "-100024-02-11T04:00:00-12:30"])
-    ]
-
     def __init__(self, repetitions=None, start_point=None,
                  interval=None, end_point=None, min_point=None,
                  max_point=None):
+        _type_checker(
+            (repetitions, "repetitions", None, int),
+            (start_point, "start_point", None, TimePoint),
+            (interval, "interval", None, TimeInterval),
+            (end_point, "end_point", None, TimePoint),
+            (min_point, "min_point", None, TimePoint),
+            (max_point, "max_point", None, TimePoint)
+        )
         self.repetitions = repetitions
         self.start_point = start_point
         self.interval = interval
@@ -119,7 +102,8 @@ class TimeRecurrence(object):
                     point -= self.interval
                 self.start_point = point
         else:
-            raise ValueError("Unsupported or invalid recurrence information.")
+            raise BadInputError(
+                "Unsupported or invalid recurrence information.")
 
     def __iter__(self):
         if self.start_point is None:
@@ -201,6 +185,15 @@ class TimeInterval(object):
 
     def __init__(self, years=0, months=0, weeks=0, days=0,
                  hours=0.0, minutes=0.0, seconds=0.0):
+        _type_checker(
+            (years, "years", int, float, None),
+            (months, "months", int, float, None),
+            (weeks, "weeks", int, float, None),
+            (days, "days", int, float, None),
+            (hours, "hours", int, float, None),
+            (minutes, "minutes", int, float, None),
+            (seconds, "seconds", int, float, None)
+        )
         self.years = years
         self.months = months
         self.weeks = None
@@ -446,65 +439,185 @@ class TimeZone(TimeInterval):
 
 class TimePoint(object):
 
-    """Represent an instant in time."""
+    """Represent an instant in time.
 
-    def __init__(self, **kwargs):
-        self.format_function = kwargs.get("format_function")
-        self.expanded_year_digits = kwargs.get("expanded_year_digits", 0)
-        self.truncated = kwargs.get("truncated", False)
-        self.truncated_property = kwargs.get("truncated_property")
-        self.year = kwargs.get("year")
-        self.month_of_year = kwargs.get("month_of_year")
-        self.day_of_year = kwargs.get("day_of_year")
-        self.day_of_month = kwargs.get("day_of_month")
-        self.day_of_week = kwargs.get("day_of_week")
-        self.week_of_year = kwargs.get("week_of_year")
-        if self.truncated:
-            time_default = None
-        else:
-            time_default = 0
-        self.hour_of_day = kwargs.get("hour_of_day", time_default)
-        if "hour_of_day_decimal" in kwargs:
+    An ISO 8601 date/time instant can be represented in three
+    separate ways:
+    Calendar date: calendar year, calendar month,
+    calendar day of the month
+    Ordinal date: calendar year, calendar day of the year
+    Week date: calendar (week) year, calendar week,
+    calendar day of the week (note: week years are not identical to
+    calendar years).
+
+    This class maintains a date/time instant in the original
+    representation with which it was invoked - so it may be in any of
+    these formats. See the TimePoint.to_*_date methods for internal
+    conversions between formats.
+
+    Where properties are not given (consistent with ISO 8601 reduced
+    precision dates), they will be given the expected defaults if
+    truncation is not specified. For example, if only the year and the
+    month_of_year is given, the day_of_month will be set to 1.
+
+    Time zone information defaults to UTC. It is essential to provide it
+    unless you are happy with this behaviour. A date/time
+    representation is ambiguous without it.
+
+    Keyword arguments (usually default to None if not provided):
+    expanded_year_digits (default 0) - an agreed-upon number of extra
+    digits to represent the year, beyond the default of 4. For example,
+    a value of 2 would suggest representing the year 2000 as 002000.
+    year - a positive or negative integer. Note that ISO 8601 implies
+    using non-zero expanded_year_digits when using negative integers.
+    Remember we are using the proleptic Gregorian calendar, with a year
+    zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
+    should be represented as -1.
+    month_of_year - an integer between 1 and 12 inclusive, if using the
+    calendar date representation.
+    week_of_year - an integer between 1 and 52/53 (depending on the
+    year), if using the week date representation.
+    day_of_year - an integer between 1 and 365/366 (depending on the
+    year), if using the ordinal date representation.
+    day_of_month - an integer between 1 and 28/29/30/31 (depending on
+    the month), if using the calendar date representation.
+    day_of_week - an integer between 1 and 7, if using the week date
+    representation.
+    hour_of_day - an integer between 1 and 24.
+    hour_of_day_decimal - a float between 0 and 1, if using decimal
+    accuracy for hours. Note that you should not provide lower units
+    such as minute_of_hour or second_of_minute when using this.
+    minute_of_hour - an integer between 0 and 59.
+    minute_of_hour_decimal - a float between 0 and 1, if using decimal
+    accuracy for minutes. Note that you should not provide lower units
+    such as second_of_minute when using this.
+    second_of_minute - an integer between 0 and 59 (note: no support
+    for leap seconds at 60 yet)
+    second_of_minute_decimal - a float between 0 and 1, if using decimal
+    accuracy for seconds.
+    time_zone_hour - (default 0) an integer denoting the hour timezone
+    offset from UTC. Note that unless this is a truncated
+    representation, 0 will be assumed if this is not provided.
+    time_zone_minute - (default 0) an integer between 0 and 59 denoting
+    the minute component of the timezone offset from UTC.
+    format_function - a custom callable to provide your own str()
+    implementation.
+    truncated - (default False) a boolean denoting whether the
+    date/time instant has purposefully incomplete information
+    (ISO 8601:2000 truncation).
+    truncated_property - a string that can either be "year_of_decade"
+    or "year_of_century". This is used for truncated representations to
+    distinguish between the two ways of truncating the year.
+
+    """
+
+    def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
+                 week_of_year=None, day_of_year=None, day_of_month=None,
+                 day_of_week=None, hour_of_day=None, hour_of_day_decimal=None,
+                 minute_of_hour=None, minute_of_hour_decimal=None,
+                 second_of_minute=None, second_of_minute_decimal=None,
+                 time_zone_hour=None, time_zone_minute=None,
+                 format_function=None, truncated=False,
+                 truncated_property=None):
+        _type_checker(
+            (expanded_year_digits, "expanded_year_digits", int),
+            (year, "year", None, int),
+            (month_of_year, "month_of_year", None, int),
+            (week_of_year, "week_of_year", None, int),
+            (day_of_year, "day_of_year", None, int),
+            (day_of_month, "day_of_month", None, int),
+            (day_of_week, "day_of_week", None, int),
+            (hour_of_day, "hour_of_day", None, int, float),
+            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
+            (minute_of_hour, "minute_of_hour", None, int, float),
+            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
+            (second_of_minute, "second_of_minute", None, int, float),
+            (second_of_minute_decimal, "second_of_minute_decimal", None,
+             float),
+            (time_zone_hour, "time_zone_hour", None, int),
+            (time_zone_minute, "time_zone_minute", None, int)
+        )
+        if format_function is not None and not callable(format_function):
+            raise BadInputError(
+                "Invalid input for format_function: {0}".format(
+                     format_function))
+        if (truncated_property is not None and
+                truncated_property not in ["year_of_decade",
+                                           "year_of_century"]):
+            raise BadInputError(
+                "Invalid input for truncated_property: {0}".format(
+                    truncated_property))
+        self.format_function = format_function
+        self.expanded_year_digits = _int_caster(expanded_year_digits,
+                                                "expanded_year_digits")
+        self.truncated = truncated
+        self.truncated_property = truncated_property
+        self.year = _int_caster(year, "year", allow_none=True)
+        self.month_of_year = _int_caster(month_of_year, "year",
+                                         allow_none=True)
+        self.day_of_year = _int_caster(day_of_year, "day_of_year",
+                                       allow_none=True)
+        self.day_of_month = _int_caster(day_of_month, "day_of_month",
+                                        allow_none=True)
+        self.day_of_week = _int_caster(day_of_week, "day_of_week",
+                                       allow_none=True)
+        self.week_of_year = _int_caster(week_of_year, "week_of_year",
+                                        allow_none=True)
+        self.hour_of_day = _int_caster(hour_of_day, "hour_of_day",
+                                       allow_none=True)
+        if hour_of_day_decimal is not None:
             if self.hour_of_day is None:
                 raise TimePointInputError(
                     "Invalid input: hour decimal points - but not hours")
-            self.hour_of_day += kwargs.get("hour_of_day_decimal")
-            if "minute_of_hour" in kwargs:
+            self.hour_of_day += float(hour_of_day_decimal)
+            if minute_of_hour is not None:
                 raise TimePointInputError(
                     "Invalid input: minutes - already have hour decimals")
-            if "second_of_minute" in kwargs:
+            if second_of_minute is not None:
                 raise TimePointInputError(
                     "Invalid input: seconds - already have hour decimals")
-        if "minute_of_hour_decimal" in kwargs:
-            if "minute_of_hour" not in kwargs:
+        if minute_of_hour_decimal is not None:
+            if minute_of_hour is None:
                 raise TimePointInputError(
                     "Invalid input: minute decimal points - but not minutes")
-            self.minute_of_hour = kwargs["minute_of_hour"]
-            self.minute_of_hour += kwargs["minute_of_hour_decimal"]
-            if "second_of_minute" in kwargs:
+            self.minute_of_hour = _int_caster(
+                minute_of_hour, "minute_of_hour")
+            self.minute_of_hour += float(minute_of_hour_decimal)
+            if second_of_minute is not None:
                 raise TimePointInputError(
                     "Invalid input: seconds - already have minute decimals")
         else:
-            self.minute_of_hour = kwargs.get("minute_of_hour", time_default)
-        if "second_of_minute_decimal" in kwargs:
-            if "second_of_minute" not in kwargs:
+            self.minute_of_hour = _int_caster(
+                minute_of_hour, "minute_of_hour", allow_none=True)
+        if second_of_minute_decimal is not None:
+            if second_of_minute is None:
                 raise TimePointInputError(
                     "Invalid input: second decimal points - but not seconds")
-            self.second_of_minute = kwargs["second_of_minute"]
-            self.second_of_minute += kwargs["second_of_minute_decimal"]
+            self.second_of_minute = _int_caster(second_of_minute,
+                                                "second_of_minute")
+            self.second_of_minute += float(second_of_minute_decimal)
         else:
-            self.second_of_minute = kwargs.get("second_of_minute",
-                                               time_default)
+            self.second_of_minute = _int_caster(second_of_minute,
+                                                "second_of_minute",
+                                                allow_none=True)
+        if not self.truncated:
+            if self.hour_of_day is None:
+                self.hour_of_day = 0
+            if self.minute_of_hour is None:
+                self.minute_of_hour = 0
+            if self.second_of_minute is None:
+                self.second_of_minute = 0
         self.time_zone = TimeZone()
         has_unknown_tz = True
-        if "time_zone_hour" in kwargs:
+        if time_zone_hour is not None:
             has_unknown_tz = False
-            self.time_zone.hours = kwargs.get("time_zone_hour")
-        if "time_zone_minute" in kwargs:
+            self.time_zone.hours = _int_caster(time_zone_hour,
+                                               "time_zone_hour")
+        if time_zone_minute is not None:
             has_unknown_tz = False
-            self.time_zone.minutes = kwargs.get("time_zone_minute")
-        has_unknown_tz = self.truncated and has_unknown_tz
-        self.time_zone.unknown = has_unknown_tz
+            self.time_zone.minutes = _int_caster(time_zone_minute,
+                                                 "time_zone_minute")
+        self.time_zone.unknown = self.truncated and has_unknown_tz
         if not self.truncated:
             # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
             if (self.month_of_year is None and self.week_of_year is None and
@@ -1469,6 +1582,41 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
                     yield i + 1, day
 
 
-if __name__ == "__main__":
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSuite)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+def _int_caster(number, name="number", allow_none=False):
+    if allow_none and number is None:
+        return None
+    try:
+        int_number = int(number)
+        float_number = float(number)
+    except (TypeError, ValueError) as num_exc:
+        raise BadInputError(
+            "Invalid input for {0}: {1}: {2}".format(name, number, num_exc))
+    if float(int_number) != float_number:
+        raise BadInputError(
+            "Non-integer like number for {0}: {1}".format(name, number))
+    return int_number
+        
+
+def _type_checker(*objects):
+    for type_info in objects:
+        value, name = type_info[:2]
+        allowed_types = list(type_info[2:])
+        if None in allowed_types:
+            allowed_types.remove(None)
+            allowed_types.append(type(None))
+        if int in allowed_types and float not in allowed_types:
+            value = _int_caster(value, name=name, allow_none=(
+                type(None) in allowed_types))
+        is_ok = False
+        for type_ in allowed_types:
+            if isinstance(value, type_):
+                is_ok = True
+                break
+        if not is_ok:
+            values_string = ""
+            if allowed_types:
+                values_string = " should be: "
+                values_string += " or ".join(
+                    [str(v) for v in allowed_types])
+            raise BadInputError("Invalid type for '{0}': {1}{2}".format(
+                name, repr(value), values_string))
