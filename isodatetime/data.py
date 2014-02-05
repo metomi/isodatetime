@@ -19,11 +19,20 @@
 """This provides ISO 8601 data model functionality."""
 
 
+from . import dumpers
+from . import util
+
 DAYS_OF_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 DAYS_OF_MONTHS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
                             "ordinal": (2000, 3)}
+
+
+TIMEPOINT_DUMPER_MAP = {
+    0: dumpers.TimePointDumper(num_expanded_year_digits=0),
+    2: dumpers.TimePointDumper(num_expanded_year_digits=2)
+}
 
 
 class BadInputError(ValueError):
@@ -500,8 +509,8 @@ class TimePoint(object):
     representation, 0 will be assumed if this is not provided.
     time_zone_minute - (default 0) an integer between 0 and 59 denoting
     the minute component of the timezone offset from UTC.
-    format_function - a custom callable to provide your own str()
-    implementation.
+    dump_format - a custom format string to control the stringification
+    of the timepoint. See isodatetime.parser_spec for more details.
     truncated - (default False) a boolean denoting whether the
     date/time instant has purposefully incomplete information
     (ISO 8601:2000 truncation).
@@ -511,13 +520,21 @@ class TimePoint(object):
 
     """
 
+    DATA_ATTRIBUTES = [
+        "expanded_year_digits", "year", "month_of_year",
+        "day_of_year", "day_of_month", "day_of_week",
+        "week_of_year", "hour_of_day", "minute_of_hour",
+        "second_of_minute", "truncated", "truncated_property",
+        "dump_format"
+    ]
+
     def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
                  week_of_year=None, day_of_year=None, day_of_month=None,
                  day_of_week=None, hour_of_day=None, hour_of_day_decimal=None,
                  minute_of_hour=None, minute_of_hour_decimal=None,
                  second_of_minute=None, second_of_minute_decimal=None,
                  time_zone_hour=None, time_zone_minute=None,
-                 format_function=None, truncated=False,
+                 dump_format=None, truncated=False,
                  truncated_property=None):
         _type_checker(
             (expanded_year_digits, "expanded_year_digits", int),
@@ -537,17 +554,18 @@ class TimePoint(object):
             (time_zone_hour, "time_zone_hour", None, int),
             (time_zone_minute, "time_zone_minute", None, int)
         )
-        if format_function is not None and not callable(format_function):
+        if (dump_format is not None and not
+            isinstance(dump_format, basestring)):
             raise BadInputError(
-                "Invalid input for format_function: {0}".format(
-                     format_function))
+                "Invalid input for dumper: {0}".format(
+                     dumper))
         if (truncated_property is not None and
                 truncated_property not in ["year_of_decade",
                                            "year_of_century"]):
             raise BadInputError(
                 "Invalid input for truncated_property: {0}".format(
                     truncated_property))
-        self.format_function = format_function
+        self.dump_format = dump_format
         self.expanded_year_digits = _int_caster(expanded_year_digits,
                                                 "expanded_year_digits")
         self.truncated = truncated
@@ -679,6 +697,52 @@ class TimePoint(object):
             return get_ordinal_date_from_week_date(self.year,
                                                    self.week_of_year,
                                                    self.day_of_week)
+
+    def get(self, property_name):
+        """Return a calculated value for property name."""
+        if property_name == "year_sign":
+            return "+" if self.year >= 0 else "-"
+        if property_name == "century":
+            return (abs(self.year) % 10000) // 100
+        if property_name == "year_of_century":
+            return abs(self.year) % 100
+        if property_name == "month_of_year":
+            return self.get_calendar_date()[1]
+        if property_name == "day_of_year":
+            return self.get_ordinal_date()[1]
+        if property_name == "day_of_month":
+            return self.get_calendar_date()[2]
+        if property_name == "week_of_year":
+            return self.get_week_date()[1]
+        if property_name == "day_of_week":
+            return self.get_week_date()[2]
+        if property_name == "year_of_decade":
+            return abs(self.year) % 10
+        if property_name == "minute_of_hour":
+            return int(self.minute_of_hour)
+        if property_name == "hour_of_day":
+            return int(self.hour_of_day)
+        if property_name == "hour_of_day_decimal_string":
+            string = "%f" % (float(self.hour_of_day) - int(self.hour_of_day))
+            return string.replace("0.", ",", 1)
+        if property_name == "minute_of_hour_decimal_string":
+            string = "%f" % (float(self.minute_of_hour) -
+                             int(self.minute_of_hour))
+            return string.replace("0.", ",", 1)
+        if property_name == "second_of_minute":
+            return int(self.second_of_minute)
+        if property_name == "second_of_minute_decimal_string":
+            string = "%f" % (float(self.second_of_minute) -
+                             int(self.second_of_minute))
+            return string.replace("0.", ",", 1)
+        if property_name == "time_zone_minute_abs":
+            return abs(self.time_zone.minutes)
+        if property_name == "time_zone_hour_abs":
+            return abs(self.time_zone.minutes)
+        if property_name == "time_zone_sign":
+            if self.time_zone.hours < 0 or self.time_zone.minutes < 0:
+                return "-"
+            return "+"
 
     def get_second_of_day(self):
         """Return the seconds elapsed since the start of the day."""
@@ -947,11 +1011,7 @@ class TimePoint(object):
     def copy(self):
         """Copy this TimePoint without leaving references."""
         dummy_timepoint = TimePoint()
-        for attr in ["expanded_year_digits", "year", "month_of_year",
-                     "day_of_year", "day_of_month", "day_of_week",
-                     "week_of_year", "hour_of_day", "minute_of_hour",
-                     "second_of_minute", "truncated", "truncated_property",
-                     "format_function"]:
+        for attr in self.DATA_ATTRIBUTES:
             setattr(dummy_timepoint, attr, getattr(self, attr))
         dummy_timepoint.time_zone = self.time_zone.copy()
         return dummy_timepoint
@@ -962,6 +1022,17 @@ class TimePoint(object):
                 "Invalid comparison type '%s' - should be TimePoint." %
                 type(other).__name__
             )
+        if self.truncated != other.truncated:
+            raise TypeError(
+                "Cannot compare truncated to non-truncated " +
+                "TimePoint: %s, %s" % (self, other))
+        if self.truncated:
+            for attribute in self.DATA_ATTRIBUTES:
+                other_attr = getattr(other, attribute)
+                self_attr = getattr(self, attribute)
+                if other_attr != self_attr:
+                    return cmp(self_attr, other_attr)
+            return 0
         other = other.copy()
         other.set_time_zone(self.get_time_zone())
         if self.get_is_calendar_date():
@@ -1146,9 +1217,19 @@ class TimePoint(object):
                                 self.day_of_month = day
                                 return
 
-    def __str__(self, override_custom=False):
-        if self.format_function is not None and not override_custom:
-            return self.format_function(self)
+    def __str__(self, override_custom_dump_format=False):
+        if self.expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
+            TIMEPOINT_DUMPER_MAP[self.expanded_year_digits] = (
+                dumpers.TimePointDumper(
+                    self.expanded_year_digits))
+        dumper = TIMEPOINT_DUMPER_MAP[self.expanded_year_digits]
+        if self.truncated:
+            return dumper.dump(self, self._get_truncated_dump_format())
+        if self.dump_format and not override_custom_dump_format:
+            return dumper.dump(self, self.dump_format)
+        return dumper.dump(self, self._get_dump_format())
+
+    def _get_dump_format(self):
         year_digits = 4 + self.expanded_year_digits
         year_string = "%0" + str(year_digits) + "d"
         if self.expanded_year_digits:
@@ -1163,67 +1244,79 @@ class TimePoint(object):
             )
         elif self.year is not None:
             year_string = year_string % self.year
-        if self.truncated:
-            year_string = "-"
-            if self.truncated_property == "year_of_decade":
-                year_string = "-" + str(self.year % 10)
-            elif self.truncated_property == "year_of_century":
-                year_string = "-" + str(self.year % 100)
-        date_string = year_string
-        if self.truncated:
-            if self.month_of_year is not None:
-                date_string = year_string + "-%02d" % self.month_of_year
-                if self.day_of_month is not None:
-                    date_string += "-%02d" % self.day_of_month
-            elif self.day_of_month is not None:
-                date_string = year_string + "-%02d" % self.day_of_month
-            if self.day_of_year is not None:
-                day_string = "%03d" % self.day_of_year
-                if year_string == "-":
-                    date_string = year_string + day_string
-                else:
-                    date_string = year_string + "-" + day_string
-            if self.week_of_year is not None:
-                date_string = year_string + "-W%02d" % self.week_of_year
-                if self.day_of_week is not None:
-                    date_string += "-%01d" % self.day_of_week
-            elif self.day_of_week is not None:
-                date_string = year_string + "-W-%01d" % self.day_of_week
+        
+        if self.get_is_calendar_date():
+            date_string = year_string + "-MM-DD"
+        if self.get_is_ordinal_date():
+            date_string = year_string + "-DDD"
+        if self.get_is_week_date():
+            date_string = year_string + "-Www-D"
+        time_string = "Thh"
+        if int(self.hour_of_day) != self.hour_of_day:
+            time_string += ",ii"
         else:
-            if self.get_is_calendar_date():
-                date_string = year_string + "-%02d-%02d" % (self.month_of_year,
-                                                            self.day_of_month)
-            if self.get_is_ordinal_date():
-                date_string = year_string + "-%03d" % self.day_of_year
-            if self.get_is_week_date():
-                date_string = year_string + "-W%02d-%01d" % (self.week_of_year,
-                                                             self.day_of_week)
+            time_string += ":mm"
+            if int(self.minute_of_hour) != self.minute_of_hour:
+                time_string += ",nn"
+            else:
+                seconds_int = int(self.second_of_minute)
+                time_string += ":ss"
+                if seconds_int != self.second_of_minute:
+                    time_string += ",tt"
+        time_string += u" ±hh:mm"
+        return date_string + time_string
+
+    def _get_truncated_dump_format(self):
+        year_string = "-"
+        if self.truncated_property == "year_of_decade":
+            year_string = "-" + "y"
+        elif self.truncated_property == "year_of_century":
+            if self.month_of_year is None:
+                year_string = "YY"
+            else:
+                year_string = "-YY"
+        date_string = year_string
+        if self.month_of_year is not None:
+            date_string = year_string + "-MM"
+            if self.day_of_month is not None:
+                date_string += "-DD"
+        elif self.day_of_month is not None:
+            date_string = year_string + "-DD"
+        if self.day_of_year is not None:
+            day_string = "DDD"
+            if year_string == "-":
+                date_string = year_string + day_string
+            else:
+                date_string = year_string + "-" + day_string
+        if self.week_of_year is not None:
+            date_string = year_string + "-Www"
+            if self.day_of_week is not None:
+                date_string += "-D"
+        elif self.day_of_week is not None:
+            date_string = year_string + "-W-D"
         time_string = ""
         if self.hour_of_day is not None:
-            time_string = "T%02d" % int(self.hour_of_day)
+            time_string = "Thh"
             if int(self.hour_of_day) != self.hour_of_day:
                 remainder = self.hour_of_day - int(self.hour_of_day)
-                time_string += _format_remainder(remainder)
+                time_string += ",ii"
             else:
-                if self.truncated and self.minute_of_hour is None:
+                if self.minute_of_hour is None:
                     time_string += ":00:00"
                 else:
-                    time_string += ":%02d" % int(self.minute_of_hour)
+                    time_string += ":mm"
                     if int(self.minute_of_hour) != self.minute_of_hour:
-                        remainder = (
-                            self.minute_of_hour - int(self.minute_of_hour))
-                        time_string += _format_remainder(remainder)
+                        time_string += ",nn"
                     else:
-                        if self.truncated and self.second_of_minute is None:
+                        if self.second_of_minute is None:
                             time_string += ":00"
                         else:
                             seconds_int = int(self.second_of_minute)
-                            time_string += ":%02d" % seconds_int
+                            time_string += ":ss"
                             if seconds_int != self.second_of_minute:
-                                remainder = self.second_of_minute - seconds_int
-                                time_string += _format_remainder(remainder)
+                                time_string += ",tt"
         if time_string:
-            time_string += str(self.time_zone)
+            time_string += u"±hh:mm"
         return date_string + time_string
 
     __repr__ = __str__
@@ -1259,7 +1352,7 @@ def _format_remainder(float_time_number):
     return string
 
 
-@cache_results
+@util.cache_results
 def get_is_leap_year(year):
     """Return if year is a leap year in the proleptic Gregorian calendar."""
     if year % 4 == 0:
@@ -1271,7 +1364,7 @@ def get_is_leap_year(year):
     return False
 
 
-@cache_results
+@util.cache_results
 def get_days_in_year(year):
     """Return 366 if year is a leap year, otherwise 365."""
     if get_is_leap_year(year):
@@ -1279,7 +1372,7 @@ def get_days_in_year(year):
     return 365
 
 
-@cache_results
+@util.cache_results
 def get_weeks_in_year(year):
     """Return the number of calendar weeks in this week date year."""
     cal_year, cal_ord_days = get_ordinal_date_week_date_start(year)
@@ -1470,7 +1563,7 @@ def get_week_date_from_ordinal_date(year, day_of_year):
     return get_week_date_from_calendar_date(year, month, day)
 
 
-@cache_results
+@util.cache_results
 def get_calendar_date_week_date_start(year):
     """Return the calendar date of the start of (week date) year."""
     ref_year, ref_month, ref_day = WEEK_DAY_START_REFERENCE["calendar"]
@@ -1504,7 +1597,7 @@ def get_calendar_date_week_date_start(year):
             return year - 1, month, day
 
 
-@cache_results
+@util.cache_results
 def get_days_since_1_ad(year):
     """Return the number of days since Jan 1, 1 A.D. to the year end."""
     if year == 1:
@@ -1519,7 +1612,7 @@ def get_days_since_1_ad(year):
     return days
 
 
-@cache_results
+@util.cache_results
 def get_ordinal_date_week_date_start(year):
     """Return the week date start for year in year, day-of-year."""
     cal_year, cal_month, cal_day = get_calendar_date_week_date_start(year)

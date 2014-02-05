@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #-----------------------------------------------------------------------------
-# (C) British Crown Copyright 2013 Met Office.
+# (C) British Crown Copyright 2013-2014 Met Office.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -20,7 +20,9 @@
 
 import re
 
-import isodata
+from . import data
+from . import dumpers
+from . import parser_spec
 
 
 class TimeSyntaxError(ValueError):
@@ -79,10 +81,12 @@ class TimeRecurrenceParser(object):
             if "intv" in result_map:
                 interval = self.timeinterval_parser.parse(
                     result_map["intv"])
-            return isodata.TimeRecurrence(repetitions=repetitions,
-                                          start_point=start_point,
-                                          end_point=end_point,
-                                          interval=interval)
+            return data.TimeRecurrence(
+                repetitions=repetitions,
+                start_point=start_point,
+                end_point=end_point,
+                interval=interval
+            )
         raise TimeSyntaxError(
             "Not a supported ISO 8601 recurrence pattern: %s" %
             expression)
@@ -112,189 +116,28 @@ class TimePointParser(object):
     timezone information should be assumed UTC (Z). Otherwise, these
     will be converted to the local timezone.
 
-    format_function (default None) should be a callable that takes a
-    TimePoint instance created by this parser and returns a custom
-    string representation such as "20150304T0103". This is called on
-    str(timepoint_instance). If None, the default TimePoint
-    formatting will be applied.
+    dump_format (default None) specifies a default custom dump format
+    string for TimePoint instances. See data.TimePoint documentation
+    for syntax.
 
     """
-
-    DATE_EXPRESSIONS = {"basic": {"complete": u"""
-ccYYMMDD
-±ΫccYYMMDD
-ccYYDDD
-±ΫccYYDDD
-ccYYWwwD
-±ΫccYYWwwD""",
-                                  "reduced": u"""
-ccYY-MM       # Deviation? Not clear if "basic" or "extended" in standard.
-ccYY
-cc
-±ΫccYY-MM     # Deviation? Not clear if "basic" or "extended" in standard.
-±ΫccYY
-±Ϋcc
-ccYYWww
-±ΫccYYWww""",
-                                  "truncated": u"""
--YYMM
--YY
---MMDD
---MM
----DD
-YYMMDD
-YYDDD
--DDD
-YYWwwD
-YYWww
--ỵWwwD
--ỵWww
--WwwD
--Www
--W-D
-"""},
-                        "extended": {"complete": u"""
-ccYY-MM-DD
-±ΫccYY-MM-DD
-ccYY-DDD
-±ΫccYY-DDD
-ccYY-Www-D
-±ΫccYY-Www-D""",
-                                     "reduced": u"""
-ccYY-MM
-±ΫccYY-MM
-ccYY-Www
-±ΫccYY-Www""",
-                                     "truncated": u"""
--YY-MM
---MM-DD
-YY-MM-DD
-YY-DDD
--DDD          # Deviation from standard ?
-YY-Www-D
-YY-Www
--ỵ-WwwD
--ỵ-Www
--Www-D
-"""}}
-
-    TIME_EXPRESSIONS = {"basic": {"complete": u"""
-# No Time Zone
-hhmmss
-
-# No Time Zone - decimals
-hhmmss,sṡ
-hhmm,mṁ
-hh,hḣ
-""",
-                                  "reduced": u"""
-# No Time Zone
-hhmm
-hh
-
-# No Time Zone - decimals
-""",
-                                  "truncated": u"""
-# No Time Zone
--mmss
--mm
---ss
-
-# No Time Zone - decimals
--mmss,sṡ
--mm,mṁ
---ss,sṡ
-"""},
-                        "extended": {"complete": u"""
-# No Time Zone
-hh:mm:ss
-
-# No Time Zone - decimals
-hh:mm:ss,sṡ
-hh:mm,mṁ
-hh,hḣ          # Deviation? Not allowed in standard ?
-""",
-                                     "reduced": u"""
-# No Time Zone
-hh:mm
-hh             # Deviation? Not allowed in standard ?
-""",
-                                     "truncated": u"""
-# No Time Zone
--mm:ss
--mm             # Deviation? Not allowed in standard ?
---ss            # Deviation? Not allowed in standard ?
-
-# No Time Zone - decimals
--mm:ss,sṡ
--mm,mṁ          # Deviation? Not allowed in standard ?
---ss,sṡ         # Deviation? Not allowed in standard ?
-"""}}
-
-    TIMEZONE_EXPRESSIONS = {"basic": u"""
-Z
-±hh
-±hhmm
-""",
-                            "extended": u"""
-Z
-±hh             # Deviation? Not allowed in standard?
-±hh:mm
-"""}
-
-    DATE_CHAR_REGEXES = [(u"±", "(?P<year_sign>[+-])"),
-                         (u"cc", "(?P<century>\d\d)"),
-                         (u"YY", "(?P<year_of_century>\d\d)"),
-                         (u"MM", "(?P<month_of_year>\d\d)"),
-                         (u"DDD", "(?P<day_of_year>\d\d\d)"),
-                         (u"DD", "(?P<day_of_month>\d\d)"),
-                         (u"Www", "W(?P<week_of_year>\d\d)"),
-                         (u"D", "(?P<day_of_week>\d)"),
-                         (u"ỵ", "(?P<year_of_decade>\d)"),
-                         (u"^---", "(?P<truncated>---)"),
-                         (u"^--", "(?P<truncated>--)"),
-                         (u"^-", "(?P<truncated>-)"),
-                         (u"^~", "(?P<truncated>)")]
-    TIME_CHAR_REGEXES = [(u"(?<=^hh)mm", "(?P<minute_of_hour>\d\d)"),
-                         (u"(?<=^hh:)mm", "(?P<minute_of_hour>\d\d)"),
-                         (u"(?<=^-)mm", "(?P<minute_of_hour>\d\d)"),
-                         (u"^hh", "(?P<hour_of_day>\d\d)"),
-                         (u",hḣ", "[,.](?P<hour_of_day_decimal>\d+)"),
-                         (u",mṁ", "[,.](?P<minute_of_hour_decimal>\d+)"),
-                         (u"ss", "(?P<second_of_minute>\d\d)"),
-                         (u",sṡ", "[,.](?P<second_of_minute_decimal>\d+)"),
-                         (u"^--", "(?P<truncated>--)"),
-                         (u"^-", "(?P<truncated>-)")]
-    TIMEZONE_CHAR_REGEXES = [
-        (u"(?<=±hh)mm", "(?P<time_zone_minute>\d\d)"),
-        (u"(?<=±hh:)mm", "(?P<time_zone_minute>\d\d)"),
-        (u"(?<=±)hh", "(?P<time_zone_hour>\d\d)"),
-        (u"±", "(?P<time_zone_sign>[+-])"),
-        (u"Z", "(?P<time_zone_utc>Z)")
-    ]
-    TIME_DESIGNATOR = "T"
 
     def __init__(self, num_expanded_year_digits=2,
                  allow_truncated=False,
                  allow_only_basic=False,
                  assume_utc=False,
-                 format_function=None):
-        expanded_year_digit_regex = "\d" * num_expanded_year_digits
+                 dump_format=None):
         self.expanded_year_digits = num_expanded_year_digits
-        self.DATE_CHAR_REGEXES.append(
-            (u"Ϋ",
-             "(?P<expanded_year>" + expanded_year_digit_regex + ")")
-        )
         self.allow_truncated = allow_truncated
         self.allow_only_basic = allow_only_basic
-        self.format_function = format_function
+        self.dump_format = dump_format
         self._generate_regexes()
 
     def _generate_regexes(self):
         """Generate combined date time strings."""
-        date_map = self.DATE_EXPRESSIONS
-        time_map = self.TIME_EXPRESSIONS
-        timezone_map = self.TIMEZONE_EXPRESSIONS
+        date_map = parser_spec.DATE_EXPRESSIONS
+        time_map = parser_spec.TIME_EXPRESSIONS
+        timezone_map = parser_spec.TIMEZONE_EXPRESSIONS
         self._date_regex_map = {}
         self._time_regex_map = {}
         self._timezone_regex_map = {}
@@ -339,28 +182,34 @@ Z
 
     def parse_date_expression_to_regex(self, expression):
         """Construct regular expressions for the date."""
-        for expr_regex, substitute in self.DATE_CHAR_REGEXES:
+        for expr_regex, substitute, format in (
+                parser_spec.get_date_translate_info(
+                    self.expanded_year_digits)):
             expression = re.sub(expr_regex, substitute, expression)
         expression = "^" + expression + "$"
         return expression
 
     def parse_time_expression_to_regex(self, expression):
         """Construct regular expressions for the time."""
-        for expr_regex, substitute in self.TIME_CHAR_REGEXES:
+        for expr_regex, substitute, format in (
+                parser_spec.get_time_translate_info()):
             expression = re.sub(expr_regex, substitute, expression)
         expression = "^" + expression + "$"
         return expression
 
     def parse_timezone_expression_to_regex(self, expression):
         """Construct regular expressions for the timezone."""
-        for expr_regex, substitute in self.TIMEZONE_CHAR_REGEXES:
+        for expr_regex, substitute, format in (
+                parser_spec.get_timezone_translate_info(
+                    )):
             expression = re.sub(expr_regex, substitute, expression)
         expression = "^" + expression + "$"
         return expression
 
-    def parse(self, timepoint_string):
+    def parse(self, timepoint_string, dump_format=None):
         """Parse a user-supplied timepoint string."""
-        date_time_timezone = timepoint_string.split(self.TIME_DESIGNATOR)
+        date_time_timezone = timepoint_string.split(
+            parser_spec.TIME_DESIGNATOR)
         if len(date_time_timezone) == 1:
             date = date_time_timezone[0]
             keys, date_info = self.get_date_info(date)
@@ -387,30 +236,29 @@ Z
                 bad_types = []
             if time_timezone.endswith("Z"):
                 time, timezone = time_timezone[:-1], "Z"
-            else:
-                if "+" in time_timezone:
-                    time, timezone = time_timezone.split("+")
-                    timezone = "+" + timezone
-                elif "-" in time_timezone:
-                    time, timezone = time_timezone.rsplit("-", 1)
-                    timezone = "-" + timezone
-                    # Make sure this isn't just a truncated time.
-                    try:
-                        time_info = self.get_time_info(
-                            time,
-                            bad_formats=bad_formats,
-                            bad_types=bad_types
-                        )
-                        timezone_info = self.get_timezone_info(
-                            timezone,
-                            bad_formats=bad_formats
-                        )
-                    except TimeSyntaxError:
-                        time = time_timezone
-                        timezone = None
-                else:
+            elif "+" in time_timezone:
+                time, timezone = time_timezone.split("+")
+                timezone = "+" + timezone
+            elif "-" in time_timezone:
+                time, timezone = time_timezone.rsplit("-", 1)
+                timezone = "-" + timezone
+                # Make sure this isn't just a truncated time.
+                try:
+                    time_info = self.get_time_info(
+                        time,
+                        bad_formats=bad_formats,
+                        bad_types=bad_types
+                    )
+                    timezone_info = self.get_timezone_info(
+                        timezone,
+                        bad_formats=bad_formats
+                    )
+                except TimeSyntaxError:
                     time = time_timezone
                     timezone = None
+            else:
+                time = time_timezone
+                timezone = None
             if timezone is None:
                 timezone_info = {}
             else:
@@ -475,9 +323,10 @@ Z
             info["truncated"] = True
         if truncated_property is not None:
             info["truncated_property"] = truncated_property
-        if self.format_function is not None:
-            info.update({"format_function": self.format_function})
-        return isodata.TimePoint(**info)
+        if dump_format is None and self.dump_format:
+            dump_format = self.dump_format
+        info.update({"dump_format": dump_format})    
+        return data.TimePoint(**info)
 
     def get_date_info(self, date_string, bad_types=None):
         """Return the format and properties from a date string."""
@@ -568,7 +417,7 @@ class TimeIntervalParser(object):
                         value = value.replace(",", ".")
                     value = float(value)
                 result_map[key] = value
-            return isodata.TimeInterval(**result_map)
+            return data.TimeInterval(**result_map)
         raise TimeSyntaxError("Not an ISO 8601 duration representation: %s" %
                               expression)
 

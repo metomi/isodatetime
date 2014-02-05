@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #-----------------------------------------------------------------------------
-# (C) British Crown Copyright 2013 Met Office.
+# (C) British Crown Copyright 2013-2014 Met Office.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -21,38 +21,43 @@
 import copy
 import unittest
 
-import isodata
-import isoparsers
+from . import data
+from . import parsers
+from . import parser_spec
 
 
 def get_timeintervalparser_tests():
     """Yield tests for the time interval parser."""
     test_expressions = {
-        "P3Y": str(isodata.TimeInterval(years=3)),
-        "P90Y": str(isodata.TimeInterval(years=90)),
-        "P1Y2M": str(isodata.TimeInterval(years=1, months=2)),
-        "P20Y2M": str(isodata.TimeInterval(years=20, months=2)),
-        "P2M": str(isodata.TimeInterval(months=2)),
-        "P52M": str(isodata.TimeInterval(months=52)),
-        "P20Y10M2D": str(isodata.TimeInterval(years=20, months=10, days=2)),
-        "P1Y3D": str(isodata.TimeInterval(years=1, days=3)),
-        "P4M1D": str(isodata.TimeInterval(months=4, days=1)),
-        "P3Y404D": str(isodata.TimeInterval(years=3, days=404)),
-        "P30Y2D": str(isodata.TimeInterval(years=30, days=2)),
-        "PT6H": str(isodata.TimeInterval(hours=6)),
-        "PT1034H": str(isodata.TimeInterval(hours=1034)),
-        "P3YT4H2M": str(isodata.TimeInterval(years=3, hours=4, minutes=2)),
-        "P30Y2DT10S": str(isodata.TimeInterval(years=30, days=2, seconds=10)),
-        "PT2S": str(isodata.TimeInterval(seconds=2)),
-        "PT2.5S": str(isodata.TimeInterval(seconds=2.5)),
-        "PT2,5S": str(isodata.TimeInterval(seconds=2.5)),
-        "PT5.5023H": str(isodata.TimeInterval(hours=5.5023)),
-        "PT5,5023H": str(isodata.TimeInterval(hours=5.5023)),
-        "P5W": str(isodata.TimeInterval(weeks=5)),
-        "P100W": str(isodata.TimeInterval(weeks=100))
+        "P3Y": str(data.TimeInterval(years=3)),
+        "P90Y": str(data.TimeInterval(years=90)),
+        "P1Y2M": str(data.TimeInterval(years=1, months=2)),
+        "P20Y2M": str(data.TimeInterval(years=20, months=2)),
+        "P2M": str(data.TimeInterval(months=2)),
+        "P52M": str(data.TimeInterval(months=52)),
+        "P20Y10M2D": str(data.TimeInterval(years=20, months=10, days=2)),
+        "P1Y3D": str(data.TimeInterval(years=1, days=3)),
+        "P4M1D": str(data.TimeInterval(months=4, days=1)),
+        "P3Y404D": str(data.TimeInterval(years=3, days=404)),
+        "P30Y2D": str(data.TimeInterval(years=30, days=2)),
+        "PT6H": str(data.TimeInterval(hours=6)),
+        "PT1034H": str(data.TimeInterval(hours=1034)),
+        "P3YT4H2M": str(data.TimeInterval(years=3, hours=4, minutes=2)),
+        "P30Y2DT10S": str(data.TimeInterval(years=30, days=2, seconds=10)),
+        "PT2S": str(data.TimeInterval(seconds=2)),
+        "PT2.5S": str(data.TimeInterval(seconds=2.5)),
+        "PT2,5S": str(data.TimeInterval(seconds=2.5)),
+        "PT5.5023H": str(data.TimeInterval(hours=5.5023)),
+        "PT5,5023H": str(data.TimeInterval(hours=5.5023)),
+        "P5W": str(data.TimeInterval(weeks=5)),
+        "P100W": str(data.TimeInterval(weeks=100))
     }
     for expression, ctrl_result in test_expressions.items():
         yield expression, ctrl_result
+
+
+def get_timepointdumper_tests():
+    return
 
 
 def get_timepointparser_tests(allow_only_basic=False,
@@ -329,6 +334,7 @@ def get_timepointparser_tests(allow_only_basic=False,
     if allow_truncated:
         date_combo_ok_keys = ["complete", "truncated"]
     time_combo_ok_keys = ["complete", "reduced"]
+    time_designator = parser_spec.TIME_DESIGNATOR
     for format_type in format_ok_keys:
         date_format_tests = test_date_map[format_type]
         time_format_tests = test_time_map[format_type]
@@ -339,7 +345,7 @@ def get_timepointparser_tests(allow_only_basic=False,
             for date_expr, info in date_format_tests[date_key].items():
                 yield date_expr, info
         for date_key in date_combo_ok_keys:
-            date_tests = copy.deepcopy(date_format_tests[date_key])
+            date_tests = date_format_tests[date_key]
             # Add a blank date for time-only testing.
             for date_expr, info in date_tests.items():
                 for time_key in time_combo_ok_keys:
@@ -347,7 +353,7 @@ def get_timepointparser_tests(allow_only_basic=False,
                     for time_expr, time_info in time_items:
                         combo_expr = (
                             date_expr +
-                            isoparsers.TimePointParser.TIME_DESIGNATOR +
+                            time_designator +
                             time_expr
                         )
                         combo_info = {}
@@ -367,8 +373,10 @@ def get_timepointparser_tests(allow_only_basic=False,
         for time_key in time_format_tests:
             time_tests = time_format_tests[time_key]
             for time_expr, time_info in time_tests.items():
-                combo_expr = (isoparsers.TimePointParser.TIME_DESIGNATOR +
-                              time_expr)
+                combo_expr = (
+                    time_designator +
+                    time_expr
+                )
                 # Add truncated (no date).
                 combo_info = {"truncated": True}
                 for key, value in time_info.items():
@@ -385,45 +393,45 @@ def get_timepointparser_tests(allow_only_basic=False,
 
 
 def get_timerecurrence_tests():
-    """Return test expressions for isodata.TimeRecurrence."""
+    """Return test expressions for data.TimeRecurrence."""
     return [
         ("R3/1001-W01-1T00:00:00Z/1002-W52-6T00:00:00-05:30",
-            ["1001-W01-1T00:00:00Z", "1001-W53-3T14:45:00Z",
-            "1002-W52-6T05:30:00Z"]),
+         ["1001-W01-1T00:00:00Z", "1001-W53-3T14:45:00Z",
+          "1002-W52-6T05:30:00Z"]),
         ("R3/P700D/1957-W01-1T06,5Z",
-            ["1953-W10-1T06,5Z", "1955-W05-1T06,5Z", "1957-W01-1T06,5Z"]),
+         ["1953-W10-1T06,5Z", "1955-W05-1T06,5Z", "1957-W01-1T06,5Z"]),
         ("R3/P5DT2,5S/1001-W11-1T00:30:02,5-02:00",
-            ["1001-W09-5T00:29:57,5-02:00", "1001-W10-3T00:30:00-02:00",
-            "1001-W11-1T00:30:02,5-02:00"]),
+         ["1001-W09-5T00:29:57,5-02:00", "1001-W10-3T00:30:00-02:00",
+          "1001-W11-1T00:30:02,5-02:00"]),
         ("R/+000001W457T060000Z/P4M1D",
-            ["+000001-W45-7T06:00:00Z", "+000002-W11-2T06:00:00Z",
-            "+000002-W28-6T06:00:00Z"]),
+         ["+000001-W45-7T06:00:00Z", "+000002-W11-2T06:00:00Z",
+          "+000002-W28-6T06:00:00Z"]),
         ("R/P4M1DT6M/+002302-002T06:00:00-00:30",
-            ["+002302-002T06:00:00-00:30", "+002301-244T05:54:00-00:30",
-            "+002301-120T05:48:00-00:30"]),
+         ["+002302-002T06:00:00-00:30", "+002301-244T05:54:00-00:30",
+          "+002301-120T05:48:00-00:30"]),
         ("R/P30Y2DT15H/-099994-02-12T17:00:00-02:30",
-            ["-099994-02-12T17:00:00-02:30", "-100024-02-10T02:00:00-02:30",
-            "-100054-02-07T11:00:00-02:30"]),
+         ["-099994-02-12T17:00:00-02:30", "-100024-02-10T02:00:00-02:30",
+          "-100054-02-07T11:00:00-02:30"]),
         ("R/-100024-02-10T17:00:00-12:30/PT5.5H",
-            ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22,5-12:30",
-            "-100024-02-11T04:00:00-12:30"])
+         ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22,5-12:30",
+          "-100024-02-11T04:00:00-12:30"])
     ]
 
 
 def get_timerecurrenceparser_tests():
     """Yield tests for the time recurrence parser."""
     test_points = ["-100024-02-10T17:00:00-12:30",
-                    "+000001-W45-7T06Z", "1001W011",
-                    "1955W051T06,5Z", "1999-06-01",
-                    "1967-056", "+5002000830T235902,345",
-                    "1765-W04"]
+                   "+000001-W45-7T06Z", "1001W011",
+                   "1955W051T06,5Z", "1999-06-01",
+                   "1967-056", "+5002000830T235902,345",
+                   "1765-W04"]
     for reps in [None, 1, 2, 3, 10]:
         if reps is None:
             reps_string = ""
         else:
             reps_string = str(reps)
-        point_parser = isoparsers.TimePointParser()
-        interval_parser = isoparsers.TimeIntervalParser()
+        point_parser = parsers.TimePointParser()
+        interval_parser = parsers.TimeIntervalParser()
         for point_expr in test_points:
             interval_tests = get_timeintervalparser_tests()
             start_point = point_parser.parse(point_expr)
@@ -462,7 +470,7 @@ class TestSuite(unittest.TestCase):
 
     def test_timeinterval_parser(self):
         """Test the time interval parsing."""
-        parser = isoparsers.TimeIntervalParser()
+        parser = parsers.TimeIntervalParser()
         for expression, ctrl_result in get_timeintervalparser_tests():
             try:
                 test_result = str(parser.parse(expression))
@@ -473,16 +481,17 @@ class TestSuite(unittest.TestCase):
                 )
             self.assertEqual(test_result, ctrl_result, expression)
 
-    def test_timepoint(self):
+    def _test_timepoint(self):
         """Test the manipulation of dates and times (takes a while)."""
         import datetime
         import random
         my_date = datetime.datetime(1801, 1, 1)
         while my_date <= datetime.datetime(2401, 2, 1):
             ctrl_data = my_date.isocalendar()
-            test_date = isodata.TimePoint(year=my_date.year,
-                                          month_of_year=my_date.month,
-                                          day_of_month=my_date.day)
+            test_date = data.TimePoint(
+                year=my_date.year,
+                month_of_year=my_date.month,
+                day_of_month=my_date.day)
             test_data = test_date.get_week_date()
             self.assertEqual(test_data, ctrl_data)
             ctrl_data = (my_date.year, my_date.month, my_date.day)
@@ -491,7 +500,7 @@ class TestSuite(unittest.TestCase):
             ctrl_data = my_date.toordinal()
             year, day_of_year = test_date.get_ordinal_date()
             test_data = day_of_year
-            test_data += isodata.get_days_since_1_ad(year - 1)
+            test_data += data.get_days_since_1_ad(year - 1)
             self.assertEqual(test_data, ctrl_data)
             for attribute, attr_max in [("weeks", 110),
                                         ("days", 770),
@@ -503,13 +512,13 @@ class TestSuite(unittest.TestCase):
                 ctrl_data = my_date + datetime.timedelta(**kwargs)
                 ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
                 test_data = (
-                    test_date + isodata.TimeInterval(
+                    test_date + data.TimeInterval(
                         **kwargs)).get_calendar_date()
                 self.assertEqual(test_data, ctrl_data)
                 ctrl_data = (my_date - datetime.timedelta(**kwargs))
                 ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
                 test_data = (
-                    test_date - isodata.TimeInterval(
+                    test_date - data.TimeInterval(
                         **kwargs)).get_calendar_date()
                 self.assertEqual(test_data, ctrl_data)
             ctrl_data = (my_date + datetime.timedelta(minutes=450) +
@@ -518,9 +527,9 @@ class TestSuite(unittest.TestCase):
             ctrl_data = [(ctrl_data.year, ctrl_data.month, ctrl_data.day),
                          (ctrl_data.hour, ctrl_data.minute, ctrl_data.second)]
             test_data = (
-                test_date + isodata.TimeInterval(minutes=450) +
-                isodata.TimeInterval(hours=5) -
-                isodata.TimeInterval(weeks=5, seconds=500)
+                test_date + data.TimeInterval(minutes=450) +
+                data.TimeInterval(hours=5) -
+                data.TimeInterval(weeks=5, seconds=500)
             )
             test_data = [test_data.get_calendar_date(),
                          test_data.get_hour_minute_second()]
@@ -528,26 +537,42 @@ class TestSuite(unittest.TestCase):
             timedelta = datetime.timedelta(days=1)
             my_date += timedelta
 
+    def test_timepoint_dumper(self):
+        """Test the dumping of TimePoint instances."""
+        parser = parsers.TimePointParser(allow_truncated=True)
+        for expression, timepoint_kwargs in get_timepointparser_tests(
+                allow_truncated=True):
+            ctrl_timepoint = data.TimePoint(**timepoint_kwargs)
+            try:
+                test_timepoint = parser.parse(str(ctrl_timepoint))
+            except parsers.TimeSyntaxError as syn_exc:
+                raise ValueError(
+                    "Parsing failed for the dump of {0}: {1}".format(
+                        expression, syn_exc))
+            self.assertEqual(test_timepoint,
+                             ctrl_timepoint, expression)
+
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
-        parser = isoparsers.TimePointParser(allow_truncated=True)
+        parser = parsers.TimePointParser(allow_truncated=True)
         for expression, timepoint_kwargs in get_timepointparser_tests(
                 allow_truncated=True):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_data = str(parser.parse(expression))
-            except isoparsers.TimeSyntaxError:
-                raise ValueError("Parsing failed for %s" % expression)
-            ctrl_data = str(isodata.TimePoint(**timepoint_kwargs))
+            except parsers.TimeSyntaxError as syn_exc:
+                raise ValueError("Parsing failed for {0}: {1}".format(
+                   expression, syn_exc))
+            ctrl_data = str(data.TimePoint(**timepoint_kwargs))
             self.assertEqual(test_data, ctrl_data, expression)
 
     def test_timerecurrence(self):
         """Test the recurring date/time series data model."""
-        parser = isoparsers.TimeRecurrenceParser()
+        parser = parsers.TimeRecurrenceParser()
         for expression, ctrl_results in get_timerecurrence_tests():
             try:
                 test_recurrence = parser.parse(expression)
-            except isoparsers.TimeSyntaxError:
+            except parsers.TimeSyntaxError:
                 raise ValueError(
                     "TimeRecurrenceParser test failed to parse '%s'" %
                     expression
@@ -561,13 +586,14 @@ class TestSuite(unittest.TestCase):
 
     def test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""
-        parser = isoparsers.TimeRecurrenceParser()
+        parser = parsers.TimeRecurrenceParser()
         for expression, test_info in get_timerecurrenceparser_tests():
             try:
                 test_data = str(parser.parse(expression))
-            except isoparsers.TimeSyntaxError:
+            except parsers.TimeSyntaxError as e:
+                print e
                 raise ValueError("Parsing failed for %s" % expression)
-            ctrl_data = str(isodata.TimeRecurrence(**test_info))
+            ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
 
 
