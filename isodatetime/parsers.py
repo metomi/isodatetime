@@ -130,6 +130,7 @@ class TimePointParser(object):
         self.expanded_year_digits = num_expanded_year_digits
         self.allow_truncated = allow_truncated
         self.allow_only_basic = allow_only_basic
+        self.assume_utc = assume_utc
         self.dump_format = dump_format
         self._generate_regexes()
 
@@ -261,6 +262,9 @@ class TimePointParser(object):
                 timezone = None
             if timezone is None:
                 timezone_info = {}
+                if self.assume_utc:
+                    timezone_info["time_zone_hour"] = 0
+                    timezone_info["time_zone_minute"] = 0
             else:
                 timezone_info = self.get_timezone_info(
                     timezone,
@@ -286,19 +290,28 @@ class TimePointParser(object):
               "year_of_century" in date_info):
             truncated_property = "year_of_century"
             date_info["truncated"] = True
-        year = int(date_info.get("year", 0))
-        if "year_of_decade" in date_info:
-            year += int(date_info.pop("year_of_decade"))
-            truncated_property = "year_of_decade"
-        year += int(date_info.pop("year_of_century", 0))
-        year += 100 * int(date_info.pop("century", 0))
-        expanded_year = date_info.pop("expanded_year", 0)
-        if expanded_year:
-            date_info["expanded_year_digits"] = self.expanded_year_digits
-        year += 10000 * int(expanded_year)
-        if date_info.pop("year_sign", "+") == "-":
-            year *= -1
-        date_info["year"] = year
+        is_year_present = True
+        if date_info.get("truncated"):
+            is_year_present = False
+            for property_ in ["year", "year_of_decade", "century",
+                              "year_of_century", "expanded_year",
+                              "year_sign"]:
+                if date_info.get(property_) is not None:
+                    is_year_present = True
+        if is_year_present:
+            year = int(date_info.get("year", 0))
+            if "year_of_decade" in date_info:
+                year += int(date_info.pop("year_of_decade"))
+                truncated_property = "year_of_decade"
+            year += int(date_info.pop("year_of_century", 0))
+            year += 100 * int(date_info.pop("century", 0))
+            expanded_year = date_info.pop("expanded_year", 0)
+            if expanded_year:
+                date_info["expanded_year_digits"] = self.expanded_year_digits
+            year += 10000 * int(expanded_year)
+            if date_info.pop("year_sign", "+") == "-":
+                year *= -1
+            date_info["year"] = year
         for key, value in date_info.items():
             try:
                 date_info[key] = int(value)
@@ -325,7 +338,8 @@ class TimePointParser(object):
             info["truncated_property"] = truncated_property
         if dump_format is None and self.dump_format:
             dump_format = self.dump_format
-        info.update({"dump_format": dump_format})    
+        if dump_format is not None:
+            info.update({"dump_format": dump_format})
         return data.TimePoint(**info)
 
     def get_date_info(self, date_string, bad_types=None):

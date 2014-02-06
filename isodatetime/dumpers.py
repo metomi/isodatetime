@@ -18,6 +18,7 @@
 
 """This provides data model dumping functionality."""
 
+import copy
 import re
 
 from . import parser_spec
@@ -63,7 +64,7 @@ class TimePointDumper(object):
                       "day_of_month" in properties or
                       "day_of_year" in properties)):
             # We need the year to be in week years.
-            timepoint.to_week_date()
+            timecopy = copy.copy(timepoint).to_week_date()
         property_map = {}
         for property_ in properties:
             property_map[property_] = timepoint.get(property_)

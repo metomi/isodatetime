@@ -707,14 +707,24 @@ class TimePoint(object):
         if property_name == "year_of_century":
             return abs(self.year) % 100
         if property_name == "month_of_year":
+            if self.month_of_year is not None:
+                return self.month_of_year
             return self.get_calendar_date()[1]
         if property_name == "day_of_year":
+            if self.day_of_year is not None:
+                return self.day_of_year
             return self.get_ordinal_date()[1]
         if property_name == "day_of_month":
+            if self.day_of_month is not None:
+                return self.day_of_month
             return self.get_calendar_date()[2]
         if property_name == "week_of_year":
+            if self.week_of_year is not None:
+                return self.week_of_year
             return self.get_week_date()[1]
         if property_name == "day_of_week":
+            if self.day_of_week is not None:
+                return self.day_of_week
             return self.get_week_date()[2]
         if property_name == "year_of_decade":
             return abs(self.year) % 10
@@ -724,25 +734,26 @@ class TimePoint(object):
             return int(self.hour_of_day)
         if property_name == "hour_of_day_decimal_string":
             string = "%f" % (float(self.hour_of_day) - int(self.hour_of_day))
-            return string.replace("0.", ",", 1)
+            return string.replace("0.", ",", 1).rstrip("0")
         if property_name == "minute_of_hour_decimal_string":
             string = "%f" % (float(self.minute_of_hour) -
                              int(self.minute_of_hour))
-            return string.replace("0.", ",", 1)
+            return string.replace("0.", ",", 1).rstrip("0")
         if property_name == "second_of_minute":
             return int(self.second_of_minute)
         if property_name == "second_of_minute_decimal_string":
             string = "%f" % (float(self.second_of_minute) -
                              int(self.second_of_minute))
-            return string.replace("0.", ",", 1)
+            return string.replace("0.", ",", 1).rstrip("0")
         if property_name == "time_zone_minute_abs":
             return abs(self.time_zone.minutes)
         if property_name == "time_zone_hour_abs":
-            return abs(self.time_zone.minutes)
+            return abs(self.time_zone.hours)
         if property_name == "time_zone_sign":
             if self.time_zone.hours < 0 or self.time_zone.minutes < 0:
                 return "-"
             return "+"
+        raise NotImplementedError(property_name)
 
     def get_second_of_day(self):
         """Return the seconds elapsed since the start of the day."""
@@ -1263,25 +1274,33 @@ class TimePoint(object):
                 time_string += ":ss"
                 if seconds_int != self.second_of_minute:
                     time_string += ",tt"
-        time_string += u" ±hh:mm"
+        if time_string:
+            if self.time_zone.hours == 0 and self.time_zone.minutes == 0:
+                time_string += "Z"
+            else:
+                time_string += u"±hh:mm"
         return date_string + time_string
 
     def _get_truncated_dump_format(self):
         year_string = "-"
         if self.truncated_property == "year_of_decade":
-            year_string = "-" + "y"
+            year_string = "-" + "z"
         elif self.truncated_property == "year_of_century":
-            if self.month_of_year is None:
-                year_string = "YY"
-            else:
+            if (self.day_of_month is None and
+                self.month_of_year is not None):
                 year_string = "-YY"
+            else:
+                year_string = "YY"
         date_string = year_string
         if self.month_of_year is not None:
             date_string = year_string + "-MM"
             if self.day_of_month is not None:
                 date_string += "-DD"
         elif self.day_of_month is not None:
-            date_string = year_string + "-DD"
+            if year_string == "-":
+                date_string = year_string + "--DD"
+            else:
+                date_string = year_string + "-DD"
         if self.day_of_year is not None:
             day_string = "DDD"
             if year_string == "-":
@@ -1289,11 +1308,17 @@ class TimePoint(object):
             else:
                 date_string = year_string + "-" + day_string
         if self.week_of_year is not None:
-            date_string = year_string + "-Www"
+            if year_string == "-":
+                date_string = year_string + "Www"
+            else:
+                date_string = year_string + "-Www"
             if self.day_of_week is not None:
                 date_string += "-D"
         elif self.day_of_week is not None:
-            date_string = year_string + "-W-D"
+            if year_string == "-":
+                date_string = year_string + "W-D"
+            else:
+                date_string = year_string + "-W-D"
         time_string = ""
         if self.hour_of_day is not None:
             time_string = "Thh"
@@ -1316,7 +1341,13 @@ class TimePoint(object):
                             if seconds_int != self.second_of_minute:
                                 time_string += ",tt"
         if time_string:
-            time_string += u"±hh:mm"
+            if self.time_zone.hours == 0 and self.time_zone.minutes == 0:
+                time_string += "Z"
+            else:
+                time_string += u"±hh:mm"
+        if date_string == "YY":
+            date_string = "-YY"
+            time_string = time_string.replace(":", "")
         return date_string + time_string
 
     __repr__ = __str__
