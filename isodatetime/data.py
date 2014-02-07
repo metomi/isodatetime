@@ -817,6 +817,10 @@ class TimePoint(object):
         self.apply_time_zone_offset(dest_time_zone - self.get_time_zone())
         self.time_zone = dest_time_zone
 
+    def set_time_zone_to_utc(self):
+        """Set the time zone to UTC, if it's not already."""
+        self.set_time_zone(TimeZone(hours=0, minutes=0))
+
     def to_calendar_date(self):
         """Reformat the date in years, month-of-year, day-of-month."""
         year, month, day = self.get_calendar_date()
@@ -1320,26 +1324,33 @@ class TimePoint(object):
             else:
                 date_string = year_string + "-W-D"
         time_string = ""
-        if self.hour_of_day is not None:
+        if (self.hour_of_day is None and
+                (self.minute_of_hour is not None or
+                 self.second_of_minute is not None)):
+            time_string = "T-"
+        elif (self.hour_of_day is not None and
+                  int(self.hour_of_day) != self.hour_of_day):
+            time_string = "Thh,ii"
+        elif self.hour_of_day is not None:
             time_string = "Thh"
-            if int(self.hour_of_day) != self.hour_of_day:
-                remainder = self.hour_of_day - int(self.hour_of_day)
-                time_string += ",ii"
-            else:
-                if self.minute_of_hour is None:
-                    time_string += ":00:00"
-                else:
-                    time_string += ":mm"
-                    if int(self.minute_of_hour) != self.minute_of_hour:
-                        time_string += ",nn"
-                    else:
-                        if self.second_of_minute is None:
-                            time_string += ":00"
-                        else:
-                            seconds_int = int(self.second_of_minute)
-                            time_string += ":ss"
-                            if seconds_int != self.second_of_minute:
-                                time_string += ",tt"
+        if self.minute_of_hour is None and self.second_of_minute is not None:
+            time_string += "-"
+        elif (self.minute_of_hour is not None and
+                  int(self.minute_of_hour) != self.minute_of_hour):
+            if self.hour_of_day is not None:
+                time_string += ":"
+            time_string += "mm,nn"
+        elif self.minute_of_hour is not None:
+            if self.hour_of_day is not None:
+                time_string += ":"
+            time_string += "mm"
+        if self.second_of_minute is not None:
+            seconds_int = int(self.second_of_minute)
+            if self.minute_of_hour is not None:
+                time_string += ":"
+            time_string += "ss"
+            if seconds_int != self.second_of_minute:
+                time_string += ",tt"
         if time_string:
             if self.time_zone.hours == 0 and self.time_zone.minutes == 0:
                 time_string += "Z"
@@ -1348,6 +1359,8 @@ class TimePoint(object):
         if date_string == "YY":
             date_string = "-YY"
             time_string = time_string.replace(":", "")
+        if date_string == "-":
+            date_string = ""
         return date_string + time_string
 
     __repr__ = __str__

@@ -183,7 +183,7 @@ class TimePointParser(object):
 
     def parse_date_expression_to_regex(self, expression):
         """Construct regular expressions for the date."""
-        for expr_regex, substitute, format in (
+        for expr_regex, substitute, format_, name in (
                 parser_spec.get_date_translate_info(
                     self.expanded_year_digits)):
             expression = re.sub(expr_regex, substitute, expression)
@@ -192,7 +192,7 @@ class TimePointParser(object):
 
     def parse_time_expression_to_regex(self, expression):
         """Construct regular expressions for the time."""
-        for expr_regex, substitute, format in (
+        for expr_regex, substitute, format_, name in (
                 parser_spec.get_time_translate_info()):
             expression = re.sub(expr_regex, substitute, expression)
         expression = "^" + expression + "$"
@@ -200,7 +200,7 @@ class TimePointParser(object):
 
     def parse_timezone_expression_to_regex(self, expression):
         """Construct regular expressions for the timezone."""
-        for expr_regex, substitute, format in (
+        for expr_regex, substitute, format_, name in (
                 parser_spec.get_timezone_translate_info(
                     )):
             expression = re.sub(expr_regex, substitute, expression)

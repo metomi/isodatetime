@@ -29,8 +29,6 @@ class TimePointDumper(object):
 
     """Dump TimePoint instances to strings."""
 
-    RE_PROP = re.compile("%\(([^)]*)\)")
-
     def __init__(self, num_expanded_year_digits=2):
         self._rec_formats = {"date": [], "time": [], "timezone": []}
         self._time_designator = parser_spec.TIME_DESIGNATOR
@@ -40,13 +38,9 @@ class TimePointDumper(object):
                  "date"),
                 (parser_spec.get_time_translate_info(), "time"),
                 (parser_spec.get_timezone_translate_info(), "timezone")]:
-            for regex, regex_sub, format_sub in info:
+            for regex, regex_sub, format_sub, prop_name in info:
                 rec = re.compile(regex)
-                prop = None
-                prop_results = self.RE_PROP.search(format_sub)
-                if prop_results:
-                    prop = prop_results.groups()[0]
-                self._rec_formats[key].append((rec, format_sub, prop))
+                self._rec_formats[key].append((rec, format_sub, prop_name))
 
     def dump(self, timepoint, formatting_string):
         """Dump a timepoint according to formatting_string.
@@ -64,7 +58,10 @@ class TimePointDumper(object):
                       "day_of_month" in properties or
                       "day_of_year" in properties)):
             # We need the year to be in week years.
-            timecopy = copy.copy(timepoint).to_week_date()
+            timepoint = copy.copy(timepoint).to_week_date()
+        if "Z" in expression and (
+                timepoint.time_zone.hours or timepoint.time_zone.minutes):
+            timepoint = copy.copy(timepoint.set_time_zone_to_utc())
         property_map = {}
         for property_ in properties:
             property_map[property_] = timepoint.get(property_)

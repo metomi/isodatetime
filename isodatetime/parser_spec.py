@@ -140,43 +140,48 @@ Z
 """}
 TIME_DESIGNATOR = "T"
 _DATE_TRANSLATE_INFO = [
-    (u"±", "(?P<year_sign>[-+])", "%(year_sign)s"),
-    (u"CC", "(?P<century>\d\d)", "%(century)02d"),
-    (u"YY", "(?P<year_of_century>\d\d)", "%(year_of_century)02d"),
-    (u"MM", "(?P<month_of_year>\d\d)", "%(month_of_year)02d"),
-    (u"DDD", "(?P<day_of_year>\d\d\d)", "%(day_of_year)03d"),
-    (u"DD", "(?P<day_of_month>\d\d)", "%(day_of_month)02d"),
-    (u"Www", "W(?P<week_of_year>\d\d)", "W%(week_of_year)02d"),
-    (u"D", "(?P<day_of_week>\d)", "%(day_of_week)01d"),
-    (u"z", "(?P<year_of_decade>\d)", "%(year_of_decade)01d"),
-    (u"^---", "(?P<truncated>---)", "---"),
-    (u"^--", "(?P<truncated>--)", "--"),
-    (u"^-", "(?P<truncated>-)", "-")
+    (u"±", "(?P<year_sign>[-+])", "%(year_sign)s", "year_sign"),
+    (u"CC", "(?P<century>\d\d)", "%(century)02d", "century"),
+    (u"YY", "(?P<year_of_century>\d\d)", "%(year_of_century)02d",
+     "year_of_century"),
+    (u"MM", "(?P<month_of_year>\d\d)", "%(month_of_year)02d", "month_of_year"),
+    (u"DDD", "(?P<day_of_year>\d\d\d)", "%(day_of_year)03d", "day_of_year"),
+    (u"DD", "(?P<day_of_month>\d\d)", "%(day_of_month)02d", "day_of_month"),
+    (u"Www", "W(?P<week_of_year>\d\d)", "W%(week_of_year)02d", "week_of_year"),
+    (u"D", "(?P<day_of_week>\d)", "%(day_of_week)01d", "day_of_week"),
+    (u"z", "(?P<year_of_decade>\d)", "%(year_of_decade)01d", "year_of_decade"),
+    (u"^---", "(?P<truncated>---)", "---", None),
+    (u"^--", "(?P<truncated>--)", "--", None),
+    (u"^-", "(?P<truncated>-)", "-", None)
 ]
 _TIME_TRANSLATE_INFO = [
-    (u"(?<=^hh)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d"),
-    (u"(?<=^hh:)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d"),
-    (u"(?<=^-)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d"),
-    (u"^hh", "(?P<hour_of_day>\d\d)", "%(hour_of_day)02d"),
+    (u"(?<=^hh)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d",
+     "minute_of_hour"),
+    (u"(?<=^hh:)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d",
+     "minute_of_hour"),
+    (u"(?<=^-)mm", "(?P<minute_of_hour>\d\d)", "%(minute_of_hour)02d",
+     "minute_of_hour"),
+    (u"^hh", "(?P<hour_of_day>\d\d)", "%(hour_of_day)02d", "hour_of_day"),
     (u",ii", "[,.](?P<hour_of_day_decimal>\d+)",
-        "%(hour_of_day_decimal_string)s"),
+     "%(hour_of_day_decimal_string)s", "hour_of_day_decimal_string"),
     (u",nn", "[,.](?P<minute_of_hour_decimal>\d+)",
-        "%(minute_of_hour_decimal_string)s"),
-    (u"ss", "(?P<second_of_minute>\d\d)", "%(second_of_minute)02d"),
+     "%(minute_of_hour_decimal_string)s", "minute_of_hour_decimal_string"),
+    (u"ss", "(?P<second_of_minute>\d\d)", "%(second_of_minute)02d",
+     "second_of_minute"),
     (u",tt", "[,.](?P<second_of_minute_decimal>\d+)",
-        "%(second_of_minute_decimal_string)s"),
-    (u"^--", "(?P<truncated>--)", "--"),
-    (u"^-", "(?P<truncated>-)", "--")
+     "%(second_of_minute_decimal_string)s", "second_of_minute_decimal_string"),
+    (u"^--", "(?P<truncated>--)", "--", None),
+    (u"^-", "(?P<truncated>-)", "-", None)
 ]
 _TIMEZONE_TRANSLATE_INFO = [
     (u"(?<=±hh)mm", "(?P<time_zone_minute>\d\d)",
-        "%(time_zone_minute_abs)02d"),
+     "%(time_zone_minute_abs)02d", "time_zone_minute_abs"),
     (u"(?<=±hh:)mm", "(?P<time_zone_minute>\d\d)",
-        "%(time_zone_minute_abs)02d"),
+     "%(time_zone_minute_abs)02d", "time_zone_minute_abs"),
     (u"(?<=±)hh", "(?P<time_zone_hour>\d\d)",
-        "%(time_zone_hour_abs)02d"),
-    (u"±", "(?P<time_zone_sign>[-+])", "%(time_zone_sign)s"),
-    (u"Z", "(?P<time_zone_utc>Z)", "Z")
+     "%(time_zone_hour_abs)02d", "time_zone_hour_abs"),
+    (u"±", "(?P<time_zone_sign>[-+])", "%(time_zone_sign)s", "time_zone_sign"),
+    (u"Z", "(?P<time_zone_utc>Z)", "Z", None)
 ]
 
 
@@ -185,7 +190,8 @@ def get_date_translate_info(num_expanded_year_digits=2):
     return _DATE_TRANSLATE_INFO + [
         (u"X",
          "(?P<expanded_year>" + expanded_year_digit_regex + ")",
-         "%(expanded_year_digits)0" + str(num_expanded_year_digits) + "d")
+         "%(expanded_year_digits)0" + str(num_expanded_year_digits) + "d",
+         "expanded_year_digits")
     ]
 
 

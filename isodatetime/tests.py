@@ -317,14 +317,14 @@ def get_timepointparser_tests(allow_only_basic=False,
             "+01": {"time_zone_hour": 1},
             "-05": {"time_zone_hour": -5},
             "+2301": {"time_zone_hour": 23, "time_zone_minute": 1},
-            "-1230": {"time_zone_hour": -12, "time_zone_minute": 30}
+            "-1230": {"time_zone_hour": -12, "time_zone_minute": -30}
         },
         "extended": {
             "Z": {"time_zone_hour": 0, "time_zone_minute": 0},
             "+01": {"time_zone_hour": 1},
             "-05": {"time_zone_hour": -5},
             "+23:01": {"time_zone_hour": 23, "time_zone_minute": 1},
-            "-12:30": {"time_zone_hour": -12, "time_zone_minute": 30}
+            "-12:30": {"time_zone_hour": -12, "time_zone_minute": -30}
         }
     }
     format_ok_keys = ["basic", "extended"]
@@ -468,7 +468,7 @@ class TestSuite(unittest.TestCase):
                     (source, test, control))
         super(TestSuite, self).assertEqual(test, control, info)
 
-    def _test_timeinterval_parser(self):
+    def test_timeinterval_parser(self):
         """Test the time interval parsing."""
         parser = parsers.TimeIntervalParser()
         for expression, ctrl_result in get_timeintervalparser_tests():
@@ -481,7 +481,7 @@ class TestSuite(unittest.TestCase):
                 )
             self.assertEqual(test_result, ctrl_result, expression)
 
-    def _test_timepoint(self):
+    def test_timepoint(self):
         """Test the manipulation of dates and times (takes a while)."""
         import datetime
         import random
@@ -552,7 +552,7 @@ class TestSuite(unittest.TestCase):
             self.assertEqual(test_timepoint,
                              ctrl_timepoint, expression)
 
-    def _test_timepoint_parser(self):
+    def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
         parser = parsers.TimePointParser(allow_truncated=True)
         for expression, timepoint_kwargs in get_timepointparser_tests(
@@ -566,7 +566,7 @@ class TestSuite(unittest.TestCase):
             ctrl_data = str(data.TimePoint(**timepoint_kwargs))
             self.assertEqual(test_data, ctrl_data, expression)
 
-    def _test_timerecurrence(self):
+    def test_timerecurrence(self):
         """Test the recurring date/time series data model."""
         parser = parsers.TimeRecurrenceParser()
         for expression, ctrl_results in get_timerecurrence_tests():
@@ -584,14 +584,13 @@ class TestSuite(unittest.TestCase):
                 test_results.append(str(time_point))
             self.assertEqual(test_results, ctrl_results, expression)
 
-    def _test_timerecurrence_parser(self):
+    def test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""
         parser = parsers.TimeRecurrenceParser()
         for expression, test_info in get_timerecurrenceparser_tests():
             try:
                 test_data = str(parser.parse(expression))
-            except parsers.TimeSyntaxError as e:
-                print e
+            except parsers.TimeSyntaxError:
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
