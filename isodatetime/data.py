@@ -22,9 +22,29 @@
 from . import dumpers
 from . import util
 
-DAYS_OF_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-DAYS_OF_MONTHS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
+# The following constants could be encapsulated in a calendar class.
+SECONDS_IN_MINUTE = 60
+MINUTES_IN_HOUR = 60
+SECONDS_IN_HOUR = SECONDS_IN_MINUTE * MINUTES_IN_HOUR
+HOURS_IN_DAY = 24
+SECONDS_IN_DAY = SECONDS_IN_HOUR * HOURS_IN_DAY
+MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY
+DAYS_IN_WEEK = 7
+DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+DAYS_IN_MONTHS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+MONTHS_IN_YEAR = len(DAYS_IN_MONTHS)
+# No support for MONTHS_IN_YEAR_LEAP (some calendars...)
+ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
+DAYS_IN_YEAR = sum(DAYS_IN_MONTHS)
+ROUGH_DAYS_IN_YEAR = DAYS_IN_YEAR  # = as ROUGH_DAYS_IN_MONTH
+DAYS_IN_YEAR_LEAP = sum(DAYS_IN_MONTHS_LEAP)
+HOURS_IN_YEAR = DAYS_IN_YEAR * HOURS_IN_DAY
+MINUTES_IN_YEAR = DAYS_IN_YEAR * MINUTES_IN_DAY
+SECONDS_IN_YEAR = DAYS_IN_YEAR * SECONDS_IN_DAY
+HOURS_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * HOURS_IN_DAY
+MINUTES_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * MINUTES_IN_DAY
+SECONDS_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * SECONDS_IN_DAY
 WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
                             "ordinal": (2000, 3)}
 
@@ -34,12 +54,24 @@ TIMEPOINT_DUMPER_MAP = {
     2: dumpers.TimePointDumper(num_expanded_year_digits=2)
 }
 
+BAD_INPUT_CONFLICT = "Conflicting input: {0} but have {1}"
+BAD_INPUT_INT_CAST = "Invalid input for {0}: {1}: {2}"
+BAD_INPUT_INT_REMAINDER = "Non-integer like number for {0}: {1}"
+BAD_INPUT_MISSING = "Missing input: {0} needs {1}"
+BAD_INPUT_OUT_OF_BOUNDS = "Invalid input (out of bounds): {0}: {1}"
+BAD_INPUT_RECURRENCE = "Unsupported or invalid recurrence information."
+BAD_INPUT_TYPE = "Invalid type for {0}: {1}{2}"
+BAD_INPUT_VALUES = "Invalid input for {0}: {1}: allowed: {2}"
+
 
 class BadInputError(ValueError):
 
     """An error raised when constructor inputs are invalid."""
 
-    pass
+    def __str__(self):
+        format_string = self.args[0]
+        format_args = self.args[1:]
+        return format_string.format(*format_args)
 
 
 class TimeRecurrence(object):
@@ -79,10 +111,10 @@ class TimeRecurrence(object):
             diff_seconds = end_seconds - start_seconds
             while diff_seconds < 0:
                 diff_days -= 1
-                diff_seconds += 86400
-            while diff_seconds >= 86400:
+                diff_seconds += SECONDS_IN_DAY
+            while diff_seconds >= SECONDS_IN_DAY:
                 diff_days += 1
-                diff_seconds -= 86400
+                diff_seconds -= SECONDS_IN_DAY
             if self.repetitions == 1:
                 self.interval = TimeInterval(years=0)
             else:
@@ -91,7 +123,8 @@ class TimeRecurrence(object):
                 diff_seconds_float = diff_seconds / float(
                     self.repetitions - 1)
                 diff_days = int(diff_days_float)
-                diff_seconds_float += (diff_days_float - diff_days) * 86400
+                diff_seconds_float += (
+                    diff_days_float - diff_days) * SECONDS_IN_DAY
                 self.interval = TimeInterval(days=diff_days,
                                              seconds=diff_seconds_float)
         elif self.end_point is None:
@@ -111,8 +144,7 @@ class TimeRecurrence(object):
                     point -= self.interval
                 self.start_point = point
         else:
-            raise BadInputError(
-                "Unsupported or invalid recurrence information.")
+            raise BadInputError(BAD_INPUT_RECURRENCE)
 
     def __iter__(self):
         if self.start_point is None:
@@ -209,16 +241,16 @@ class TimeInterval(object):
         self.days = days
         if weeks is not None:
             if days is None:
-                self.days = 7 * weeks
+                self.days = DAYS_IN_WEEK * weeks
             else:
-                self.days += 7 * weeks
+                self.days += DAYS_IN_WEEK * weeks
         self.hours = hours
         self.minutes = minutes
         self.seconds = seconds
         if (not self.years and not self.months and not self.hours and
                 not self.minutes and not self.seconds and
                 weeks and not days):
-            self.weeks = self.days / 7
+            self.weeks = self.days / DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
 
@@ -236,22 +268,27 @@ class TimeInterval(object):
         equal to 365 days, months to 30, in order to work (no context
         can be supplied). This code needs improving.
 
-        Seconds are returned in the range 0 <= seconds < 86400, which
-        means that a TimeInterval which has self.seconds = 86500 will
-        return 1 day, 100 seconds or (1, 100) from this method.
+        Seconds are returned in the range
+        0 <= seconds < SECONDS_IN_DAY, which means that a TimeInterval
+        which has self.seconds = SECONDS_IN_DAY + 100 will return 1
+        day, 100 seconds or (1, 100) from this method.
 
         """
         # TODO: Implement error calculation for the below quantities.
         new = self.copy()
         new.to_days()
-        new_days = new.years * 365 + new.months * 30 + new.days
-        new_seconds = new.hours * 3600 + new.minutes * 60 + new.seconds
-        while new_seconds >= 86400:
+        new_days = (new.years * ROUGH_DAYS_IN_YEAR +
+                    new.months * ROUGH_DAYS_IN_MONTH +
+                    new.days)
+        new_seconds = (new.hours * SECONDS_IN_HOUR +
+                       new.minutes * SECONDS_IN_MINUTE +
+                       new.seconds)
+        while new_seconds >= SECONDS_IN_DAY:
             new_days += 1
-            new_seconds -= 86400
+            new_seconds -= SECONDS_IN_DAY
         while new_seconds < 0:
             new_days -= 1
-            new_seconds += 86400
+            new_seconds += SECONDS_IN_DAY
         return new_days, new_seconds
 
     def get_is_in_weeks(self):
@@ -265,13 +302,13 @@ class TimeInterval(object):
                               self.minutes, self.seconds]:
                 if attribute is None:
                     attribute = 0
-            self.days = self.weeks * 7
+            self.days = self.weeks * DAYS_IN_WEEK
             self.weeks = None
 
     def to_weeks(self):
         """Convert to week representation (warning: use with caution)."""
         if not self.get_is_in_weeks():
-            self.weeks = self.days / 7
+            self.weeks = self.days / DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
 
@@ -301,29 +338,7 @@ class TimeInterval(object):
         )
 
     def __sub__(self, other):
-        new = self.copy()
-        if isinstance(other, TimeInterval):
-            if new.get_is_in_weeks():
-                if other.get_is_in_weeks():
-                    new.weeks -= other.weeks
-                    return new
-                new.to_days()
-            elif other.get_is_in_weeks():
-                other = other.copy().to_days()
-            new.years -= other.years
-            new.months -= other.months
-            new.days -= other.days
-            new.hours -= other.hours
-            new.minutes -= other.minutes
-            new.seconds -= other.seconds
-            return new
-        if isinstance(other, TimePoint):
-            return other - new
-        raise TypeError(
-            "Invalid type for subtraction: " +
-            "'%s' should be TimeInterval or TimePoint." %
-            type(other).__name__
-        )
+        return self + -1 * other
 
     def __mul__(self, other):
         # TODO: support float multiplication?
@@ -517,7 +532,6 @@ class TimePoint(object):
     truncated_property - a string that can either be "year_of_decade"
     or "year_of_century". This is used for truncated representations to
     distinguish between the two ways of truncating the year.
-
     """
 
     DATA_ATTRIBUTES = [
@@ -557,14 +571,15 @@ class TimePoint(object):
         if (dump_format is not None and not
             isinstance(dump_format, basestring)):
             raise BadInputError(
-                "Invalid input for dumper: {0}".format(
-                     dumper))
+                BAD_INPUT_TYPE,
+                "dump_format", repr(dump_format), type(dump_format))
         if (truncated_property is not None and
                 truncated_property not in ["year_of_decade",
                                            "year_of_century"]):
             raise BadInputError(
-                "Invalid input for truncated_property: {0}".format(
-                    truncated_property))
+                BAD_INPUT_VALUES, "truncated_property",
+                repr(truncated_property),
+                "'year_of_decade' or 'year_of_century'")
         self.dump_format = dump_format
         self.expanded_year_digits = _int_caster(expanded_year_digits,
                                                 "expanded_year_digits")
@@ -585,32 +600,39 @@ class TimePoint(object):
                                        allow_none=True)
         if hour_of_day_decimal is not None:
             if self.hour_of_day is None:
-                raise TimePointInputError(
-                    "Invalid input: hour decimal points - but not hours")
+                raise BadInputError(
+                    BAD_INPUT_MISSING, "hour_of_day_decimal",
+                    "hour_of_day")
             self.hour_of_day += float(hour_of_day_decimal)
             if minute_of_hour is not None:
-                raise TimePointInputError(
-                    "Invalid input: minutes - already have hour decimals")
+                raise BadInputError(
+                    BAD_INPUT_CONFLICT, "minute_of_hour",
+                    "hour_of_day_decimal")
             if second_of_minute is not None:
-                raise TimePointInputError(
-                    "Invalid input: seconds - already have hour decimals")
+                raise BadInputError(
+                    BAD_INPUT_CONFLICT, "second_of_minute",
+                    "hour_of_day_decimal")
         if minute_of_hour_decimal is not None:
             if minute_of_hour is None:
-                raise TimePointInputError(
-                    "Invalid input: minute decimal points - but not minutes")
+                raise BadInputError(
+                    BAD_INPUT_MISSING, "minute_of_hour_decimal",
+                    "minute_of_hour")
             self.minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour")
             self.minute_of_hour += float(minute_of_hour_decimal)
             if second_of_minute is not None:
-                raise TimePointInputError(
-                    "Invalid input: seconds - already have minute decimals")
+                raise BadInputError(
+                    BAD_INPUT_CONFLICT, "second_of_minute",
+                    "minute_of_hour_decimal")
         else:
             self.minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour", allow_none=True)
         if second_of_minute_decimal is not None:
             if second_of_minute is None:
-                raise TimePointInputError(
-                    "Invalid input: second decimal points - but not seconds")
+                raise BadInputError(
+                    BAD_INPUT_MISSING,
+                    "second_of_minute_decimal",
+                    "second_of_minute")
             self.second_of_minute = _int_caster(second_of_minute,
                                                 "second_of_minute")
             self.second_of_minute += float(second_of_minute_decimal)
@@ -679,10 +701,10 @@ class TimePoint(object):
             if minute_of_hour is None:
                 hour_decimals = hour_of_day - int(hour_of_day)
                 hour_of_day = float(int(hour_of_day))
-                minute_of_hour = 60 * hour_decimals
+                minute_of_hour = MINUTES_IN_HOUR * hour_decimals
             minute_decimals = minute_of_hour - int(minute_of_hour)
             minute_of_hour = float(int(minute_of_hour))
-            second_of_minute = 60 * minute_decimals
+            second_of_minute = SECONDS_IN_MINUTE * minute_decimals
         return hour_of_day, minute_of_hour, second_of_minute
 
     def get_ordinal_date(self):
@@ -761,8 +783,8 @@ class TimePoint(object):
         if self.second_of_minute is not None:
             second_of_day += self.second_of_minute
         if self.minute_of_hour is not None:
-            second_of_day += self.minute_of_hour * 60
-        second_of_day += self.hour_of_day * 3600
+            second_of_day += self.minute_of_hour * SECONDS_IN_MINUTE
+        second_of_day += self.hour_of_day * SECONDS_IN_HOUR
         return second_of_day
 
     def get_time_zone(self):
@@ -791,7 +813,7 @@ class TimePoint(object):
         """Apply a time zone shift represented by a TimeInterval."""
         if offset.minutes:
             if self.minute_of_hour is None:
-                self.hour_of_day += offset.minutes / 60.0
+                self.hour_of_day += offset.minutes / float(MINUTES_IN_HOUR)
             else:
                 self.minute_of_hour += offset.minutes
             self._tick_over()
@@ -976,15 +998,17 @@ class TimePoint(object):
         if duration.seconds:
             if new.second_of_minute is None:
                 if new.minute_of_hour is None:
-                    new.hour_of_day += duration.seconds / 3600.0
+                    new.hour_of_day += (
+                        duration.seconds / float(SECONDS_IN_HOUR))
                 else:
-                    new.minute_of_hour += duration.seconds / 60.0
+                    new.minute_of_hour += (
+                        duration.seconds / float(SECONDS_IN_MINUTE))
             else:
                 new.second_of_minute += duration.seconds
             new._tick_over()
         if duration.minutes:
             if new.minute_of_hour is None:
-                new.hour_of_day += duration.minutes / 3600.0
+                new.hour_of_day += duration.minutes / float(MINUTES_IN_HOUR)
             else:
                 new.minute_of_hour += duration.minutes
             new._tick_over()
@@ -1005,11 +1029,11 @@ class TimePoint(object):
         if duration.years:
             new.year += duration.years
             if new.get_is_calendar_date():
-                month_index = (new.month_of_year - 1) % 12
+                month_index = (new.month_of_year - 1) % MONTHS_IN_YEAR
                 if get_is_leap_year(new.year):
-                    max_day_in_new_month = DAYS_OF_MONTHS_LEAP[month_index]
+                    max_day_in_new_month = DAYS_IN_MONTHS_LEAP[month_index]
                 else:
-                    max_day_in_new_month = DAYS_OF_MONTHS[month_index]
+                    max_day_in_new_month = DAYS_IN_MONTHS[month_index]
                 if new.day_of_month > max_day_in_new_month:
                     # For example, when Feb 29 - 1 year = Feb 28.
                     new.day_of_month = max_day_in_new_month
@@ -1031,6 +1055,13 @@ class TimePoint(object):
         dummy_timepoint.time_zone = self.time_zone.copy()
         return dummy_timepoint
 
+    def get_props(self):
+        """Return the data properties of this TimePoint."""
+        hash_ = []
+        for attr in self.DATA_ATTRIBUTES:
+            hash_.append(attr, getattr(self, attr, None))
+        return hash_
+
     def __cmp__(self, other):
         if not isinstance(other, TimePoint):
             raise TypeError(
@@ -1041,6 +1072,8 @@ class TimePoint(object):
             raise TypeError(
                 "Cannot compare truncated to non-truncated " +
                 "TimePoint: %s, %s" % (self, other))
+        if self.get_props() == other.get_props():
+            return 0
         if self.truncated:
             for attribute in self.DATA_ATTRIBUTES:
                 other_attr = getattr(other, attribute)
@@ -1106,19 +1139,19 @@ class TimePoint(object):
         for i in range(abs(num_months)):
             if num_months > 0:
                 self.month_of_year += 1
-                if self.month_of_year > 12:
-                    self.month_of_year -= 12
+                if self.month_of_year > MONTHS_IN_YEAR:
+                    self.month_of_year -= MONTHS_IN_YEAR
                     self.year += 1
             if num_months < 0:
                 self.month_of_year -= 1
                 if self.month_of_year < 1:
-                    self.month_of_year += 12
+                    self.month_of_year += MONTHS_IN_YEAR
                     self.year -= 1
-            month_index = (self.month_of_year - 1) % 12
+            month_index = (self.month_of_year - 1) % MONTHS_IN_YEAR
             if get_is_leap_year(self.year):
-                max_day_in_new_month = DAYS_OF_MONTHS_LEAP[month_index]
+                max_day_in_new_month = DAYS_IN_MONTHS_LEAP[month_index]
             else:
-                max_day_in_new_month = DAYS_OF_MONTHS[month_index]
+                max_day_in_new_month = DAYS_IN_MONTHS[month_index]
             if self.day_of_month > max_day_in_new_month:
                 # For example, when 31 March + 1 month = 30 April.
                 self.day_of_month = max_day_in_new_month
@@ -1139,7 +1172,7 @@ class TimePoint(object):
             self.hour_of_day += num_hours
             self.minute_of_hour = minutes
         if self.hour_of_day is not None:
-            num_days, hours = divmod(self.hour_of_day, 24)
+            num_days, hours = divmod(self.hour_of_day, HOURS_IN_DAY)
             if self.day_of_week is not None:
                 self.day_of_week += num_days
             elif self.day_of_month is not None:
@@ -1148,7 +1181,7 @@ class TimePoint(object):
                 self.day_of_year += num_days
             self.hour_of_day = hours
         if self.day_of_week is not None:
-            num_weeks, days = divmod(self.day_of_week - 1, 7)
+            num_weeks, days = divmod(self.day_of_week - 1, DAYS_IN_WEEK)
             self.week_of_year += num_weeks
             self.day_of_week = days + 1
         if self.day_of_month is not None:
@@ -1173,10 +1206,10 @@ class TimePoint(object):
                 self.year += 1
         if self.month_of_year is not None:
             while self.month_of_year < 1:
-                self.month_of_year += 12
+                self.month_of_year += MONTHS_IN_YEAR
                 self.year -= 1
-            while self.month_of_year > 12:
-                self.month_of_year -= 12
+            while self.month_of_year > MONTHS_IN_YEAR:
+                self.month_of_year -= MONTHS_IN_YEAR
                 self.year += 1
 
     def _tick_over_day_of_month(self):
@@ -1204,11 +1237,11 @@ class TimePoint(object):
                 self.month_of_year = month
                 self.day_of_month = day
         else:
-            month_index = (self.month_of_year - 1) % 12
+            month_index = (self.month_of_year - 1) % MONTHS_IN_YEAR
             if get_is_leap_year(self.year):
-                max_day_in_month = DAYS_OF_MONTHS_LEAP[month_index]
+                max_day_in_month = DAYS_IN_MONTHS_LEAP[month_index]
             else:
-                max_day_in_month = DAYS_OF_MONTHS[month_index]
+                max_day_in_month = DAYS_IN_MONTHS[month_index]
             if self.day_of_month > max_day_in_month:
                 num_days = 0
                 for month, day in iter_months_days(
@@ -1410,10 +1443,10 @@ def get_is_leap_year(year):
 
 @util.cache_results
 def get_days_in_year(year):
-    """Return 366 if year is a leap year, otherwise 365."""
+    """Return the number of days in this particular year."""
     if get_is_leap_year(year):
-        return 366
-    return 365
+        return DAYS_IN_YEAR_LEAP
+    return DAYS_IN_YEAR
 
 
 @util.cache_results
@@ -1426,7 +1459,7 @@ def get_weeks_in_year(year):
     while cal_year_next != cal_year:
         diff_days += get_days_in_year(cal_year)
         cal_year += 1
-    return diff_days / 7
+    return diff_days / DAYS_IN_WEEK
 
 
 def get_calendar_date_from_ordinal_date(year, day_of_year):
@@ -1459,7 +1492,7 @@ def get_calendar_date_from_week_date(year, week_of_year, day_of_week):
     day_of_week is an integer that denotes the day of the week (1-7).
 
     """
-    num_days_week_year = (week_of_year - 1) * 7 + day_of_week - 1
+    num_days_week_year = (week_of_year - 1) * DAYS_IN_WEEK + day_of_week - 1
     start_year, start_month, start_day = (
         get_calendar_date_week_date_start(year))
     if num_days_week_year == 0:
@@ -1573,8 +1606,8 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
         if (start_year == year and
                 iter_month == month_of_year and
                 iter_day == day_of_month):
-            week_of_year = (total_iter_days / 7) + 1
-            day_of_week = (total_iter_days % 7) + 1
+            week_of_year = (total_iter_days / DAYS_IN_WEEK) + 1
+            day_of_week = (total_iter_days % DAYS_IN_WEEK) + 1
             return week_date_start_year, week_of_year, day_of_week
 
     for iter_start_year in [start_year + 1, start_year + 2]:
@@ -1584,8 +1617,8 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
             if (iter_start_year == year and
                     iter_month == month_of_year and
                     iter_day == day_of_month):
-                week_of_year = (total_iter_days / 7) + 1
-                day_of_week = (total_iter_days % 7) + 1
+                week_of_year = (total_iter_days / DAYS_IN_WEEK) + 1
+                day_of_week = (total_iter_days % DAYS_IN_WEEK) + 1
                 return week_date_start_year, week_of_year, day_of_week
     raise ValueError("Bad calendar date: %s-%02d-%02d" % (year,
                                                           month_of_year,
@@ -1623,11 +1656,12 @@ def get_calendar_date_week_date_start(year):
         days_diff = ref_ordinal_day - 2
     for intervening_year in years:
         days_diff += get_days_in_year(intervening_year)
-    weekdays_diff = (days_diff) % 7
+    weekdays_diff = (days_diff) % DAYS_IN_WEEK
     if year > ref_year:
         day_of_week_start_year = weekdays_diff + 1
     else:
-        day_of_week_start_year = 7 - weekdays_diff  # Jan 1 as day of week.
+        # Jan 1 as day of week.
+        day_of_week_start_year = DAYS_IN_WEEK - weekdays_diff
     if day_of_week_start_year == 1:
         return year, 1, 1
     if day_of_week_start_year > 4:
@@ -1678,9 +1712,9 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
     True (default False).
 
     """
-    source = DAYS_OF_MONTHS
+    source = DAYS_IN_MONTHS
     if get_is_leap_year(year):
-        source = DAYS_OF_MONTHS_LEAP
+        source = DAYS_IN_MONTHS_LEAP
     if day_of_month is not None and month_of_year is None:
         raise ValueError("Need to specify start month as well as day.")
     if in_reverse:
@@ -1727,10 +1761,10 @@ def _int_caster(number, name="number", allow_none=False):
         float_number = float(number)
     except (TypeError, ValueError) as num_exc:
         raise BadInputError(
-            "Invalid input for {0}: {1}: {2}".format(name, number, num_exc))
+            BAD_INPUT_INT_CAST, name, number, num_exc)
     if float(int_number) != float_number:
         raise BadInputError(
-            "Non-integer like number for {0}: {1}".format(name, number))
+            BAD_INPUT_INT_REMAINDER, name, number)
     return int_number
         
 
@@ -1755,5 +1789,5 @@ def _type_checker(*objects):
                 values_string = " should be: "
                 values_string += " or ".join(
                     [str(v) for v in allowed_types])
-            raise BadInputError("Invalid type for '{0}': {1}{2}".format(
-                name, repr(value), values_string))
+            raise BadInputError(
+                BAD_INPUT_TYPE, name, repr(value), values_string)

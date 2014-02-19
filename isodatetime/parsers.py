@@ -25,9 +25,15 @@ from . import dumpers
 from . import parser_spec
 
 
-class TimeSyntaxError(ValueError):
+
+class ISOSyntaxError(ValueError):
 
     """An error denoting invalid input syntax."""
+
+    BAD_TIME_INPUT = "Invalid ISO 8601 {0} representation: {1}"
+
+    def __str__(self):
+        return self.BAD_TIME_INPUT.format(*self.args)
 
 
 class TimeRecurrenceParser(object):
@@ -87,9 +93,7 @@ class TimeRecurrenceParser(object):
                 end_point=end_point,
                 interval=interval
             )
-        raise TimeSyntaxError(
-            "Not a supported ISO 8601 recurrence pattern: %s" %
-            expression)
+        raise ISOSyntaxError("recurrence", expression)
 
     __call__ = parse
 
@@ -254,7 +258,7 @@ class TimePointParser(object):
                         timezone,
                         bad_formats=bad_formats
                     )
-                except TimeSyntaxError:
+                except ISOSyntaxError:
                     time = time_timezone
                     timezone = None
             else:
@@ -357,8 +361,7 @@ class TimePointParser(object):
                     result = regex.match(date_string)
                     if result:
                         return (format_key, type_key), result.groupdict()
-        raise TimeSyntaxError(
-            "Not a valid ISO 8601 date representation: %s" % date_string)
+        raise ISOSyntaxError("date", date_string)
 
     def get_time_info(self, time_string, bad_formats=None, bad_types=None):
         """Return the properties from a time string."""
@@ -376,8 +379,7 @@ class TimePointParser(object):
                     result = regex.match(time_string)
                     if result:
                         return result.groupdict()
-        raise TimeSyntaxError(
-            "Not a valid ISO 8601 time representation: %s" % time_string)
+        raise ISOSyntaxError("time", time_string)
 
     def get_timezone_info(self, timezone_string, bad_formats=None):
         """Return the properties from a timezone string."""
@@ -390,10 +392,7 @@ class TimePointParser(object):
                 result = regex.match(timezone_string)
                 if result:
                     return result.groupdict()
-        raise TimeSyntaxError(
-            "Not a valid ISO 8601 timezone representation: %s" %
-            timezone_string
-        )
+        raise ISOSyntaxError("timezone", timezone_string)
 
 
 class TimeIntervalParser(object):
@@ -432,8 +431,7 @@ class TimeIntervalParser(object):
                     value = float(value)
                 result_map[key] = value
             return data.TimeInterval(**result_map)
-        raise TimeSyntaxError("Not an ISO 8601 duration representation: %s" %
-                              expression)
+        raise ISOSyntaxError("duration", expression)
 
 
 def parse_timepoint_expression(timepoint_expression, **kwargs):
