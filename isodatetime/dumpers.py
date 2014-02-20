@@ -61,7 +61,8 @@ class TimePointDumper(object):
             timepoint = copy.copy(timepoint).to_week_date()
         if "Z" in expression and (
                 timepoint.time_zone.hours or timepoint.time_zone.minutes):
-            timepoint = copy.copy(timepoint.set_time_zone_to_utc())
+            timepoint = copy.copy(timepoint)
+            timepoint.set_time_zone_to_utc()   
         property_map = {}
         for property_ in properties:
             property_map[property_] = timepoint.get(property_)
