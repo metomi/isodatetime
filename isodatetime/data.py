@@ -722,6 +722,8 @@ class TimePoint(object):
 
     def get(self, property_name):
         """Return a calculated value for property name."""
+        if property_name == "expanded_year_digits":
+            return abs(self.year) / 10000
         if property_name == "year_sign":
             return "+" if self.year >= 0 else "-"
         if property_name == "century":
@@ -1059,7 +1061,7 @@ class TimePoint(object):
         """Return the data properties of this TimePoint."""
         hash_ = []
         for attr in self.DATA_ATTRIBUTES:
-            hash_.append(attr, getattr(self, attr, None))
+            hash_.append((attr, getattr(self, attr, None)))
         return hash_
 
     def __cmp__(self, other):
