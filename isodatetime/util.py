@@ -35,7 +35,8 @@ def cache_results(func):
             return cache[key]
         else:
             results = func(*args, **kwargs)
-            if len(cache) < 100000:
-                cache[key] = results
+            if len(cache) > 100000:
+                cache.popitem()
+            cache[key] = results
             return results
     return wrap_func
