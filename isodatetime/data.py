@@ -54,19 +54,19 @@ TIMEPOINT_DUMPER_MAP = {
     2: dumpers.TimePointDumper(num_expanded_year_digits=2)
 }
 
-BAD_INPUT_CONFLICT = "Conflicting input: {0} but have {1}"
-BAD_INPUT_INT_CAST = "Invalid input for {0}: {1}: {2}"
-BAD_INPUT_INT_REMAINDER = "Non-integer like number for {0}: {1}"
-BAD_INPUT_MISSING = "Missing input: {0} needs {1}"
-BAD_INPUT_OUT_OF_BOUNDS = "Invalid input (out of bounds): {0}: {1}"
-BAD_INPUT_RECURRENCE = "Unsupported or invalid recurrence information."
-BAD_INPUT_TYPE = "Invalid type for {0}: {1}{2}"
-BAD_INPUT_VALUES = "Invalid input for {0}: {1}: allowed: {2}"
-
 
 class BadInputError(ValueError):
 
     """An error raised when constructor inputs are invalid."""
+
+    CONFLICT = "Conflicting input: {0} but have {1}"
+    INT_CAST = "Invalid input for {0}: {1}: {2}"
+    INT_REMAINDER = "Non-integer like number for {0}: {1}"
+    MISSING = "Missing input: {0} needs {1}"
+    OUT_OF_BOUNDS = "Invalid input (out of bounds): {0}: {1}"
+    RECURRENCE = "Invalid recurrence info: {0}"
+    TYPE = "Invalid type for {0}: {1}{2}"
+    VALUES = "Invalid input for {0}: {1}: allowed: {2}"
 
     def __str__(self):
         format_string = self.args[0]
@@ -81,7 +81,7 @@ class TimeRecurrence(object):
     def __init__(self, repetitions=None, start_point=None,
                  interval=None, end_point=None, min_point=None,
                  max_point=None):
-        _type_checker(
+        inputs = (
             (repetitions, "repetitions", None, int),
             (start_point, "start_point", None, TimePoint),
             (interval, "interval", None, TimeInterval),
@@ -89,6 +89,7 @@ class TimeRecurrence(object):
             (min_point, "min_point", None, TimePoint),
             (max_point, "max_point", None, TimePoint)
         )
+        _type_checker(*inputs)
         self.repetitions = repetitions
         self.start_point = start_point
         self.interval = interval
@@ -105,14 +106,13 @@ class TimeRecurrence(object):
             end_year, end_days = self.end_point.get_ordinal_date()
             end_seconds = self.end_point.get_second_of_day()
             diff_days = end_days - start_days
-            while end_year != start_year:
-                diff_days += get_days_in_year(start_year)
-                start_year += 1
+            for year in range(start_year, end_year):
+                diff_days += get_days_in_year(year)
             diff_seconds = end_seconds - start_seconds
-            while diff_seconds < 0:
+            if diff_seconds < 0:
                 diff_days -= 1
                 diff_seconds += SECONDS_IN_DAY
-            while diff_seconds >= SECONDS_IN_DAY:
+            if diff_seconds >= SECONDS_IN_DAY:
                 diff_days += 1
                 diff_seconds -= SECONDS_IN_DAY
             if self.repetitions == 1:
@@ -144,7 +144,10 @@ class TimeRecurrence(object):
                     point -= self.interval
                 self.start_point = point
         else:
-            raise BadInputError(BAD_INPUT_RECURRENCE)
+            raise BadInputError(
+                BadInputError.RECURRENCE,
+                [i[:2] for i in inputs]
+            )
 
     def __iter__(self):
         if self.start_point is None:
@@ -283,10 +286,10 @@ class TimeInterval(object):
         new_seconds = (new.hours * SECONDS_IN_HOUR +
                        new.minutes * SECONDS_IN_MINUTE +
                        new.seconds)
-        while new_seconds >= SECONDS_IN_DAY:
+        if new_seconds >= SECONDS_IN_DAY:
             new_days += 1
             new_seconds -= SECONDS_IN_DAY
-        while new_seconds < 0:
+        if new_seconds < 0:
             new_days -= 1
             new_seconds += SECONDS_IN_DAY
         return new_days, new_seconds
@@ -571,13 +574,13 @@ class TimePoint(object):
         if (dump_format is not None and not
             isinstance(dump_format, basestring)):
             raise BadInputError(
-                BAD_INPUT_TYPE,
+                BadInputError.TYPE,
                 "dump_format", repr(dump_format), type(dump_format))
         if (truncated_property is not None and
                 truncated_property not in ["year_of_decade",
                                            "year_of_century"]):
             raise BadInputError(
-                BAD_INPUT_VALUES, "truncated_property",
+                BadInputError.VALUES, "truncated_property",
                 repr(truncated_property),
                 "'year_of_decade' or 'year_of_century'")
         self.dump_format = dump_format
@@ -601,28 +604,28 @@ class TimePoint(object):
         if hour_of_day_decimal is not None:
             if self.hour_of_day is None:
                 raise BadInputError(
-                    BAD_INPUT_MISSING, "hour_of_day_decimal",
+                    BadInputError.MISSING, "hour_of_day_decimal",
                     "hour_of_day")
             self.hour_of_day += float(hour_of_day_decimal)
             if minute_of_hour is not None:
                 raise BadInputError(
-                    BAD_INPUT_CONFLICT, "minute_of_hour",
+                    BadInputError.CONFLICT, "minute_of_hour",
                     "hour_of_day_decimal")
             if second_of_minute is not None:
                 raise BadInputError(
-                    BAD_INPUT_CONFLICT, "second_of_minute",
+                    BadInputError.CONFLICT, "second_of_minute",
                     "hour_of_day_decimal")
         if minute_of_hour_decimal is not None:
             if minute_of_hour is None:
                 raise BadInputError(
-                    BAD_INPUT_MISSING, "minute_of_hour_decimal",
+                    BadInputError.MISSING, "minute_of_hour_decimal",
                     "minute_of_hour")
             self.minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour")
             self.minute_of_hour += float(minute_of_hour_decimal)
             if second_of_minute is not None:
                 raise BadInputError(
-                    BAD_INPUT_CONFLICT, "second_of_minute",
+                    BadInputError.CONFLICT, "second_of_minute",
                     "minute_of_hour_decimal")
         else:
             self.minute_of_hour = _int_caster(
@@ -630,7 +633,7 @@ class TimePoint(object):
         if second_of_minute_decimal is not None:
             if second_of_minute is None:
                 raise BadInputError(
-                    BAD_INPUT_MISSING,
+                    BadInputError.MISSING,
                     "second_of_minute_decimal",
                     "second_of_minute")
             self.second_of_minute = _int_caster(second_of_minute,
@@ -1458,9 +1461,8 @@ def get_weeks_in_year(year):
     cal_year_next, cal_ord_days_next = get_ordinal_date_week_date_start(
         year + 1)
     diff_days = cal_ord_days_next - cal_ord_days
-    while cal_year_next != cal_year:
-        diff_days += get_days_in_year(cal_year)
-        cal_year += 1
+    for intervening_year in range(cal_year, cal_year_next):
+        diff_days += get_days_in_year(intervening_year)
     return diff_days / DAYS_IN_WEEK
 
 
@@ -1686,9 +1688,8 @@ def get_days_since_1_ad(year):
         return 0
     start_year = 0
     days = 0
-    while start_year < year:
-        start_year += 1
-        days += get_days_in_year(start_year)
+    for intervening_year in range(start_year + 1, year + 1):
+        days += get_days_in_year(intervening_year)
     return days
 
 
@@ -1763,10 +1764,10 @@ def _int_caster(number, name="number", allow_none=False):
         float_number = float(number)
     except (TypeError, ValueError) as num_exc:
         raise BadInputError(
-            BAD_INPUT_INT_CAST, name, number, num_exc)
+            BadInputError.INT_CAST, name, number, num_exc)
     if float(int_number) != float_number:
         raise BadInputError(
-            BAD_INPUT_INT_REMAINDER, name, number)
+            BadInputError.INT_REMAINDER, name, number)
     return int_number
         
 
@@ -1792,4 +1793,4 @@ def _type_checker(*objects):
                 values_string += " or ".join(
                     [str(v) for v in allowed_types])
             raise BadInputError(
-                BAD_INPUT_TYPE, name, repr(value), values_string)
+                BadInputError.TYPE, name, repr(value), values_string)
