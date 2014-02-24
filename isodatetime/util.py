@@ -19,12 +19,15 @@
 """Provide an optimisation decorator and other utilities."""
 
 
+MAX_CACHE_SIZE = 100000
+
+
 def cache_results(func):
     """Decorator to store results for given inputs.
 
     func is the decorated function.
 
-    A maximum of 100000 arg-value pairs are stored.
+    A maximum of MAX_CACHE_SIZE arg-value pairs are stored.
 
     """
     cache = {}
@@ -35,7 +38,7 @@ def cache_results(func):
             return cache[key]
         else:
             results = func(*args, **kwargs)
-            if len(cache) > 100000:
+            if len(cache) > MAX_CACHE_SIZE:
                 cache.popitem()
             cache[key] = results
             return results
