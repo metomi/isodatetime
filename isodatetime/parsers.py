@@ -26,7 +26,7 @@ from . import parser_spec
 
 
 
-class ISOSyntaxError(ValueError):
+class ISO8601SyntaxError(ValueError):
 
     """An error denoting invalid input syntax."""
 
@@ -93,7 +93,7 @@ class TimeRecurrenceParser(object):
                 end_point=end_point,
                 interval=interval
             )
-        raise ISOSyntaxError("recurrence", expression)
+        raise ISO8601SyntaxError("recurrence", expression)
 
     __call__ = parse
 
@@ -258,7 +258,7 @@ class TimePointParser(object):
                         timezone,
                         bad_formats=bad_formats
                     )
-                except ISOSyntaxError:
+                except ISO8601SyntaxError:
                     time = time_timezone
                     timezone = None
             else:
@@ -361,7 +361,7 @@ class TimePointParser(object):
                     result = regex.match(date_string)
                     if result:
                         return (format_key, type_key), result.groupdict()
-        raise ISOSyntaxError("date", date_string)
+        raise ISO8601SyntaxError("date", date_string)
 
     def get_time_info(self, time_string, bad_formats=None, bad_types=None):
         """Return the properties from a time string."""
@@ -379,7 +379,7 @@ class TimePointParser(object):
                     result = regex.match(time_string)
                     if result:
                         return result.groupdict()
-        raise ISOSyntaxError("time", time_string)
+        raise ISO8601SyntaxError("time", time_string)
 
     def get_timezone_info(self, timezone_string, bad_formats=None):
         """Return the properties from a timezone string."""
@@ -392,7 +392,7 @@ class TimePointParser(object):
                 result = regex.match(timezone_string)
                 if result:
                     return result.groupdict()
-        raise ISOSyntaxError("timezone", timezone_string)
+        raise ISO8601SyntaxError("timezone", timezone_string)
 
 
 class TimeIntervalParser(object):
@@ -431,7 +431,7 @@ class TimeIntervalParser(object):
                     value = float(value)
                 result_map[key] = value
             return data.TimeInterval(**result_map)
-        raise ISOSyntaxError("duration", expression)
+        raise ISO8601SyntaxError("duration", expression)
 
 
 def parse_timepoint_expression(timepoint_expression, **kwargs):

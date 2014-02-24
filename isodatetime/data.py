@@ -441,11 +441,21 @@ class TimeInterval(object):
 
 class TimeZone(TimeInterval):
 
-    """Represent a time zone offset."""
+    """Represent a time zone offset from UTC.
 
-    def __init__(self, *args, **kwargs):
-        self.unknown = kwargs.pop("unknown", False)
-        super(TimeZone, self).__init__(*args, **kwargs)
+    Keyword arguments:
+    hours, minutes: integers (default 0) denoting the hour and minute
+    component of the offset from UTC. These may be positive, zero, or
+    negative, as required. Note that a negative UTC offset should have
+    both hours and minutes as zero or negative integers.
+    unknown: a boolean that represents an unknown TimeZone. Some
+    operations and comparisons may fail when this is True.
+
+    """
+
+    def __init__(self, hours=0, minutes=0, unknown=False):
+        self.unknown = unknown
+        super(TimeZone, self).__init__(hours=hours, minutes=minutes)
 
     def copy(self):
         """Return an unlinked copy of this instance."""

@@ -27,7 +27,37 @@ from . import util
 
 class TimePointDumper(object):
 
-    """Dump TimePoint instances to strings."""
+    """Dump TimePoint instances to strings using particular formats.
+
+    A format can be specified in the self.dump method via the
+    formatting_string argument. Unlike Python's datetime strftime
+    method, this uses normal/Unicode character patterns to represent
+    which pieces of information to output where. A full reference
+    of valid patterns is found in the parser_spec module, with lots
+    of examples (coincidentally, used to generate the parsing).
+    Anything not matched will get left as it is in the string.
+    Specifying a particular timezone will result in a timezone
+    conversion of the date/time information before it is output.
+
+    For example, the following formatting_string
+    'CCYYMMDDThhmmZ' is made up of:
+    CC - year (century) information, e.g. 19
+    YY - year (decade, year of decade) information, e.g. 85
+    MM - month of year information, e.g. 05
+    DD - day of month information, e.g. 31
+    T - left alone, date/time separator
+    hh - hour of day information, e.g. 06
+    mm - minute of hour information, e.g. 58
+    Z - Zulu or UTC zero-offset timezone, left in, forces timezone
+    conversion
+    and might dump a TimePoint instance like this: '19850531T0658Z'.
+
+    Keyword arguments:
+    num_expanded_year_digits - an integer (default 2) that indicates
+    how many extra year digits to apply if appropriate (and if the
+    user requests that information).
+
+    """
 
     def __init__(self, num_expanded_year_digits=2):
         self._rec_formats = {"date": [], "time": [], "timezone": []}
