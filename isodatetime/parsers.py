@@ -431,6 +431,28 @@ class TimeIntervalParser(object):
                     value = float(value)
                 result_map[key] = value
             return data.TimeInterval(**result_map)
+        if expression.startswith("P"):
+            try:
+                timepoint = parse_timepoint_expression(
+                    expression[1:], allow_truncated=False,
+                    assume_utc=True
+                )
+            except ISO8601SyntaxError:
+                raise
+            if timepoint.get_is_week_date():
+                raise ISO8601SyntaxError("duration", expression)
+            result_map = {}
+            result_map["years"] = timepoint.year
+            if timepoint.get_is_calendar_date():
+                result_map["months"] = timepoint.month_of_year
+                result_map["days"] = timepoint.day_of_month
+            if timepoint.get_is_ordinal_date():
+                result_map["days"] = timepoint.day_of_year
+            hours, minutes, seconds = timepoint.get_hour_minute_second()
+            result_map["hours"] = hours
+            result_map["minutes"] = minutes
+            result_map["seconds"] = seconds
+            return data.TimeInterval(**result_map)
         raise ISO8601SyntaxError("duration", expression)
 
 

@@ -29,31 +29,40 @@ from . import parser_spec
 def get_timeintervalparser_tests():
     """Yield tests for the time interval parser."""
     test_expressions = {
-        "P3Y": str(data.TimeInterval(years=3)),
-        "P90Y": str(data.TimeInterval(years=90)),
-        "P1Y2M": str(data.TimeInterval(years=1, months=2)),
-        "P20Y2M": str(data.TimeInterval(years=20, months=2)),
-        "P2M": str(data.TimeInterval(months=2)),
-        "P52M": str(data.TimeInterval(months=52)),
-        "P20Y10M2D": str(data.TimeInterval(years=20, months=10, days=2)),
-        "P1Y3D": str(data.TimeInterval(years=1, days=3)),
-        "P4M1D": str(data.TimeInterval(months=4, days=1)),
-        "P3Y404D": str(data.TimeInterval(years=3, days=404)),
-        "P30Y2D": str(data.TimeInterval(years=30, days=2)),
-        "PT6H": str(data.TimeInterval(hours=6)),
-        "PT1034H": str(data.TimeInterval(hours=1034)),
-        "P3YT4H2M": str(data.TimeInterval(years=3, hours=4, minutes=2)),
-        "P30Y2DT10S": str(data.TimeInterval(years=30, days=2, seconds=10)),
-        "PT2S": str(data.TimeInterval(seconds=2)),
-        "PT2.5S": str(data.TimeInterval(seconds=2.5)),
-        "PT2,5S": str(data.TimeInterval(seconds=2.5)),
-        "PT5.5023H": str(data.TimeInterval(hours=5.5023)),
-        "PT5,5023H": str(data.TimeInterval(hours=5.5023)),
-        "P5W": str(data.TimeInterval(weeks=5)),
-        "P100W": str(data.TimeInterval(weeks=100))
+        "P3Y": {"years": 3},
+        "P90Y": {"years": 90},
+        "P1Y2M": {"years": 1, "months": 2},
+        "P20Y2M": {"years": 20, "months": 2},
+        "P2M": {"months": 2},
+        "P52M": {"months": 52},
+        "P20Y10M2D": {"years": 20, "months": 10, "days": 2},
+        "P1Y3D": {"years": 1, "days": 3},
+        "P4M1D": {"months": 4, "days": 1},
+        "P3Y404D": {"years": 3, "days": 404},
+        "P30Y2D": {"years": 30, "days": 2},
+        "PT6H": {"hours": 6},
+        "PT1034H": {"hours": 1034},
+        "P3YT4H2M": {"years": 3, "hours": 4, "minutes": 2},
+        "P30Y2DT10S": {"years": 30, "days": 2, "seconds": 10},
+        "PT2S": {"seconds": 2},
+        "PT2.5S": {"seconds": 2.5},
+        "PT2,5S": {"seconds": 2.5},
+        "PT5.5023H": {"hours": 5.5023},
+        "PT5,5023H": {"hours": 5.5023},
+        "P5W": {"weeks": 5},
+        "P100W": {"weeks": 100},
+        "P0004-03-02T01": {"years": 4, "months": 3, "days": 2,
+                           "hours": 1},
+        "P0004-03-00": {"years": 4, "months": 3},
+        "P0004-078": {"years": 4, "days": 78},
+        "P0004-078T10,5": {"years": 4, "days": 78, "hours": 10.5},
+        "P00000020T133702": {"days": 20, "hours": 13, "minutes": 37,
+                             "seconds": 02},
+        
     }
     for expression, ctrl_result in test_expressions.items():
-        yield expression, ctrl_result
+        ctrl_data = str(data.TimeInterval(**ctrl_result))
+        yield expression, ctrl_data
 
 
 def get_timepointdumper_tests():
@@ -498,7 +507,7 @@ class TestSuite(unittest.TestCase):
         for expression, ctrl_result in get_timeintervalparser_tests():
             try:
                 test_result = str(parser.parse(expression))
-            except TimeSyntaxError:
+            except parsers.ISO8601SyntaxError:
                 raise ValueError(
                     "TimeIntervalParser test failed to parse '%s'" %
                     expression
