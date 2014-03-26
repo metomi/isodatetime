@@ -178,6 +178,8 @@ class TimeRecurrence(object):
 
     def get_prev(self, timepoint):
         """Return the previous timepoint before this timepoint, or None."""
+        if self.repetitions == 1:
+            return None
         prev_timepoint = timepoint - self.interval
         if self._get_is_in_bounds(prev_timepoint):
             return prev_timepoint
