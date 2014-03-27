@@ -164,7 +164,7 @@ class TimeRecurrence(object):
 
     def get_next(self, timepoint):
         """Return the next timepoint after this timepoint, or None."""
-        if self.repetitions == 1:
+        if self.repetitions == 1 or timepoint is None:
             return None
         next_timepoint = timepoint + self.interval
         if self._get_is_in_bounds(next_timepoint):
@@ -178,7 +178,7 @@ class TimeRecurrence(object):
 
     def get_prev(self, timepoint):
         """Return the previous timepoint before this timepoint, or None."""
-        if self.repetitions == 1:
+        if self.repetitions == 1 or timepoint is None:
             return None
         prev_timepoint = timepoint - self.interval
         if self._get_is_in_bounds(prev_timepoint):
