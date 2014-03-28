@@ -314,13 +314,19 @@ class TimePointParser(object):
             else:
                 regex += re.escape(item)
         regex += "$"
+        return self._parse_from_custom_regex(regex, strptime_data_string,
+            dump_format=None, source=strptime_format_string)
+
+    def _parse_from_custom_regex(self, regex, data_string, dump_format=None,
+                                 source=None):
+        """Parse data_string according to the regular expression in regex."""
         try:
             compiled_regex = re.compile(regex)
         except sre_constants.error:
-            raise StrptimeConversionError(our_format, regex)
-        result = compiled_regex.match(strptime_data_string)
+            raise StrptimeConversionError(source, regex)
+        result = compiled_regex.match(data_string)
         if not result:
-            raise StrptimeConversionError(our_format, strptime_data_string)
+            raise StrptimeConversionError(source, data_string)
         info = result.groupdict()
         date_info_keys = [i[3] for i in parser_spec.get_date_translate_info(
             self.expanded_year_digits)]
@@ -471,6 +477,7 @@ class TimePointParser(object):
                 timezone_info["time_zone_minute"] = (
                     int(timezone_info["time_zone_minute"]) * -1)
         return timezone_info
+
 
 class TimeIntervalParser(object):
 

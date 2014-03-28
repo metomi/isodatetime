@@ -19,40 +19,7 @@
 """This provides data to drive ISO 8601 parsing functionality."""
 
 import re
-import time  # Only used for getting the current local timezone.
-
-
-class StrftimeSyntaxError(ValueError):
-
-    """An error denoting invalid or unsupported strftime/strptime syntax."""
-
-    BAD_STRFTIME_INPUT = "Invalid strftime/strptime representation: {0}"
-
-    def __str__(self):
-        return self.BAD_STRFTIME_INPUT.format(*self.args)
-
-
-def get_timezone_for_locale():
-    """Return the UTC offset for this locale in hours and minutes."""
-    utc_offset_seconds = -time.timezone
-    if time.localtime().tm_isdst == 0 and time.daylight:
-        utc_offset_seconds = -time.altzone
-    utc_offset_minutes = (-time.timezone // 60) % 60
-    utc_offset_hours = -time.timezone // 3600
-    return utc_offset_hours, utc_offset_minutes
-
-
-def get_timezone_format_for_locale(extended_mode=False):
-    """Return the timezone format string for this locale (e.g. '+0300')."""
-    utc_offset_hours, utc_offset_minutes = get_timezone_for_locale()
-    if utc_offset_hours == 0 and utc_offset_minutes == 0:
-        return "Z"
-    timezone_template = "%s%02d%02d"
-    if extended_mode:
-        timezone_template = "%s%02d:%02d"
-    sign = "-" if (utc_offset_hours < 0 or utc_offset_minutes < 0) else "+"
-    return timezone_template % (
-        sign, abs(utc_offset_hours), abs(utc_offset_minutes))
+from . import timezone
 
 
 DATE_EXPRESSIONS = {
@@ -247,11 +214,12 @@ _TIMEZONE_TRANSLATE_INFO = [
      "Z", None)
 ]
 
-LOCALE_TIMEZONE_BASIC = get_timezone_format_for_locale()
+LOCALE_TIMEZONE_BASIC = timezone.get_timezone_format_for_locale()
 LOCALE_TIMEZONE_BASIC_NO_Z = LOCALE_TIMEZONE_BASIC
 if LOCALE_TIMEZONE_BASIC_NO_Z == "Z":
     LOCALE_TIMEZONE_BASIC_NO_Z = "+0000"
-LOCALE_TIMEZONE_EXTENDED = get_timezone_format_for_locale(extended_mode=True)
+LOCALE_TIMEZONE_EXTENDED = timezone.get_timezone_format_for_locale(
+    extended_mode=True)
 LOCALE_TIMEZONE_EXTENDED_NO_Z = LOCALE_TIMEZONE_EXTENDED
 if LOCALE_TIMEZONE_EXTENDED_NO_Z == "Z":
     LOCALE_TIMEZONE_EXTENDED_NO_Z = "+0000"
@@ -276,6 +244,16 @@ STRPTIME_EXCLUSIVE_GROUP_INFO = {
     "%Y": ("%y",),
     "%X": ("%H", "%M", "%S")
 }
+
+
+class StrftimeSyntaxError(ValueError):
+
+    """An error denoting invalid or unsupported strftime/strptime syntax."""
+
+    BAD_STRFTIME_INPUT = "Invalid strftime/strptime representation: {0}"
+
+    def __str__(self):
+        return self.BAD_STRFTIME_INPUT.format(*self.args)
 
 
 def get_date_translate_info(num_expanded_year_digits=2):
