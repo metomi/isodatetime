@@ -18,6 +18,42 @@
 
 """This provides data to drive ISO 8601 parsing functionality."""
 
+import re
+import time  # Only used for getting the current local timezone.
+
+
+class StrftimeSyntaxError(ValueError):
+
+    """An error denoting invalid or unsupported strftime/strptime syntax."""
+
+    BAD_STRFTIME_INPUT = "Invalid strftime/strptime representation: {0}"
+
+    def __str__(self):
+        return self.BAD_STRFTIME_INPUT.format(*self.args)
+
+
+def get_timezone_for_locale():
+    """Return the UTC offset for this locale in hours and minutes."""
+    utc_offset_seconds = -time.timezone
+    if time.localtime().tm_isdst == 0 and time.daylight:
+        utc_offset_seconds = -time.altzone
+    utc_offset_minutes = (-time.timezone // 60) % 60
+    utc_offset_hours = -time.timezone // 3600
+    return utc_offset_hours, utc_offset_minutes
+
+
+def get_timezone_format_for_locale(extended_mode=False):
+    """Return the timezone format string for this locale (e.g. '+0300')."""
+    utc_offset_hours, utc_offset_minutes = get_timezone_for_locale()
+    if utc_offset_hours == 0 and utc_offset_minutes == 0:
+        return "Z"
+    timezone_template = "%s%02d%02d"
+    if extended_mode:
+        timezone_template = "%s%02d:%02d"
+    sign = "-" if (utc_offset_hours < 0 or utc_offset_minutes < 0) else "+"
+    return timezone_template % (
+        sign, abs(utc_offset_hours), abs(utc_offset_minutes))
+
 
 DATE_EXPRESSIONS = {
     "basic": {
@@ -211,6 +247,36 @@ _TIMEZONE_TRANSLATE_INFO = [
      "Z", None)
 ]
 
+LOCALE_TIMEZONE_BASIC = get_timezone_format_for_locale()
+LOCALE_TIMEZONE_BASIC_NO_Z = LOCALE_TIMEZONE_BASIC
+if LOCALE_TIMEZONE_BASIC_NO_Z == "Z":
+    LOCALE_TIMEZONE_BASIC_NO_Z = "+0000"
+LOCALE_TIMEZONE_EXTENDED = get_timezone_format_for_locale(extended_mode=True)
+LOCALE_TIMEZONE_EXTENDED_NO_Z = LOCALE_TIMEZONE_EXTENDED
+if LOCALE_TIMEZONE_EXTENDED_NO_Z == "Z":
+    LOCALE_TIMEZONE_EXTENDED_NO_Z = "+0000"
+    
+# Note: we only accept the following subset of strftime syntax.
+# This is due to inconsistencies with the ISO 8601 representations.
+REC_SPLIT_STRFTIME_DIRECTIVE = re.compile(r"(%\w)")
+REC_STRFTIME_DIRECTIVE_TOKEN = re.compile(r"^%\w$")
+STRFTIME_TRANSLATE_INFO = {
+    "%d": ["day_of_month"],
+    "%H": ["hour_of_day"],
+    "%j": ["day_of_year"],
+    "%m": ["month_of_year"],
+    "%M": ["minute_of_hour"],
+    "%S": ["second_of_minute"],
+    "%X": ["hour_of_day", ":", "minute_of_hour", ":", "second_of_minute"],
+    "%y": ["year_of_century"],
+    "%Y": ["century", "year_of_century"],
+    "%z": LOCALE_TIMEZONE_BASIC_NO_Z,
+}
+STRPTIME_EXCLUSIVE_GROUP_INFO = {
+    "%Y": ("%y",),
+    "%X": ("%H", "%M", "%S")
+}
+
 
 def get_date_translate_info(num_expanded_year_digits=2):
     expanded_year_digit_regex = "\d" * num_expanded_year_digits
@@ -229,3 +295,50 @@ def get_time_translate_info():
 def get_timezone_translate_info():
     return _TIMEZONE_TRANSLATE_INFO
 
+
+def translate_strftime_token(strftime_token, num_expanded_year_digits=2):
+    """Convert a strftime format into our own dump format."""
+    return _translate_strftime_token(
+        strftime_token, dump_mode=True,
+        num_expanded_year_digits=num_expanded_year_digits
+    )
+
+
+def translate_strptime_token(strptime_token, num_expanded_year_digits=2):
+    """Convert a strptime format into our own parsing format."""
+    return _translate_strftime_token(
+        strptime_token, dump_mode=False,
+        num_expanded_year_digits=num_expanded_year_digits
+    )
+
+
+def _translate_strftime_token(strftime_token, dump_mode=False,
+                              num_expanded_year_digits=2):
+    if strftime_token not in STRFTIME_TRANSLATE_INFO:
+        raise StrftimeSyntaxError(strftime_token)
+    our_translation = ""
+    our_translate_info = (
+        get_date_translate_info(
+            num_expanded_year_digits=num_expanded_year_digits) +
+        get_time_translate_info() +
+        get_timezone_translate_info()
+    )
+    attr_names = STRFTIME_TRANSLATE_INFO[strftime_token]
+    if isinstance(attr_names, basestring):
+        if dump_mode:
+            return attr_names, []
+        return re.escape(attr_names), []
+    attr_names = list(attr_names)
+    for attr_name in list(attr_names):
+        for expr_regex, substitute, format_, name in our_translate_info:
+            if name == attr_name:
+                if dump_mode:
+                    our_translation += format_
+                else:
+                    our_translation += substitute
+                break
+        else:
+            # Not an attribute name, just a delimiter or something.
+            our_translation += attr_name
+            attr_names.remove(attr_name)
+    return our_translation, attr_names

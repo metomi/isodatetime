@@ -617,6 +617,70 @@ class TestSuite(unittest.TestCase):
             ctrl_data = str(data.TimePoint(**timepoint_kwargs))
             self.assertEqual(test_data, ctrl_data, expression)
 
+    def test_timepoint_strftime_strptime(self):
+        """Test the strftime/strptime for date/time expressions."""
+        import datetime
+        parser = parsers.TimePointParser()
+        parse_tokens = parser_spec.STRFTIME_TRANSLATE_INFO.keys()
+        parse_tokens.remove("%z")  # Don't test datetime's tz handling.
+        format_string = ""
+        for i, token in enumerate(parse_tokens):
+            format_string += token
+            if i % 2 == 0:
+                format_string += " "
+            if i % 3 == 0:
+                format_string += ":"
+            if i % 5 == 0:
+                format_string += "?foobar"
+            if i % 7 == 0:
+                format_string += "++("
+        strftime_string = format_string
+        strptime_strings = [format_string]
+        for key in parser_spec.STRPTIME_EXCLUSIVE_GROUP_INFO.keys():
+            strptime_strings[-1] = strptime_strings[-1].replace(key, "")
+        strptime_strings.append(format_string)
+        for values in parser_spec.STRPTIME_EXCLUSIVE_GROUP_INFO.values():
+            for value in values:
+                strptime_strings[-1] = strptime_strings[-1].replace(value, "")
+        ctrl_date = datetime.datetime(2002, 3, 1, 12, 30, 2)
+        test_date = test_date = data.TimePoint(
+            year=ctrl_date.year,
+            month_of_year=ctrl_date.month,
+            day_of_month=ctrl_date.day,
+            hour_of_day=ctrl_date.hour,
+            minute_of_hour=ctrl_date.minute,
+            second_of_minute=ctrl_date.second
+        )
+        self.assertEqual(test_date.strftime("%z"),
+                         parser_spec.LOCALE_TIMEZONE_BASIC_NO_Z,
+                         "%z")
+        for test_date in [test_date, test_date.copy().to_week_date(),
+                          test_date.copy().to_ordinal_date()]:
+            ctrl_data = ctrl_date.strftime(strftime_string)
+            test_data = test_date.strftime(strftime_string)
+            self.assertEqual(test_data, ctrl_data, strftime_string)
+            for strptime_string in strptime_strings:
+                ctrl_dump = ctrl_date.strftime(strptime_string)
+                test_dump = test_date.strftime(strptime_string)
+                self.assertEqual(test_dump, ctrl_dump, strptime_string)
+                ctrl_data = datetime.datetime.strptime(
+                    ctrl_dump, strptime_string)
+                test_data = parser.strptime(test_dump, strptime_string)
+                ctrl_data = (
+                    ctrl_data.year, ctrl_data.month, ctrl_data.day,
+                    ctrl_data.hour, ctrl_data.minute, ctrl_data.second
+                )
+                test_data = tuple(list(test_data.get_calendar_date()) +
+                                  list(test_data.get_hour_minute_second()))
+                if "%y" in strptime_string:
+                    # %y is the decadal year (00 to 99) within a century.
+                    # The datetime library, for some reason, sets a default
+                    # century of '2000' - so nuke this extra information.
+                    ctrl_data = tuple([ctrl_data[0] % 100] +
+                                      list(ctrl_data[1:]))
+                self.assertEqual(test_data, ctrl_data, test_dump + "\n" +
+                                 strptime_string)
+
     def test_timerecurrence(self):
         """Test the recurring date/time series data model."""
         parser = parsers.TimeRecurrenceParser()

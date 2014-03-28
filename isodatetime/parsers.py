@@ -19,11 +19,11 @@
 """This provides ISO 8601 parsing functionality."""
 
 import re
+import sre_constants
 
 from . import data
 from . import dumpers
 from . import parser_spec
-
 
 
 class ISO8601SyntaxError(ValueError):
@@ -34,6 +34,16 @@ class ISO8601SyntaxError(ValueError):
 
     def __str__(self):
         return self.BAD_TIME_INPUT.format(*self.args)
+
+
+class StrptimeConversionError(ValueError):
+
+    """An error denoting bad conversion from a strftime/strptime format."""
+
+    BAD_CONVERSION = "Bad conversion for strftime/strptime input {0}: {1}."""
+
+    def __str__(self):
+        return self.BAD_CONVERSION.format(*self.args)
 
 
 class TimeRecurrenceParser(object):
@@ -213,76 +223,12 @@ class TimePointParser(object):
 
     def parse(self, timepoint_string, dump_format=None):
         """Parse a user-supplied timepoint string."""
-        date_time_timezone = timepoint_string.split(
-            parser_spec.TIME_DESIGNATOR)
-        if len(date_time_timezone) == 1:
-            date = date_time_timezone[0]
-            keys, date_info = self.get_date_info(date)
-            time_info = {}
-        else:
-            date, time_timezone = date_time_timezone
-            if not date and self.allow_truncated:
-                keys = (None, "truncated")
-                date_info = {"truncated": True}
-            else:
-                keys, date_info = self.get_date_info(date,
-                                                     bad_types=["reduced"])
-            format_key, type_key = keys
-            bad_formats = []
-            if format_key == "basic":
-                bad_formats = ["extended"]
-            if format_key == "extended":
-                bad_formats = ["basic"]
-            if type_key == "truncated":
-                # Do not force basic/extended formatting for truncated dates.
-                bad_formats = []
-            bad_types = ["truncated"]
-            if date_info.get("truncated"):
-                bad_types = []
-            if time_timezone.endswith("Z"):
-                time, timezone = time_timezone[:-1], "Z"
-            elif "+" in time_timezone:
-                time, timezone = time_timezone.split("+")
-                timezone = "+" + timezone
-            elif "-" in time_timezone:
-                time, timezone = time_timezone.rsplit("-", 1)
-                timezone = "-" + timezone
-                # Make sure this isn't just a truncated time.
-                try:
-                    time_info = self.get_time_info(
-                        time,
-                        bad_formats=bad_formats,
-                        bad_types=bad_types
-                    )
-                    timezone_info = self.get_timezone_info(
-                        timezone,
-                        bad_formats=bad_formats
-                    )
-                except ISO8601SyntaxError:
-                    time = time_timezone
-                    timezone = None
-            else:
-                time = time_timezone
-                timezone = None
-            if timezone is None:
-                timezone_info = {}
-                if self.assume_utc:
-                    timezone_info["time_zone_hour"] = 0
-                    timezone_info["time_zone_minute"] = 0
-            else:
-                timezone_info = self.get_timezone_info(
-                    timezone,
-                    bad_formats=bad_formats
-                )
-                if timezone_info.pop("time_zone_sign", "+") == "-":
-                    timezone_info["time_zone_hour"] = (
-                        int(timezone_info["time_zone_hour"]) * -1)
-                    if "time_zone_minute" in timezone_info:
-                        timezone_info["time_zone_minute"] = (
-                            int(timezone_info["time_zone_minute"]) * -1)
-            time_info = self.get_time_info(time, bad_formats=bad_formats,
-                                           bad_types=bad_types)
-            time_info.update(timezone_info)
+        date_info, time_info = self.get_info(timepoint_string)
+        return self._create_timepoint_from_info(
+            date_info, time_info, dump_format=dump_format)
+
+    def _create_timepoint_from_info(self, date_info, time_info,
+                                    dump_format=None):
         info = {}
         truncated_property = None
         if date_info.get("truncated"):
@@ -346,6 +292,54 @@ class TimePointParser(object):
             info.update({"dump_format": dump_format})
         return data.TimePoint(**info)
 
+    def strptime(self, strptime_data_string, strptime_format_string,
+                 dump_format=None):
+        """Implement equivalent of Python 2's datetime.datetime.strptime.
+
+        Return an isodatetime.data.TimePoint representing
+        strptime_data_string based on the format given in
+        strptime_format_string.
+        dump_format is a custom dump format string (not in strftime
+        format).
+
+        """
+        split_format = parser_spec.REC_SPLIT_STRFTIME_DIRECTIVE.split(
+            strptime_format_string)
+        regex = "^"
+        for item in split_format:
+            if parser_spec.REC_STRFTIME_DIRECTIVE_TOKEN.search(item):
+                item_regex, item_properties = (
+                    parser_spec.translate_strptime_token(item))
+                regex += item_regex
+            else:
+                regex += re.escape(item)
+        regex += "$"
+        try:
+            compiled_regex = re.compile(regex)
+        except sre_constants.error:
+            raise StrptimeConversionError(our_format, regex)
+        result = compiled_regex.match(strptime_data_string)
+        if not result:
+            raise StrptimeConversionError(our_format, strptime_data_string)
+        info = result.groupdict()
+        date_info_keys = [i[3] for i in parser_spec.get_date_translate_info(
+            self.expanded_year_digits)]
+        time_info_keys = [i[3] for i in parser_spec.get_time_translate_info()]
+        date_info = {}
+        time_info = {}
+        timezone_info = {}
+        for key, value in info.items():
+            if key in date_info_keys:
+                date_info[key] = value
+            elif key in time_info_keys:
+                time_info[key] = value
+            else:
+                timezone_info[key] = value
+        timezone_info = self._process_timezone_info(timezone_info)
+        time_info.update(timezone_info)
+        return self._create_timepoint_from_info(
+            date_info, time_info, dump_format=dump_format)
+
     def get_date_info(self, date_string, bad_types=None):
         """Return the format and properties from a date string."""
         type_keys = ["complete", "truncated", "reduced"]
@@ -394,6 +388,89 @@ class TimePointParser(object):
                     return result.groupdict()
         raise ISO8601SyntaxError("timezone", timezone_string)
 
+    def get_info(self, timepoint_string):
+        """Return the date and time properties from a timepoint string."""
+        date_time_timezone = timepoint_string.split(
+            parser_spec.TIME_DESIGNATOR)
+        if len(date_time_timezone) == 1:
+            date = date_time_timezone[0]
+            keys, date_info = self.get_date_info(date)
+            time_info = {}
+        else:
+            date, time_timezone = date_time_timezone
+            if not date and self.allow_truncated:
+                keys = (None, "truncated")
+                date_info = {"truncated": True}
+            else:
+                keys, date_info = self.get_date_info(date,
+                                                     bad_types=["reduced"])
+            format_key, type_key = keys
+            bad_formats = []
+            if format_key == "basic":
+                bad_formats = ["extended"]
+            if format_key == "extended":
+                bad_formats = ["basic"]
+            if type_key == "truncated":
+                # Do not force basic/extended formatting for truncated dates.
+                bad_formats = []
+            bad_types = ["truncated"]
+            if date_info.get("truncated"):
+                bad_types = []
+            if time_timezone.endswith("Z"):
+                time, timezone = time_timezone[:-1], "Z"
+            elif "+" in time_timezone:
+                time, timezone = time_timezone.split("+")
+                timezone = "+" + timezone
+            elif "-" in time_timezone:
+                time, timezone = time_timezone.rsplit("-", 1)
+                timezone = "-" + timezone
+                # Make sure this isn't just a truncated time.
+                try:
+                    time_info = self.get_time_info(
+                        time,
+                        bad_formats=bad_formats,
+                        bad_types=bad_types
+                    )
+                    timezone_info = self.get_timezone_info(
+                        timezone,
+                        bad_formats=bad_formats
+                    )
+                except ISO8601SyntaxError:
+                    time = time_timezone
+                    timezone = None
+            else:
+                time = time_timezone
+                timezone = None
+            if timezone is None:
+                timezone_info = {}
+                timezone_info = self._process_timezone_info(timezone_info)
+                if self.assume_utc:
+                    timezone_info["time_zone_hour"] = 0
+                    timezone_info["time_zone_minute"] = 0
+            else:
+                timezone_info = self.get_timezone_info(
+                    timezone,
+                    bad_formats=bad_formats
+                )
+                timezone_info = self._process_timezone_info(timezone_info)
+            time_info = self.get_time_info(time, bad_formats=bad_formats,
+                                           bad_types=bad_types)
+            time_info.update(timezone_info)
+        return date_info, time_info
+
+    def _process_timezone_info(self, timezone_info):
+        if not timezone_info:
+            if self.assume_utc:
+                timezone_info["time_zone_hour"] = 0
+                timezone_info["time_zone_minute"] = 0
+            return timezone_info
+        if timezone_info.pop("time_zone_sign", "+") == "-":
+            timezone_info["time_zone_hour"] = (
+                int(timezone_info["time_zone_hour"]) * -1)
+            if "time_zone_minute" in timezone_info:
+                timezone_info["time_zone_minute"] = (
+                    int(timezone_info["time_zone_minute"]) * -1)
+        return timezone_info
 
 class TimeIntervalParser(object):
 
