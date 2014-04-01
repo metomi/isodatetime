@@ -339,9 +339,15 @@ class TimePointParser(object):
                 info.pop(property_)
                 translator = data.PARSE_PROPERTY_TRANSLATORS[property_]
                 info.update(translator(value))
-        date_info_keys = [i[3] for i in parser_spec.get_date_translate_info(
-            self.expanded_year_digits)]
-        time_info_keys = [i[3] for i in parser_spec.get_time_translate_info()]
+        date_info_keys = []
+        for expr_regex, substitute, format_, name in (
+                parser_spec.get_date_translate_info(
+                    self.expanded_year_digits)):
+            date_info_keys.append(name)
+        time_info_keys = []
+        for expr_regex, substitute, format_, name in (
+                parser_spec.get_time_translate_info()):
+            time_info_keys.append(name)
         date_info = {}
         time_info = {}
         timezone_info = {}
@@ -493,10 +499,10 @@ class TimePointParser(object):
             return timezone_info
         if timezone_info.pop("time_zone_sign", "+") == "-":
             timezone_info["time_zone_hour"] = (
-                int(timezone_info["time_zone_hour"]) * -1)
+                -int(timezone_info["time_zone_hour"]))
             if "time_zone_minute" in timezone_info:
                 timezone_info["time_zone_minute"] = (
-                    int(timezone_info["time_zone_minute"]) * -1)
+                    -int(timezone_info["time_zone_minute"]))
         return timezone_info
 
 
