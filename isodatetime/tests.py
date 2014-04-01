@@ -22,6 +22,7 @@ import copy
 import unittest
 
 from . import data
+from . import dumpers
 from . import parsers
 from . import parser_spec
 
@@ -65,8 +66,76 @@ def get_timeintervalparser_tests():
         yield expression, ctrl_data
 
 
-def get_timepointdumper_tests():
-    return
+def get_timepoint_dumper_tests():
+    """Yield tests for custom timepoint dumps."""
+    return [
+        (
+            {"year": 44, "month_of_year": 1, "day_of_month": 4,
+             "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            [("CCYY-MMDDThhmmZ", "0044-0104T0501Z"),
+             ("YYDDDThh:mm:ss", "44004T05:01:02"),
+             ("WwwD", "W011"),
+             ("CCDDDThh*ss-0600", "00003T23*02-0600"),
+             (u"±XCCYY-MM-DDThh:mm:ss-11:45", "+000044-01-03T17:16:02-11:45"),
+             (u"±XCCYYMM-DDThh-01:00", "+00004401-04T04-01:00"),
+             (u"±XCCYYMM-DDThh+13:00", "+00004401-04T18+13:00"),
+             (u"±XCCYYMM-DDThh-0100", "+00004401-04T04-0100"),
+             (u"±XCCYYMM-DDThh+1300", "+00004401-04T18+1300"),
+             (u"±XCCYYMMDDThh-0100", "+0000440104T04-0100"),
+             (u"±XCCYYMMDDThh+13", "+0000440104T18+13"),
+             (u"±XCCYYMMDDThh±hhmm", "+0000440104T05+0000"),
+             (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "+000044-01-04T05:01:02+00:00"),
+             ("DD/MM/CCYY is a silly format", "04/01/0044 is a silly format"),
+             ("ThhZ", "T05Z")]
+        ),
+        (
+            {"year": 500200, "month_of_year": 7, "day_of_month": 28,
+             "expanded_year_digits": 2, "hour_of_day": 0,
+             "hour_of_day_decimal": 0.4356, "time_zone_hour": -8,
+             "time_zone_minute": -30},
+            [("CCYY-MMDDThhmmZ", "0200-0728T0856Z"),
+             ("YYDDDThh:mm:ss", "00209T00:26:08"),
+             ("WwwD", "W311"),
+             ("CCDDDThh*ss-0600", "02209T02*08-0600"),
+             (u"±XCCYY-MM-DDThh:mm:ss-11:45", "+500200-07-27T21:11:08-11:45"),
+             (u"±XCCYYMM-DDThhmm-01:00", "+50020007-28T0756-01:00"),
+             (u"±XCCYYMM-DDThhmm+13:00", "+50020007-28T2156+13:00"),
+             (u"±XCCYYMM-DDThhmm-0100", "+50020007-28T0756-0100"),
+             (u"±XCCYYMM-DDThhmm+1300", "+50020007-28T2156+1300"),
+             (u"±XCCYYMMDDThhmm-0100", "+5002000728T0756-0100"),
+             (u"±XCCYYMMDDThhmm+13", "+5002000728T2156+13"),
+             (u"±XCCYYMMDDThh±hhmm", "+5002000728T00-0830"),
+             (u"±XCCYYWwwDThhmm±hh", "+500200W311T0026-08"),
+             (u"±XCCYYDDDThhmm±hh", "+500200209T0026-08"),
+             (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "+500200-07-28T00:26:08-08:30"),
+             (u"±XCCYY-MM-DDThh:mm:ssZ", "+500200-07-28T08:56:08Z"),
+             ("DD/MM/CCYY is a silly format", "28/07/0200 is a silly format"),
+             ("ThhmmZ", "T0856Z")]
+        ),
+        (
+            {"year": -56, "day_of_year": 318, "expanded_year_digits": 2,
+             "hour_of_day": 5, "minute_of_hour": 1, "time_zone_hour": 6},
+            [("CCYY-MMDDThhmmZ", "0056-1112T2301Z"),
+             ("YYDDDThh:mm:ss", "56318T05:01:00"),
+             ("WwwD", "W461"),
+             ("CCDDDThh*ss-0600", "00317T17*00-0600"),
+             (u"±XCCYY-MM-DDThh:mm:ss-11:45", "-000056-11-12T11:16:00-11:45"),
+             (u"±XCCYYMM-DDThhmm-01:00", "-00005611-12T2201-01:00"),
+             (u"±XCCYYMM-DDThhmm+13:00", "-00005611-13T1201+13:00"),
+             (u"±XCCYYMM-DDThhmm-0100", "-00005611-12T2201-0100"),
+             (u"±XCCYYMM-DDThhmm+1300", "-00005611-13T1201+1300"),
+             (u"±XCCYYMMDDThhmm-0100", "-0000561112T2201-0100"),
+             (u"±XCCYYMMDDThhmm+13", "-0000561113T1201+13"),
+             (u"±XCCYYMMDDThh±hhmm", "-0000561113T05+0600"),
+             (u"±XCCYYWwwDThhmm±hh", "-000056W461T0501+06"),
+             (u"±XCCYYDDDThhmm±hh", "-000056318T0501+06"),
+             (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "-000056-11-13T05:01:00+06:00"),
+             (u"±XCCYY-MM-DDThh:mm:ssZ", "-000056-11-12T23:01:00Z"),
+             ("DD/MM/CCYY is a silly format", "13/11/0056 is a silly format"),
+             ("ThhmmZ", "T2301Z")]
+        )
+    ]
 
 
 def get_timepointparser_tests(allow_only_basic=False,
@@ -422,7 +491,7 @@ def get_timerecurrence_expansion_tests():
          ["-099994-02-12T17:00:00-02:30", "-100024-02-10T02:00:00-02:30",
           "-100054-02-07T11:00:00-02:30"]),
         ("R/-100024-02-10T17:00:00-12:30/PT5.5H",
-         ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22,5-12:30",
+         ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22:30:00-12:30",
           "-100024-02-11T04:00:00-12:30"])
     ]
 
@@ -591,17 +660,24 @@ class TestSuite(unittest.TestCase):
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
         parser = parsers.TimePointParser(allow_truncated=True)
+        dumper = dumpers.TimePointDumper()
         for expression, timepoint_kwargs in get_timepointparser_tests(
                 allow_truncated=True):
             ctrl_timepoint = data.TimePoint(**timepoint_kwargs)
             try:
                 test_timepoint = parser.parse(str(ctrl_timepoint))
-            except parsers.TimeSyntaxError as syn_exc:
+            except parsers.ISO8601SyntaxError as syn_exc:
                 raise ValueError(
                     "Parsing failed for the dump of {0}: {1}".format(
                         expression, syn_exc))
             self.assertEqual(test_timepoint,
                              ctrl_timepoint, expression)
+        for timepoint_kwargs, format_results in (
+                get_timepoint_dumper_tests()):
+            ctrl_timepoint = data.TimePoint(**timepoint_kwargs)
+            for format_, ctrl_data in format_results:
+                test_data = dumper.dump(ctrl_timepoint, format_)
+                self.assertEqual(test_data, ctrl_data, format_)
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
@@ -611,10 +687,13 @@ class TestSuite(unittest.TestCase):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_data = str(parser.parse(expression))
-            except parsers.TimeSyntaxError as syn_exc:
+            except parsers.ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                    expression, syn_exc))
             ctrl_data = str(data.TimePoint(**timepoint_kwargs))
+            self.assertEqual(test_data, ctrl_data, expression)
+            ctrl_data = expression
+            test_data = str(parser.parse(expression, dump_as_parsed=True))
             self.assertEqual(test_data, ctrl_data, expression)
 
     def test_timepoint_strftime_strptime(self):
@@ -663,9 +742,14 @@ class TestSuite(unittest.TestCase):
                 ctrl_dump = ctrl_date.strftime(strptime_string)
                 test_dump = test_date.strftime(strptime_string)
                 self.assertEqual(test_dump, ctrl_dump, strptime_string)
-                ctrl_data = datetime.datetime.strptime(
-                    ctrl_dump, strptime_string)
+                if "%s" in strptime_string:
+                    # The datetime library can't handle this for strptime!
+                    ctrl_data = ctrl_date
+                else:
+                    ctrl_data = datetime.datetime.strptime(
+                        ctrl_dump, strptime_string)
                 test_data = parser.strptime(test_dump, strptime_string)
+                
                 ctrl_data = (
                     ctrl_data.year, ctrl_data.month, ctrl_data.day,
                     ctrl_data.hour, ctrl_data.minute, ctrl_data.second
@@ -687,7 +771,7 @@ class TestSuite(unittest.TestCase):
         for expression, ctrl_results in get_timerecurrence_expansion_tests():
             try:
                 test_recurrence = parser.parse(expression)
-            except parsers.TimeSyntaxError:
+            except parsers.ISO8601SyntaxError:
                 raise ValueError(
                     "TimeRecurrenceParser test failed to parse '%s'" %
                     expression
@@ -701,7 +785,7 @@ class TestSuite(unittest.TestCase):
         for expression, results in get_timerecurrence_membership_tests():
             try:
                 test_recurrence = parser.parse(expression)
-            except parsers.TimeSyntaxError:
+            except parsers.ISO8601SyntaxError:
                 raise ValueError(
                     "TimeRecurrenceParser test failed to parse '%s'" %
                     expression
@@ -719,7 +803,7 @@ class TestSuite(unittest.TestCase):
         for expression, test_info in get_timerecurrenceparser_tests():
             try:
                 test_data = str(parser.parse(expression))
-            except parsers.TimeSyntaxError:
+            except parsers.ISO8601SyntaxError:
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)

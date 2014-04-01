@@ -93,6 +93,9 @@ hhmmss
 hhmmss,tt
 hhmm,nn
 hh,ii
+hhmmss.tt
+hhmm.nn
+hh.ii
 """,
         "reduced": u"""
 # No Time Zone
@@ -111,6 +114,9 @@ hh
 -mmss,tt
 -mm,nn
 --ss,tt
+-mmss.tt
+-mm.nn
+--ss.tt
 """    },
     "extended": {
         "complete": u"""
@@ -121,6 +127,9 @@ hh:mm:ss
 hh:mm:ss,tt
 hh:mm,nn
 hh,ii          # Deviation? Not allowed in standard ?
+hh:mm:ss.tt
+hh:mm.nn
+hh.ii          # Deviation? Not allowed in standard ?
 """,
         "reduced": u"""
 # No Time Zone
@@ -137,6 +146,9 @@ hh             # Deviation? Not allowed in standard ?
 -mm:ss,tt
 -mm,nn          # Deviation? Not allowed in standard ?
 --ss,tt         # Deviation? Not allowed in standard ?
+-mm:ss.tt
+-mm.nn          # Deviation? Not allowed in standard ?
+--ss.tt         # Deviation? Not allowed in standard ?
 """    }
 }
 TIMEZONE_EXPRESSIONS = {
@@ -187,14 +199,21 @@ _TIME_TRANSLATE_INFO = [
      "%(minute_of_hour)02d", "minute_of_hour"),
     (u"^hh", "(?P<hour_of_day>\d\d)",
      "%(hour_of_day)02d", "hour_of_day"),
-    (u",ii", "[,.](?P<hour_of_day_decimal>\d+)",
-     "%(hour_of_day_decimal_string)s", "hour_of_day_decimal_string"),
-    (u",nn", "[,.](?P<minute_of_hour_decimal>\d+)",
-     "%(minute_of_hour_decimal_string)s", "minute_of_hour_decimal_string"),
+    (u",ii", ",(?P<hour_of_day_decimal>\d+)",
+     ",%(hour_of_day_decimal_string)s", "hour_of_day_decimal_string"),
+    (u"\.ii", "\.(?P<hour_of_day_decimal>\d+)",
+     ".%(hour_of_day_decimal_string)s", "hour_of_day_decimal_string"),
+    (u",nn", ",(?P<minute_of_hour_decimal>\d+)",
+     ",%(minute_of_hour_decimal_string)s", "minute_of_hour_decimal_string"),
+    (u"\.nn", "\.(?P<minute_of_hour_decimal>\d+)",
+     ".%(minute_of_hour_decimal_string)s", "minute_of_hour_decimal_string"),
     (u"ss", "(?P<second_of_minute>\d\d)",
      "%(second_of_minute)02d", "second_of_minute"),
-    (u",tt", "[,.](?P<second_of_minute_decimal>\d+)",
-     "%(second_of_minute_decimal_string)s",
+    (u",tt", ",(?P<second_of_minute_decimal>\d+)",
+     ",%(second_of_minute_decimal_string)s",
+     "second_of_minute_decimal_string"),
+    (u"\.tt", "\.(?P<second_of_minute_decimal>\d+)",
+     ".%(second_of_minute_decimal_string)s",
      "second_of_minute_decimal_string"),
     (u"^--", "(?P<truncated>--)",
      "--", None),
@@ -230,10 +249,15 @@ REC_SPLIT_STRFTIME_DIRECTIVE = re.compile(r"(%\w)")
 REC_STRFTIME_DIRECTIVE_TOKEN = re.compile(r"^%\w$")
 STRFTIME_TRANSLATE_INFO = {
     "%d": ["day_of_month"],
+    "%F": ["century", "year_of_century", "-", "month_of_year", "-",
+           "day_of_month"],
     "%H": ["hour_of_day"],
     "%j": ["day_of_year"],
     "%m": ["month_of_year"],
     "%M": ["minute_of_hour"],
+    "%s": (
+        "(?P<seconds_since_unix_epoch>\d+[,.]?\d*)",
+        "%(seconds_since_unix_epoch)s", "seconds_since_unix_epoch"),
     "%S": ["second_of_minute"],
     "%X": ["hour_of_day", ":", "minute_of_hour", ":", "second_of_minute"],
     "%y": ["year_of_century"],
@@ -242,7 +266,9 @@ STRFTIME_TRANSLATE_INFO = {
 }
 STRPTIME_EXCLUSIVE_GROUP_INFO = {
     "%Y": ("%y",),
-    "%X": ("%H", "%M", "%S")
+    "%X": ("%H", "%M", "%S"),
+    "%F": ("%Y", "%y", "%m", "%d"),
+    "%s": tuple([i for i in STRFTIME_TRANSLATE_INFO if i != "%s"])
 }
 
 
@@ -306,6 +332,13 @@ def _translate_strftime_token(strftime_token, dump_mode=False,
         if dump_mode:
             return attr_names, []
         return re.escape(attr_names), []
+    if isinstance(attr_names, tuple):
+        (substitute, format_, name) = attr_names
+        if dump_mode:
+            our_translation += format_
+        else:
+            our_translation += substitute
+        return our_translation, [name]
     attr_names = list(attr_names)
     for attr_name in list(attr_names):
         for expr_regex, substitute, format_, name in our_translate_info:
