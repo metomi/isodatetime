@@ -81,6 +81,32 @@ class TimePointDumper(object):
         """
         expression, properties = self._get_expression_and_properties(
             formatting_string)
+        return self._dump_expression_with_properties(
+            timepoint, expression, properties)
+
+    def strftime(self, timepoint, formatting_string):
+        """Implement equivalent of Python 2's datetime.datetime.strftime.
+
+        Dump timepoint based on the format given in formatting_string.
+
+        """
+        split_format = parser_spec.REC_SPLIT_STRFTIME_DIRECTIVE.split(
+            formatting_string)
+        expression = ""
+        properties = []
+        for item in split_format:
+            if parser_spec.REC_STRFTIME_DIRECTIVE_TOKEN.search(item):
+                item_expression, item_properties = (
+                    parser_spec.translate_strftime_token(item))
+                expression += item_expression
+                properties += item_properties
+            else:
+                expression += item
+        return self._dump_expression_with_properties(
+            timepoint, expression, properties)
+
+    def _dump_expression_with_properties(self, timepoint, expression,
+                                         properties):
         if (not timepoint.truncated and
                 ("week_of_year" in properties or
                  "day_of_week" in properties) and

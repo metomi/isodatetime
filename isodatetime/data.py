@@ -1313,17 +1313,28 @@ class TimePoint(object):
                                 self.day_of_month = day
                                 return
 
-    def __str__(self, override_custom_dump_format=False):
+    def __str__(self, override_custom_dump_format=False,
+                strftime_format=None):
         if self.expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
             TIMEPOINT_DUMPER_MAP[self.expanded_year_digits] = (
                 dumpers.TimePointDumper(
                     self.expanded_year_digits))
         dumper = TIMEPOINT_DUMPER_MAP[self.expanded_year_digits]
+        if strftime_format is not None:
+            return dumper.strftime(self, strftime_format)
         if self.truncated:
             return dumper.dump(self, self._get_truncated_dump_format())
         if self.dump_format and not override_custom_dump_format:
             return dumper.dump(self, self.dump_format)
         return dumper.dump(self, self._get_dump_format())
+
+    def strftime(self, strftime_format):
+        """Implement equivalent of Python 2's datetime.datetime.strftime.
+
+        Dump based on the format given in the strftime_format string.
+
+        """
+        return self.__str__(strftime_format=strftime_format)
 
     def _get_dump_format(self):
         year_digits = 4 + self.expanded_year_digits
