@@ -782,6 +782,28 @@ class TestSuite(unittest.TestCase):
                     break
                 test_results.append(str(time_point))
             self.assertEqual(test_results, ctrl_results, expression)
+            if test_recurrence.start_point is None:
+                forward_method = test_recurrence.get_prev
+                backward_method = test_recurrence.get_next
+            else:
+                forward_method = test_recurrence.get_next
+                backward_method = test_recurrence.get_prev
+            test_points = [test_recurrence[0]]
+            test_points.append(forward_method(test_points[-1]))
+            test_points.append(forward_method(test_points[-1]))
+            test_results = [str(point) for point in test_points]
+            self.assertEqual(test_results, ctrl_results, expression)
+            if test_recurrence[2] is not None:
+                test_points = [test_recurrence[2]]
+                test_points.append(backward_method(test_points[-1]))
+                test_points.append(backward_method(test_points[-1]))
+                test_points.append(backward_method(test_points[-1]))
+            self.assertEqual(test_points[3], None, expression)
+            test_points.pop(3)
+            test_points.reverse()
+            test_results = [str(point) for point in test_points]
+            self.assertEqual(test_results, ctrl_results, expression)
+            
         for expression, results in get_timerecurrence_membership_tests():
             try:
                 test_recurrence = parser.parse(expression)
