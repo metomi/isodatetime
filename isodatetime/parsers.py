@@ -221,14 +221,18 @@ class TimePointParser(object):
         expression = "^" + expression + "$"
         return expression
 
-    def parse(self, timepoint_string, dump_format=None):
+    def parse(self, timepoint_string, dump_format=None, dump_as_parsed=False):
         """Parse a user-supplied timepoint string."""
-        date_info, time_info = self.get_info(timepoint_string)
+        date_info, time_info, parsed_expr = self.get_info(timepoint_string)
+        if dump_as_parsed:
+            dump_format = parsed_expr
         return self._create_timepoint_from_info(
-            date_info, time_info, dump_format=dump_format)
+            date_info, time_info, dump_format=dump_format,
+            truncated_dump_format=dump_format)
 
     def _create_timepoint_from_info(self, date_info, time_info,
-                                    dump_format=None):
+                                    dump_format=None,
+                                    truncated_dump_format=None):
         info = {}
         truncated_property = None
         if date_info.get("truncated"):
@@ -273,7 +277,7 @@ class TimePointParser(object):
                 value = "0." + value
             try:
                 value = float(value)
-            except (IOError, ValueError) as e:
+            except (IOError, TypeError, ValueError):
                 pass
             if key == "time_zone_utc" and value == "Z":
                 time_info.pop(key)
@@ -290,6 +294,8 @@ class TimePointParser(object):
             dump_format = self.dump_format
         if dump_format is not None:
             info.update({"dump_format": dump_format})
+        if truncated_dump_format is not None:
+            info.update({"truncated_dump_format": truncated_dump_format})
         return data.TimePoint(**info)
 
     def strptime(self, strptime_data_string, strptime_format_string,
@@ -328,6 +334,11 @@ class TimePointParser(object):
         if not result:
             raise StrptimeConversionError(source, data_string)
         info = result.groupdict()
+        for property_, value in info.items():
+            if property_ in data.PARSE_PROPERTY_TRANSLATORS:
+                info.pop(property_)
+                translator = data.PARSE_PROPERTY_TRANSLATORS[property_]
+                info.update(translator(value))
         date_info_keys = []
         for expr_regex, substitute, format_, name in (
                 parser_spec.get_date_translate_info(
@@ -347,7 +358,7 @@ class TimePointParser(object):
                 time_info[key] = value
             else:
                 timezone_info[key] = value
-        timezone_info = self._process_timezone_info(timezone_info)
+        timezone_info = self.process_timezone_info(timezone_info)
         time_info.update(timezone_info)
         return self._create_timepoint_from_info(
             date_info, time_info, dump_format=dump_format)
@@ -366,7 +377,8 @@ class TimePointParser(object):
                 for regex, expr in regex_list:
                     result = regex.match(date_string)
                     if result:
-                        return (format_key, type_key), result.groupdict()
+                        return ((format_key, type_key, expr),
+                                result.groupdict())
         raise ISO8601SyntaxError("date", date_string)
 
     def get_time_info(self, time_string, bad_formats=None, bad_types=None):
@@ -384,7 +396,7 @@ class TimePointParser(object):
                 for regex, expr in regex_list:
                     result = regex.match(time_string)
                     if result:
-                        return result.groupdict()
+                        return expr, result.groupdict()
         raise ISO8601SyntaxError("time", time_string)
 
     def get_timezone_info(self, timezone_string, bad_formats=None):
@@ -397,26 +409,30 @@ class TimePointParser(object):
             for regex, expr in regex_list:
                 result = regex.match(timezone_string)
                 if result:
-                    return result.groupdict()
+                    return expr, result.groupdict()
         raise ISO8601SyntaxError("timezone", timezone_string)
 
     def get_info(self, timepoint_string):
         """Return the date and time properties from a timepoint string."""
         date_time_timezone = timepoint_string.split(
             parser_spec.TIME_DESIGNATOR)
+        parsed_expr = ""
         if len(date_time_timezone) == 1:
             date = date_time_timezone[0]
             keys, date_info = self.get_date_info(date)
+            format_key, type_key, date_expr = keys
+            parsed_expr += date_expr
             time_info = {}
         else:
             date, time_timezone = date_time_timezone
             if not date and self.allow_truncated:
-                keys = (None, "truncated")
+                keys = (None, "truncated", "")
                 date_info = {"truncated": True}
             else:
                 keys, date_info = self.get_date_info(date,
                                                      bad_types=["reduced"])
-            format_key, type_key = keys
+            format_key, type_key, date_expr = keys
+            parsed_expr += date_expr
             bad_formats = []
             if format_key == "basic":
                 bad_formats = ["extended"]
@@ -438,12 +454,12 @@ class TimePointParser(object):
                 timezone = "-" + timezone
                 # Make sure this isn't just a truncated time.
                 try:
-                    time_info = self.get_time_info(
+                    time_expr, time_info = self.get_time_info(
                         time,
                         bad_formats=bad_formats,
                         bad_types=bad_types
                     )
-                    timezone_info = self.get_timezone_info(
+                    timezone_expr, timezone_info = self.get_timezone_info(
                         timezone,
                         bad_formats=bad_formats
                     )
@@ -455,22 +471,27 @@ class TimePointParser(object):
                 timezone = None
             if timezone is None:
                 timezone_info = {}
-                timezone_info = self._process_timezone_info(timezone_info)
+                timezone_expr = ""
+                timezone_info = (
+                    self.process_timezone_info(timezone_info))
                 if self.assume_utc:
                     timezone_info["time_zone_hour"] = 0
                     timezone_info["time_zone_minute"] = 0
             else:
-                timezone_info = self.get_timezone_info(
+                timezone_expr, timezone_info = self.get_timezone_info(
                     timezone,
                     bad_formats=bad_formats
                 )
-                timezone_info = self._process_timezone_info(timezone_info)
-            time_info = self.get_time_info(time, bad_formats=bad_formats,
+                timezone_info = self.process_timezone_info(timezone_info)
+            time_expr, time_info = self.get_time_info(
+                                           time, bad_formats=bad_formats,
                                            bad_types=bad_types)
+            parsed_expr += parser_spec.TIME_DESIGNATOR + (
+                time_expr + timezone_expr)
             time_info.update(timezone_info)
-        return date_info, time_info
+        return date_info, time_info, parsed_expr
 
-    def _process_timezone_info(self, timezone_info):
+    def process_timezone_info(self, timezone_info):
         if not timezone_info:
             if self.assume_utc:
                 timezone_info["time_zone_hour"] = 0
@@ -538,10 +559,11 @@ class TimeIntervalParser(object):
                 result_map["days"] = timepoint.day_of_month
             if timepoint.get_is_ordinal_date():
                 result_map["days"] = timepoint.day_of_year
-            hours, minutes, seconds = timepoint.get_hour_minute_second()
-            result_map["hours"] = hours
-            result_map["minutes"] = minutes
-            result_map["seconds"] = seconds
+            result_map["hours"] = timepoint.hour_of_day
+            if timepoint.minute_of_hour is not None:
+                result_map["minutes"] = timepoint.minute_of_hour
+            if timepoint.second_of_minute is not None:
+                result_map["seconds"] = timepoint.second_of_minute
             return data.TimeInterval(**result_map)
         raise ISO8601SyntaxError("duration", expression)
 
