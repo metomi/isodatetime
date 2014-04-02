@@ -260,12 +260,10 @@ STRFTIME_TRANSLATE_INFO = {
         "%(seconds_since_unix_epoch)s", "seconds_since_unix_epoch"),
     "%S": ["second_of_minute"],
     "%X": ["hour_of_day", ":", "minute_of_hour", ":", "second_of_minute"],
-    "%y": ["year_of_century"],
     "%Y": ["century", "year_of_century"],
     "%z": LOCALE_TIMEZONE_BASIC_NO_Z,
 }
 STRPTIME_EXCLUSIVE_GROUP_INFO = {
-    "%Y": ("%y",),
     "%X": ("%H", "%M", "%S"),
     "%F": ("%Y", "%y", "%m", "%d"),
     "%s": tuple([i for i in STRFTIME_TRANSLATE_INFO if i != "%s"])
