@@ -18,7 +18,6 @@
 
 """This provides data model dumping functionality."""
 
-import copy
 import re
 
 from . import parser_spec
@@ -116,16 +115,16 @@ class TimePointDumper(object):
                             "day_of_month" in properties or
                             "day_of_year" in properties):
                     # We need the year to be in week years.
-                    timepoint = copy.copy(timepoint).to_week_date()
+                    timepoint = timepoint.copy().to_week_date()
             elif (timepoint.get_is_week_date() and
-                      "month_of_year" in properties or
-                      "day_of_month" in properties or
-                      "day_of_year" in properties):
+                      ("month_of_year" in properties or
+                       "day_of_month" in properties or
+                       "day_of_year" in properties)):
                 # We need the year to be in standard calendar years.
-                timepoint = copy.copy(timepoint).to_calendar_date()
+                timepoint = timepoint.copy().to_calendar_date()
 
         if custom_time_zone is not None:
-            timepoint = copy.copy(timepoint)
+            timepoint = timepoint.copy()
             if custom_time_zone == (0, 0):
                 timepoint.set_time_zone_to_utc()
             else:
