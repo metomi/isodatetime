@@ -1141,7 +1141,7 @@ class TimePoint(object):
         hash_ = []
         for attr in self.DATA_ATTRIBUTES:
             value = getattr(self, attr, None)
-            if hasattr(value, "copy") and callable(value.copy):
+            if callable(getattr(value, "copy", None)):
                 value = value.copy()
             hash_.append((attr, value))
         return hash_
