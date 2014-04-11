@@ -87,7 +87,8 @@ def get_timepoint_dumper_tests():
              (u"±XCCYYMMDDThh±hhmm", "+0000440104T05+0000"),
              (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "+000044-01-04T05:01:02+00:00"),
              ("DD/MM/CCYY is a silly format", "04/01/0044 is a silly format"),
-             ("ThhZ", "T05Z")]
+             ("ThhZ", "T05Z"),
+             ("%Y-%m-%dT%H:%M", "0044-01-04T05:01")]
         ),
         (
             {"year": 500200, "month_of_year": 7, "day_of_month": 28,
@@ -111,7 +112,8 @@ def get_timepoint_dumper_tests():
              (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "+500200-07-28T00:26:08-08:30"),
              (u"±XCCYY-MM-DDThh:mm:ssZ", "+500200-07-28T08:56:08Z"),
              ("DD/MM/CCYY is a silly format", "28/07/0200 is a silly format"),
-             ("ThhmmZ", "T0856Z")]
+             ("ThhmmZ", "T0856Z"),
+             ("%m-%dT%H:%M", "07-28T00:26")]
         ),
         (
             {"year": -56, "day_of_year": 318, "expanded_year_digits": 2,
@@ -133,7 +135,8 @@ def get_timepoint_dumper_tests():
              (u"±XCCYY-MM-DDThh:mm:ss±hh:mm", "-000056-11-13T05:01:00+06:00"),
              (u"±XCCYY-MM-DDThh:mm:ssZ", "-000056-11-12T23:01:00Z"),
              ("DD/MM/CCYY is a silly format", "13/11/0056 is a silly format"),
-             ("ThhmmZ", "T2301Z")]
+             ("ThhmmZ", "T2301Z"),
+             ("%Y-%m-%dT%H:%M", "0056-11-13T05:01")]
         ),
         (
             {"year": 1000, "week_of_year": 1, "day_of_week": 1,
@@ -141,14 +144,16 @@ def get_timepoint_dumper_tests():
             [("CCYY-MMDDThhmmZ", "0999-1230T0000Z"),
              ("CCYY-DDDThhmmZ", "0999-364T0000Z"),
              ("CCYY-Www-DThhmm+0200", "1000-W01-1T0200+0200"),
-             ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200")]
+             ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200"),
+             ("%Y-%m-%dT%H:%M", "0999-12-30T00:00")]
         ),
         (
             {"year": 999, "day_of_year": 364, "time_zone_hour": 0},
             [("CCYY-MMDDThhmmZ", "0999-1230T0000Z"),
              ("CCYY-DDDThhmmZ", "0999-364T0000Z"),
              ("CCYY-Www-DThhmm+0200", "1000-W01-1T0200+0200"),
-             ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200")]
+             ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200"),
+             ("%Y-%m-%dT%H:%M", "0999-12-30T00:00")]
         )
     ]
 
