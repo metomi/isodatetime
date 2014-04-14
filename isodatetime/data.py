@@ -1887,6 +1887,17 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
 def set_360_calendar():
     globals()['DAYS_IN_MONTHS'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
     globals()['DAYS_IN_MONTHS_LEAP'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+    globals()['MONTHS_IN_YEAR'] = 12
+    globals()['ROUGH_DAYS_IN_MONTH'] = 30 # Used for duration conversion, nowhere else.
+    globals()['DAYS_IN_YEAR'] = 360
+    globals()['ROUGH_DAYS_IN_YEAR'] = 360
+    globals()['DAYS_IN_YEAR_LEAP'] = 360
+    globals()['HOURS_IN_YEAR'] = 360 * HOURS_IN_DAY
+    globals()['MINUTES_IN_YEAR'] = 360 * MINUTES_IN_DAY
+    globals()['SECONDS_IN_YEAR'] = 360 * SECONDS_IN_DAY
+    globals()['HOURS_IN_YEAR_LEAP'] = 360 * HOURS_IN_DAY
+    globals()['MINUTES_IN_YEAR_LEAP'] = 360 * MINUTES_IN_DAY
+    globals()['SECONDS_IN_YEAR_LEAP'] = 360 * SECONDS_IN_DAY
 
 
 def _int_caster(number, name="number", allow_none=False):
