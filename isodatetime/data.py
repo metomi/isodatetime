@@ -1884,6 +1884,11 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
                     yield i + 1, day
 
 
+def set_360_calendar():
+    globals()['DAYS_IN_MONTHS'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+    globals()['DAYS_IN_MONTHS_LEAP'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+
+
 def _int_caster(number, name="number", allow_none=False):
     if allow_none and number is None:
         return None
