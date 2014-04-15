@@ -25,6 +25,7 @@ the Contributor Licence Agreement and Certificate of Origin detailed
 below:
 
 * Ben Fitzpatrick (Met Office, UK)
+* Andrew Clark (Met Office, UK)
 
 (All contributors are identifiable with email addresses in the version control
 logs or otherwise.)
