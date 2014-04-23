@@ -515,6 +515,37 @@ def get_timerecurrence_expansion_tests():
           "-100024-02-11T04:00:00-12:30"])
     ]
 
+def get_timerecurrence_expansion_tests_360():
+    """Return test expansion expressions for data.TimeRecurrence."""
+    return [
+        ("R13/1984-01-30T00Z/P1M",
+         ["1984-01-30T00:00:00Z", "1984-02-30T00:00:00Z", "1984-03-30T00:00:00Z", 
+          "1984-04-30T00:00:00Z", "1984-05-30T00:00:00Z", "1984-06-30T00:00:00Z",
+          "1984-07-30T00:00:00Z", "1984-08-30T00:00:00Z", "1984-09-30T00:00:00Z",
+          "1984-10-30T00:00:00Z", "1984-11-30T00:00:00Z", "1984-12-30T00:00:00Z",
+          "1985-01-30T00:00:00Z"]),
+        ("R2/1984-01-30T00Z/P1D",
+         ["1984-01-30T00:00:00Z", "1984-02-01T00:00:00Z"]),
+        ("R2/P1D/1984-02-01T00Z",
+         ["1984-01-30T00:00:00Z", "1984-02-01T00:00:00Z"]),
+        ("R2/P1D/1984-01-01T00Z",
+         ["1983-12-30T00:00:00Z", "1984-01-01T00:00:00Z"]),
+        ("R2/1983-12-30T00Z/P1D",
+         ["1983-12-30T00:00:00Z", "1984-01-01T00:00:00Z"]),
+        ("R2/P1D/2005-01-01T00Z",
+         ["2004-12-30T00:00:00Z", "2005-01-01T00:00:00Z"]),
+        ("R2/2003-12-30T00Z/P1D",
+         ["2003-12-30T00:00:00Z", "2004-01-01T00:00:00Z"]),
+        ("R2/P1D/2004-01-01T00Z",
+         ["2003-12-30T00:00:00Z", "2004-01-01T00:00:00Z"]),
+        ("R2/2004-12-30T00Z/P1D",
+         ["2004-12-30T00:00:00Z", "2005-01-01T00:00:00Z"]),
+        ("R3/P1Y/2005-02-30T00Z",
+         ["2003-02-30T00:00:00Z", "2004-02-30T00:00:00Z", "2005-02-30T00:00:00Z"]),
+        ("R3/2003-02-30T00Z/P1Y",
+         ["2003-02-30T00:00:00Z", "2004-02-30T00:00:00Z", "2005-02-30T00:00:00Z"]),
+    ]
+
 
 def get_timerecurrence_membership_tests():
     """Return test membership expressions for data.TimeRecurrence."""
@@ -784,6 +815,25 @@ class TestSuite(unittest.TestCase):
                                       list(ctrl_data[1:]))
                 self.assertEqual(test_data, ctrl_data, test_dump + "\n" +
                                  strptime_string)
+
+    def test_timerecurrence_360(self):
+        """Test recurring date/time series data model for 360 day calendar"""
+        data.set_360_calendar()
+
+        parser = parsers.TimeRecurrenceParser()
+        for expression, ctrl_results in get_timerecurrence_expansion_tests_360():
+            try:
+                test_recurrence = parser.parse(expression)
+            except parsers.ISO8601SyntaxError:
+                raise ValueError(
+                    "TimeRecurrenceParser test failed to parse '%s'" %
+                    expression
+                )
+            test_results = []
+            for i, time_point in enumerate(test_recurrence):
+                test_results.append(str(time_point))
+            self.assertEqual(test_results, ctrl_results, expression)
+        data.set_gregorian_calendar()
 
     def test_timerecurrence(self):
         """Test the recurring date/time series data model."""

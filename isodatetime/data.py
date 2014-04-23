@@ -1899,6 +1899,20 @@ def set_360_calendar():
     globals()['MINUTES_IN_YEAR_LEAP'] = 360 * MINUTES_IN_DAY
     globals()['SECONDS_IN_YEAR_LEAP'] = 360 * SECONDS_IN_DAY
 
+def set_gregorian_calendar():
+    globals()['DAYS_IN_MONTHS'] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    globals()['DAYS_IN_MONTHS_LEAP'] = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    globals()['MONTHS_IN_YEAR'] = 12
+    globals()['ROUGH_DAYS_IN_MONTH'] = 30 # Used for duration conversion, nowhere else.
+    globals()['DAYS_IN_YEAR'] = sum(DAYS_IN_MONTHS)
+    globals()['ROUGH_DAYS_IN_YEAR'] = DAYS_IN_YEAR
+    globals()['DAYS_IN_YEAR_LEAP'] = sum(DAYS_IN_MONTHS_LEAP)
+    globals()['HOURS_IN_YEAR'] = DAYS_IN_YEAR* HOURS_IN_DAY
+    globals()['MINUTES_IN_YEAR'] = DAYS_IN_YEAR * MINUTES_IN_DAY
+    globals()['SECONDS_IN_YEAR'] = DAYS_IN_YEAR * SECONDS_IN_DAY
+    globals()['HOURS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * HOURS_IN_DAY
+    globals()['MINUTES_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * MINUTES_IN_DAY
+    globals()['SECONDS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * SECONDS_IN_DAY
 
 def _int_caster(number, name="number", allow_none=False):
     if allow_none and number is None:
