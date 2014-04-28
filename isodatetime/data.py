@@ -1885,6 +1885,7 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
 
 
 def set_360_calendar():
+    """Set constants for the 360 day calendar"""
     globals()['DAYS_IN_MONTHS'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
     globals()['DAYS_IN_MONTHS_LEAP'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
     globals()['MONTHS_IN_YEAR'] = 12
@@ -1900,6 +1901,7 @@ def set_360_calendar():
     globals()['SECONDS_IN_YEAR_LEAP'] = 360 * SECONDS_IN_DAY
 
 def set_gregorian_calendar():
+    """Set constants for the gregorian calendar"""
     globals()['DAYS_IN_MONTHS'] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     globals()['DAYS_IN_MONTHS_LEAP'] = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     globals()['MONTHS_IN_YEAR'] = 12
