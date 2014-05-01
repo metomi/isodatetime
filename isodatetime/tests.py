@@ -804,7 +804,8 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
-        parser = parsers.TimePointParser(allow_truncated=True)
+        parser = parsers.TimePointParser(allow_truncated=True,
+                                         assume_unknown_time_zone=True)
         for expression, timepoint_kwargs in get_timepointparser_tests(
                 allow_truncated=True):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
