@@ -634,7 +634,7 @@ class TestSuite(unittest.TestCase):
                 )
             self.assertEqual(test_result, ctrl_result, expression)
 
-    def _test_timepoint(self):
+    def test_timepoint(self):
         """Test the time point data model (takes a while)."""
         import datetime
         import random
