@@ -433,6 +433,9 @@ class TimePointParser(object):
             format_key, type_key, date_expr = keys
             parsed_expr += date_expr
             time_info = {}
+            timezone_info = (
+                self.process_timezone_info({}))
+            time_info.update(timezone_info)
         else:
             date, time_timezone = date_time_timezone
             if not date and self.allow_truncated:

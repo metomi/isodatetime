@@ -501,6 +501,9 @@ class TimeZone(TimeInterval):
                 time_string = "-%02d:%02d"
             return time_string % (abs(self.hours), abs(self.minutes))
 
+    def __repr__(self):
+        return "<isodatetime.data.TimeZone:" + repr(str(self)) + ">"
+
 
 class TimePoint(object):
 
