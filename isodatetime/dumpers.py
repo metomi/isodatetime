@@ -197,6 +197,8 @@ class TimePointDumper(object):
         except parsers.ISO8601SyntaxError as e:
             return None
         info = self._timepoint_parser.process_timezone_info(info)
+        if info.get('time_zone_utc'):
+            return (0, 0)
         if "time_zone_hour" not in info and "time_zone_minute" not in info:
             return None
         return info.get("time_zone_hour", 0), info.get("time_zone_minute", 0)
