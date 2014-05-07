@@ -845,7 +845,31 @@ class TestSuite(unittest.TestCase):
             for value in values:
                 strptime_strings[-1] = strptime_strings[-1].replace(value, "")
         ctrl_date = datetime.datetime(2002, 3, 1, 12, 30, 2)
-        test_date = test_date = data.TimePoint(
+
+        # Test %z dumping.
+        for sign in [1, -1]:
+            for hour in range(0, 24):
+                for minute in range(0, 59):
+                    if hour == 0 and minute == 0 and sign == -1:
+                        # -0000, same as +0000, but invalid.
+                        continue
+                    test_date = data.TimePoint(
+                        year=ctrl_date.year,
+                        month_of_year=ctrl_date.month,
+                        day_of_month=ctrl_date.day,
+                        hour_of_day=ctrl_date.hour,
+                        minute_of_hour=ctrl_date.minute,
+                        second_of_minute=ctrl_date.second,
+                        time_zone_hour=sign * hour,
+                        time_zone_minute=sign * minute
+                    )
+                    ctrl_string = "-" if sign == -1 else "+"
+                    ctrl_string += "%02d%02d" % (hour, minute)
+                    self.assertEqual(test_date.strftime("%z"),
+                                     ctrl_string,
+                                     "%z for " + str(test_date))       
+
+        test_date = data.TimePoint(
             year=ctrl_date.year,
             month_of_year=ctrl_date.month,
             day_of_month=ctrl_date.day,
@@ -853,9 +877,6 @@ class TestSuite(unittest.TestCase):
             minute_of_hour=ctrl_date.minute,
             second_of_minute=ctrl_date.second
         )
-        self.assertEqual(test_date.strftime("%z"),
-                         parser_spec.LOCALE_TIMEZONE_BASIC_NO_Z,
-                         "%z")
         for test_date in [test_date, test_date.copy().to_week_date(),
                           test_date.copy().to_ordinal_date()]:
             ctrl_data = ctrl_date.strftime(strftime_string)
