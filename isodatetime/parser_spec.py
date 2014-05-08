@@ -261,7 +261,7 @@ STRFTIME_TRANSLATE_INFO = {
     "%S": ["second_of_minute"],
     "%X": ["hour_of_day", ":", "minute_of_hour", ":", "second_of_minute"],
     "%Y": ["century", "year_of_century"],
-    "%z": LOCALE_TIMEZONE_BASIC_NO_Z,
+    "%z": ["time_zone_sign", "time_zone_hour_abs", "time_zone_minute_abs"],
 }
 STRPTIME_EXCLUSIVE_GROUP_INFO = {
     "%X": ("%H", "%M", "%S"),
