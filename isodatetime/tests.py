@@ -996,4 +996,6 @@ class TestSuite(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSuite)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    import cProfile
+    cProfile.run("unittest.TextTestRunner(verbosity=2).run(suite)",
+                 sort='cumulative')
