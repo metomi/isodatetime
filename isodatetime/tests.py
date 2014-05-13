@@ -159,7 +159,8 @@ def get_timepoint_dumper_tests():
 
 
 def get_timepointparser_tests(allow_only_basic=False,
-                              allow_truncated=False):
+                              allow_truncated=False,
+                              skip_time_zones=False):
     """Yield tests for the time point parser."""
     # Note: test dates assume 2 expanded year digits.
     test_date_map = {
@@ -409,7 +410,7 @@ def get_timepointparser_tests(allow_only_basic=False,
             }
         }
     }
-    test_timezone_map = {
+    test_time_zone_map = {
         "basic": {
             "Z": {"time_zone_hour": 0, "time_zone_minute": 0},
             "+01": {"time_zone_hour": 1},
@@ -436,7 +437,7 @@ def get_timepointparser_tests(allow_only_basic=False,
     for format_type in format_ok_keys:
         date_format_tests = test_date_map[format_type]
         time_format_tests = test_time_map[format_type]
-        timezone_format_tests = test_timezone_map[format_type]
+        time_zone_format_tests = test_time_zone_map[format_type]
         for date_key in date_format_tests:
             if not allow_truncated and date_key == "truncated":
                 continue
@@ -458,12 +459,14 @@ def get_timepointparser_tests(allow_only_basic=False,
                         for key, value in info.items() + time_info.items():
                             combo_info[key] = value
                         yield combo_expr, combo_info
-                        timezone_items = timezone_format_tests.items()
-                        for timezone_expr, timezone_info in timezone_items:
-                            tz_expr = combo_expr + timezone_expr
+                        if skip_time_zones:
+                            continue
+                        time_zone_items = time_zone_format_tests.items()
+                        for time_zone_expr, time_zone_info in time_zone_items:
+                            tz_expr = combo_expr + time_zone_expr
                             tz_info = {}
                             for key, value in (combo_info.items() +
-                                                timezone_info.items()):
+                                                time_zone_info.items()):
                                 tz_info[key] = value
                             yield tz_expr, tz_info
         if not allow_truncated:
@@ -480,12 +483,14 @@ def get_timepointparser_tests(allow_only_basic=False,
                 for key, value in time_info.items():
                     combo_info[key] = value
                 yield combo_expr, combo_info
-                timezone_items = timezone_format_tests.items()
-                for timezone_expr, timezone_info in timezone_items:
-                    tz_expr = combo_expr + timezone_expr
+                if skip_time_zones:
+                    continue
+                time_zone_items = time_zone_format_tests.items()
+                for time_zone_expr, time_zone_info in time_zone_items:
+                    tz_expr = combo_expr + time_zone_expr
                     tz_info = {}
                     for key, value in (combo_info.items() +
-                                        timezone_info.items()):
+                                        time_zone_info.items()):
                         tz_info[key] = value
                     yield tz_expr, tz_info
 
@@ -608,6 +613,17 @@ def get_timerecurrenceparser_tests():
                                 "end_point": end_point}
 
 
+def get_local_time_zone_hours_minutes():
+    """Provide an independent method of getting the local time zone."""
+    import datetime
+    utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
+    utc_offset_hours = (utc_offset.seconds + 1800) // 3600
+    utc_offset_minutes = (
+        ((utc_offset.seconds - 3600 * utc_offset_hours) + 30) // 60
+    )
+    return utc_offset_hours, utc_offset_minutes
+
+
 class TestSuite(unittest.TestCase):
 
     """Test the functionality of parsers and data model manipulation."""
@@ -709,16 +725,13 @@ class TestSuite(unittest.TestCase):
             timedelta = datetime.timedelta(days=1)
             my_date += timedelta
 
-    def test_timepoint_timezone(self):
-        """Test the timezone handling of timepoint instances."""
-        import datetime
+    def test_timepoint_time_zone(self):
+        """Test the time zone handling of timepoint instances."""
         year = 2000
         month_of_year = 1
         day_of_month = 1
-        utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
-        utc_offset_hrs = (utc_offset.seconds + 1800) // 3600
-        utc_offset_minutes = (
-            ((utc_offset.seconds - 3600 * utc_offset_hrs) + 30) // 60
+        utc_offset_hours, utc_offset_minutes = (
+            get_local_time_zone_hours_minutes()
         )
         for hour_of_day in range(24):
             for minute_of_hour in [0, 30]:
@@ -741,7 +754,7 @@ class TestSuite(unittest.TestCase):
                                  test_dates[0])
                 test_dates[1].set_time_zone_to_local()
                 self.assertEqual(test_dates[1].time_zone.hours,
-                                 utc_offset_hrs, test_dates[1])
+                                 utc_offset_hours, test_dates[1])
                 
                 self.assertEqual(test_dates[1].time_zone.minutes,
                                  utc_offset_minutes, test_dates[1])
@@ -782,7 +795,8 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
-        parser = parsers.TimePointParser(allow_truncated=True)
+        parser = parsers.TimePointParser(allow_truncated=True,
+                                         default_to_unknown_time_zone=True)
         dumper = dumpers.TimePointDumper()
         for expression, timepoint_kwargs in get_timepointparser_tests(
                 allow_truncated=True):
@@ -804,7 +818,11 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
-        parser = parsers.TimePointParser(allow_truncated=True)
+
+        # Test unknown time zone assumptions.
+        parser = parsers.TimePointParser(
+            allow_truncated=True,
+            default_to_unknown_time_zone=True)
         for expression, timepoint_kwargs in get_timepointparser_tests(
                 allow_truncated=True):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
@@ -818,6 +836,73 @@ class TestSuite(unittest.TestCase):
             ctrl_data = expression
             test_data = str(parser.parse(expression, dump_as_parsed=True))
             self.assertEqual(test_data, ctrl_data, expression)
+
+        # Test local time zone assumptions (the default).
+        utc_offset_hours, utc_offset_minutes = (
+            get_local_time_zone_hours_minutes()
+        )
+        parser = parsers.TimePointParser(allow_truncated=True)
+        for expression, timepoint_kwargs in get_timepointparser_tests(
+                allow_truncated=True, skip_time_zones=True):
+            timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
+            try:
+                test_timepoint = parser.parse(expression)
+            except parsers.ISO8601SyntaxError as syn_exc:
+                raise ValueError("Parsing failed for {0}: {1}".format(
+                   expression, syn_exc))
+            test_data = (test_timepoint.time_zone.hours,
+                         test_timepoint.time_zone.minutes)
+            ctrl_data = (utc_offset_hours, utc_offset_minutes)
+            self.assertEqual(test_data, ctrl_data,
+                             "Local time zone for " + expression)
+
+        # Test given time zone assumptions.
+        utc_offset_hours, utc_offset_minutes = (
+            get_local_time_zone_hours_minutes()
+        )
+        given_utc_offset_hours = -2  # This is an arbitrary number!
+        if given_utc_offset_hours == utc_offset_hours:
+            # No point testing this twice, change it.
+            given_utc_offset_hours = -3
+        given_utc_offset_minutes = -15
+        given_time_zone_hours_minutes = (
+            given_utc_offset_hours, given_utc_offset_minutes)
+        parser = parsers.TimePointParser(
+            allow_truncated=True,
+            assumed_time_zone=given_time_zone_hours_minutes
+        )
+        for expression, timepoint_kwargs in get_timepointparser_tests(
+                allow_truncated=True, skip_time_zones=True):
+            timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
+            try:
+                test_timepoint = parser.parse(expression)
+            except parsers.ISO8601SyntaxError as syn_exc:
+                raise ValueError("Parsing failed for {0}: {1}".format(
+                   expression, syn_exc))
+            test_data = (test_timepoint.time_zone.hours,
+                         test_timepoint.time_zone.minutes)
+            ctrl_data = given_time_zone_hours_minutes
+            self.assertEqual(test_data, ctrl_data,
+                             "A given time zone for " + expression)
+
+        # Test UTC time zone assumptions.
+        parser = parsers.TimePointParser(
+            allow_truncated=True,
+            assumed_time_zone=(0, 0)
+        )
+        for expression, timepoint_kwargs in get_timepointparser_tests(
+                allow_truncated=True, skip_time_zones=True):
+            timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
+            try:
+                test_timepoint = parser.parse(expression)
+            except parsers.ISO8601SyntaxError as syn_exc:
+                raise ValueError("Parsing failed for {0}: {1}".format(
+                   expression, syn_exc))
+            test_data = (test_timepoint.time_zone.hours,
+                         test_timepoint.time_zone.minutes)
+            ctrl_data = (0, 0)
+            self.assertEqual(test_data, ctrl_data,
+                             "UTC for " + expression)
 
     def test_timepoint_strftime_strptime(self):
         """Test the strftime/strptime for date/time expressions."""
