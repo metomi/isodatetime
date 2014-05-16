@@ -653,10 +653,11 @@ class TestSuite(unittest.TestCase):
                 month_of_year=my_date.month,
                 day_of_month=my_date.day
             )
-            test_data = test_date.get_week_date()
+            test_week_date = test_date.to_week_date()
+            test_data = test_week_date.get_week_date()
             self.assertEqual(test_data, ctrl_data)
             ctrl_data = (my_date.year, my_date.month, my_date.day)
-            test_data = test_date.to_week_date().get_calendar_date()
+            test_data = test_week_date.get_calendar_date()
             self.assertEqual(test_data, ctrl_data)
             ctrl_data = my_date.toordinal()
             year, day_of_year = test_date.get_ordinal_date()
@@ -982,7 +983,7 @@ class TestSuite(unittest.TestCase):
                 self.assertEqual(test_is_member, ctrl_is_member,
                                  timepoint_expression + " in " + expression)
 
-    def test_timerecurrence_parser(self):
+    def _test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""
         parser = parsers.TimeRecurrenceParser()
         for expression, test_info in get_timerecurrenceparser_tests():

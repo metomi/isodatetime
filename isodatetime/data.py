@@ -34,6 +34,12 @@ MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY
 DAYS_IN_WEEK = 7
 DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 DAYS_IN_MONTHS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+INDEXED_DAYS_IN_MONTHS = [
+    (i + 1, days) for i, days in enumerate(DAYS_IN_MONTHS)]
+INDEXED_DAYS_IN_MONTHS_LEAP = [
+    (i + 1, days) for i, days in enumerate(DAYS_IN_MONTHS_LEAP)]
+REVERSED_INDEXED_DAYS_IN_MONTHS = reversed(INDEXED_DAYS_IN_MONTHS)
+REVERSED_INDEXED_DAYS_IN_MONTHS_LEAP = reversed(INDEXED_DAYS_IN_MONTHS)
 MONTHS_IN_YEAR = len(DAYS_IN_MONTHS)
 # No support for MONTHS_IN_YEAR_LEAP (some calendars...)
 ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
@@ -576,6 +582,8 @@ class TimePoint(object):
     truncated_property - a string that can either be "year_of_decade"
     or "year_of_century". This is used for truncated representations to
     distinguish between the two ways of truncating the year.
+    is_empty_instance - if True, do not set any properties yet. These
+    should be set as part of a copy operation.
     """
 
     DATA_ATTRIBUTES = [
@@ -593,7 +601,11 @@ class TimePoint(object):
                  second_of_minute=None, second_of_minute_decimal=None,
                  time_zone_hour=None, time_zone_minute=None,
                  dump_format=None, truncated=False,
-                 truncated_dump_format=None, truncated_property=None):
+                 truncated_dump_format=None, truncated_property=None,
+                 is_empty_instance=False):
+        if is_empty_instance:
+            # This has been created for a copy - set properties later.
+            return
         _type_checker(
             (expanded_year_digits, "expanded_year_digits", int),
             (year, "year", None, int),
@@ -1130,7 +1142,7 @@ class TimePoint(object):
 
     def copy(self):
         """Copy this TimePoint without leaving references."""
-        dummy_timepoint = TimePoint()
+        dummy_timepoint = TimePoint(is_empty_instance=True)
         for attr in self.DATA_ATTRIBUTES:
             setattr(dummy_timepoint, attr, getattr(self, attr))
         dummy_timepoint.time_zone = self.time_zone.copy()
@@ -1856,45 +1868,51 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
     True (default False).
 
     """
-    source = DAYS_IN_MONTHS
-    if get_is_leap_year(year):
-        source = DAYS_IN_MONTHS_LEAP
+    is_leap_year = get_is_leap_year(year)
+    return _iter_months_days(
+        is_leap_year, month_of_year, day_of_month, in_reverse=in_reverse)
+
+
+@util.cache_results
+def _iter_months_days(is_leap_year, month_of_year, day_of_month,
+                      in_reverse=False):
+    source = INDEXED_DAYS_IN_MONTHS
+    if is_leap_year:
+        source = INDEXED_DAYS_IN_MONTHS_LEAP
     if day_of_month is not None and month_of_year is None:
         raise ValueError("Need to specify start month as well as day.")
+    results = []
     if in_reverse:
         if month_of_year is None:
-            for i, days in enumerate(reversed(source)):
+            for month_num, days in reversed(source):
                 day_range = range(days, 0, -1)
-                j = len(source) - i
                 for day in day_range:
-                    yield j, day
+                    results.append((month_num, day))
         else:
-            for i, days in enumerate(reversed(source)):
-                j = len(source) - i
-                if j > month_of_year:
+            for month_num, days in reversed(source):
+                if month_num > month_of_year:
                     continue
-                elif j == month_of_year and day_of_month is not None:
+                elif month_num == month_of_year and day_of_month is not None:
                     day_range = range(day_of_month, 0, -1)
                 else:
                     day_range = range(days, 0, -1)
                 for day in day_range:
-                    yield j, day
+                    results.append((month_num, day))
     else:
         if month_of_year is None:
-            for i, days in enumerate(source):
+            for month_num, days in source:
                 day_range = range(1, days + 1)
                 for day in day_range:
-                    yield i + 1, day
+                    results.append((month_num, day))
         else:
-            for i, days in enumerate(source):
-                if i + 1 < month_of_year:
-                    continue
-                elif i + 1 == month_of_year and day_of_month is not None:
+            for month_num, days in source[month_of_year - 1:]:
+                if month_num == month_of_year and day_of_month is not None:
                     day_range = range(day_of_month, days + 1)
                 else:
                     day_range = range(1, days + 1)
                 for day in day_range:
-                    yield i + 1, day
+                    results.append((month_num, day))
+    return results
 
 
 def set_360_calendar():
@@ -1913,6 +1931,7 @@ def set_360_calendar():
     globals()['MINUTES_IN_YEAR_LEAP'] = 360 * MINUTES_IN_DAY
     globals()['SECONDS_IN_YEAR_LEAP'] = 360 * SECONDS_IN_DAY
 
+
 def set_gregorian_calendar():
     """Set constants for the gregorian calendar"""
     globals()['DAYS_IN_MONTHS'] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -1928,6 +1947,7 @@ def set_gregorian_calendar():
     globals()['HOURS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * HOURS_IN_DAY
     globals()['MINUTES_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * MINUTES_IN_DAY
     globals()['SECONDS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * SECONDS_IN_DAY
+
 
 def _int_caster(number, name="number", allow_none=False):
     if allow_none and number is None:
@@ -1948,25 +1968,26 @@ def _type_checker(*objects):
     for type_info in objects:
         value, name = type_info[:2]
         allowed_types = list(type_info[2:])
+        none_is_allowed = False
         if None in allowed_types:
+            if value is None:
+                break
+            none_is_allowed = True
             allowed_types.remove(None)
             allowed_types.append(type(None))
+        if allowed_types and isinstance(value, allowed_types[0]):
+            break
         if int in allowed_types and float not in allowed_types:
-            value = _int_caster(value, name=name, allow_none=(
-                type(None) in allowed_types))
-        is_ok = False
-        for type_ in allowed_types:
-            if isinstance(value, type_):
-                is_ok = True
-                break
-        if not is_ok:
-            values_string = ""
-            if allowed_types:
-                values_string = " should be: "
-                values_string += " or ".join(
-                    [str(v) for v in allowed_types])
-            raise BadInputError(
-                BadInputError.TYPE, name, repr(value), values_string)
+            value = _int_caster(value, name=name, allow_none=none_is_allowed)
+        if any([isinstance(value, type_) for type_ in allowed_types]):
+            break
+        values_string = ""
+        if allowed_types:
+            values_string = " should be: "
+            values_string += " or ".join(
+                [str(v) for v in allowed_types])
+        raise BadInputError(
+            BadInputError.TYPE, name, repr(value), values_string)
 
 
 PARSE_PROPERTY_TRANSLATORS = {
