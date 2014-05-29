@@ -66,6 +66,35 @@ def get_timeintervalparser_tests():
         yield expression, ctrl_data
 
 
+def get_timeintervaldumper_tests():
+    """Yield tests for the time interval dumper."""
+    test_expressions = {
+        "P3Y": {"years": 3},
+        "P90Y": {"years": 90},
+        "P1Y2M": {"years": 1, "months": 2},
+        "P20Y2M": {"years": 20, "months": 2},
+        "P2M": {"months": 2},
+        "P52M": {"months": 52},
+        "P20Y10M2D": {"years": 20, "months": 10, "days": 2},
+        "P1Y3D": {"years": 1, "days": 3},
+        "P4M1D": {"months": 4, "days": 1},
+        "P3Y404D": {"years": 3, "days": 404},
+        "P30Y2D": {"years": 30, "days": 2},
+        "PT6H": {"hours": 6},
+        "PT1034H": {"hours": 1034},
+        "P3YT4H2M": {"years": 3, "hours": 4, "minutes": 2},
+        "P30Y2DT10S": {"years": 30, "days": 2, "seconds": 10},
+        "PT2S": {"seconds": 2},
+        "PT2,5S": {"seconds": 2.5},
+        "PT5,5023H": {"hours": 5.5023},
+        "P5W": {"weeks": 5},
+        "P100W": {"weeks": 100},
+        "-P3YT4H2M": {"years": -3, "hours": -4, "minutes": -2},       
+    }
+    for expression, ctrl_result in test_expressions.items():
+        yield expression, ctrl_result
+
+
 def get_timepoint_dumper_tests():
     """Yield tests for custom timepoint dumps."""
     return [
@@ -649,6 +678,14 @@ class TestSuite(unittest.TestCase):
                     expression
                 )
             self.assertEqual(test_result, ctrl_result, expression)
+
+    def test_timeinterval_dumper(self):
+        """Test the time interval dumping."""
+        for ctrl_expression, test_props in get_timeintervaldumper_tests():
+            interval = data.TimeInterval(**test_props)
+            test_expression = str(interval)
+            self.assertEqual(test_expression, ctrl_expression,
+                             str(test_props))
 
     def test_timepoint(self):
         """Test the time point data model (takes a while)."""

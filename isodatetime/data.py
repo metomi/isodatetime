@@ -259,6 +259,9 @@ class TimeInterval(object):
 
     """Represent a duration or period of time."""
 
+    DATA_ATTRIBUTES = [
+        "years", "months", "weeks", "days", "hours", "minutes", "seconds"]
+
     def __init__(self, years=0, months=0, weeks=0, days=0,
                  hours=0.0, minutes=0.0, seconds=0.0):
         _type_checker(
@@ -342,6 +345,14 @@ class TimeInterval(object):
             self.weeks = self.days / DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
+
+    def __abs__(self):
+        new = self.copy()
+        for attribute in new.DATA_ATTRIBUTES:
+            attr_value = getattr(new, attribute)
+            if attr_value is not None:
+                setattr(new, attribute, abs(attr_value))
+        return new
 
     def __add__(self, other):
         new = self.copy()
@@ -435,6 +446,18 @@ class TimeInterval(object):
         start_string = "P"
         date_string = ""
         time_string = ""
+        is_fully_negative = False
+        for attribute in self.DATA_ATTRIBUTES:
+            attr_value = getattr(self, attribute)
+            if attr_value is not None:
+                if attr_value > 0:
+                    is_fully_negative = False
+                    break
+                if attr_value < 0:
+                    is_fully_negative = True
+        if is_fully_negative:
+            # This does not adhere to the standard... but it's useful...
+            return "-" + str(abs(self))
         if self.get_is_in_weeks():
             return (start_string + str(self.weeks) + "W").replace(".", ",")
         if self.years:
