@@ -59,11 +59,44 @@ def get_timeintervalparser_tests():
         "P0004-078T10,5": {"years": 4, "days": 78, "hours": 10.5},
         "P00000020T133702": {"days": 20, "hours": 13, "minutes": 37,
                              "seconds": 02},
-        
+        "-P3YT4H2M": {"years": -3, "hours": -4, "minutes": -2},
+        "-PT5M": {"minutes": -5},
+        "-P7Y": {"years": -7, "hours": 0}
     }
     for expression, ctrl_result in test_expressions.items():
         ctrl_data = str(data.TimeInterval(**ctrl_result))
         yield expression, ctrl_data
+
+
+def get_timeintervaldumper_tests():
+    """Yield tests for the time interval dumper."""
+    test_expressions = {
+        "P3Y": {"years": 3},
+        "P90Y": {"years": 90},
+        "P1Y2M": {"years": 1, "months": 2},
+        "P20Y2M": {"years": 20, "months": 2},
+        "P2M": {"months": 2},
+        "P52M": {"months": 52},
+        "P20Y10M2D": {"years": 20, "months": 10, "days": 2},
+        "P1Y3D": {"years": 1, "days": 3},
+        "P4M1D": {"months": 4, "days": 1},
+        "P3Y404D": {"years": 3, "days": 404},
+        "P30Y2D": {"years": 30, "days": 2},
+        "PT6H": {"hours": 6},
+        "PT1034H": {"hours": 1034},
+        "P3YT4H2M": {"years": 3, "hours": 4, "minutes": 2},
+        "P30Y2DT10S": {"years": 30, "days": 2, "seconds": 10},
+        "PT2S": {"seconds": 2},
+        "PT2,5S": {"seconds": 2.5},
+        "PT5,5023H": {"hours": 5.5023},
+        "P5W": {"weeks": 5},
+        "P100W": {"weeks": 100},
+        "-P3YT4H2M": {"years": -3, "hours": -4, "minutes": -2},
+        "-PT5M": {"minutes": -5},
+        "-P7Y": {"years": -7, "hours": 0}
+    }
+    for expression, ctrl_result in test_expressions.items():
+        yield expression, ctrl_result
 
 
 def get_timepoint_dumper_tests():
@@ -594,6 +627,9 @@ def get_timerecurrenceparser_tests():
             interval_tests = get_timeintervalparser_tests()
             start_point = point_parser.parse(point_expr)
             for interval_expr, interval_result in interval_tests:
+                if interval_expr.startswith("-P"):
+                    # Our negative intervals are not supported in recurrences.
+                    continue
                 interval = interval_parser.parse(interval_expr)
                 end_point = start_point + interval
                 if reps is not None:
@@ -649,6 +685,14 @@ class TestSuite(unittest.TestCase):
                     expression
                 )
             self.assertEqual(test_result, ctrl_result, expression)
+
+    def test_timeinterval_dumper(self):
+        """Test the time interval dumping."""
+        for ctrl_expression, test_props in get_timeintervaldumper_tests():
+            interval = data.TimeInterval(**test_props)
+            test_expression = str(interval)
+            self.assertEqual(test_expression, ctrl_expression,
+                             str(test_props))
 
     def test_timepoint(self):
         """Test the time point data model (takes a while)."""
