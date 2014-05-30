@@ -59,7 +59,9 @@ def get_timeintervalparser_tests():
         "P0004-078T10,5": {"years": 4, "days": 78, "hours": 10.5},
         "P00000020T133702": {"days": 20, "hours": 13, "minutes": 37,
                              "seconds": 02},
-        
+        "-P3YT4H2M": {"years": -3, "hours": -4, "minutes": -2},
+        "-PT5M": {"minutes": -5},
+        "-P7Y": {"years": -7, "hours": 0}
     }
     for expression, ctrl_result in test_expressions.items():
         ctrl_data = str(data.TimeInterval(**ctrl_result))
@@ -625,6 +627,9 @@ def get_timerecurrenceparser_tests():
             interval_tests = get_timeintervalparser_tests()
             start_point = point_parser.parse(point_expr)
             for interval_expr, interval_result in interval_tests:
+                if interval_expr.startswith("-P"):
+                    # Our negative intervals are not supported in recurrences.
+                    continue
                 interval = interval_parser.parse(interval_expr)
                 end_point = start_point + interval
                 if reps is not None:
