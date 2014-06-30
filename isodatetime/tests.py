@@ -694,7 +694,7 @@ class TestSuite(unittest.TestCase):
             self.assertEqual(test_expression, ctrl_expression,
                              str(test_props))
 
-    def test_timepoint(self):
+    def _test_timepoint(self):
         """Test the time point data model (takes a while)."""
         import datetime
         import random
@@ -1042,6 +1042,9 @@ class TestSuite(unittest.TestCase):
     def test_timerecurrence_360(self):
         """Test recurring date/time series data model for 360 day calendar"""
         data.set_360_calendar()
+        print data.calendar.DAYS_IN_MONTHS
+        print data.calendar.DAYS_IN_MONTHS_LEAP
+        print data.calendar.mode
 
         parser = parsers.TimeRecurrenceParser()
         for expression, ctrl_results in get_timerecurrence_expansion_tests_360():
@@ -1112,7 +1115,7 @@ class TestSuite(unittest.TestCase):
                 self.assertEqual(test_is_member, ctrl_is_member,
                                  timepoint_expression + " in " + expression)
 
-    def _test_timerecurrence_parser(self):
+    def test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""
         parser = parsers.TimeRecurrenceParser()
         for expression, test_info in get_timerecurrenceparser_tests():
