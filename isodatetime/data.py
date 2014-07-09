@@ -38,6 +38,7 @@ class Calendar(object):
 
     MODE_360 = "360"
     MODE_365 = "365"
+    MODE_366 = "366"
     MODE_GREGORIAN = "Gregorian"
 
     WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
@@ -89,6 +90,13 @@ class Calendar(object):
         self.mode = self.MODE_365
         self.recalculate()
 
+    def set_366(self):
+        """Use a 366-day calendar."""
+        self.DAYS_IN_MONTHS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
+        self.mode = self.MODE_366
+        self.recalculate()
+
     def set_gregorian(self):
         """Use the Gregorian calendar (the default)."""
         self.DAYS_IN_MONTHS = [
@@ -97,6 +105,9 @@ class Calendar(object):
             31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         self.mode = self.MODE_GREGORIAN
         self.recalculate()
+
+    def __repr__(self):
+        return "<%s-%s>" % (type(self).__name__, self.mode)
 
 
 calendar = Calendar()
@@ -1629,16 +1640,26 @@ def get_is_leap_year(year):
     return False
 
 
-@util.cache_results
 def get_days_in_year(year):
+    """Return the number of days in this particular year."""
+    return _get_days_in_year(year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_days_in_year(year, calendar_mode=None):
     """Return the number of days in this particular year."""
     if get_is_leap_year(year):
         return calendar.DAYS_IN_YEAR_LEAP
     return calendar.DAYS_IN_YEAR
 
 
-@util.cache_results
 def get_weeks_in_year(year):
+    """Return the number of calendar weeks in this week date year."""
+    return _get_weeks_in_year(year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_weeks_in_year(year, calendar_mode=None):
     """Return the number of calendar weeks in this week date year."""
     cal_year, cal_ord_days = get_ordinal_date_week_date_start(year)
     cal_year_next, cal_ord_days_next = get_ordinal_date_week_date_start(
@@ -1828,8 +1849,14 @@ def get_week_date_from_ordinal_date(year, day_of_year):
     return get_week_date_from_calendar_date(year, month, day)
 
 
-@util.cache_results
 def get_calendar_date_week_date_start(year):
+    """Return the calendar date of the start of (week date) year."""
+    return _get_calendar_date_week_date_start(
+        year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_calendar_date_week_date_start(year, calendar_mode=None):
     """Return the calendar date of the start of (week date) year."""
     ref_year, ref_month, ref_day = (
         calendar.WEEK_DAY_START_REFERENCE["calendar"])
@@ -1865,8 +1892,13 @@ def get_calendar_date_week_date_start(year):
             return year - 1, month, day
 
 
-@util.cache_results
 def get_days_since_1_ad(year):
+    """Return the number of days since Jan 1, 1 A.D. to the year end."""
+    return _get_days_since_1_ad(year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_days_since_1_ad(year, calendar_mode=None):
     """Return the number of days since Jan 1, 1 A.D. to the year end."""
     if year == 1:
         return get_days_in_year(year)
@@ -1879,9 +1911,15 @@ def get_days_since_1_ad(year):
     return days
 
 
-@util.cache_results
 def get_ordinal_date_week_date_start(year):
-    """Return the week date start for year in year, day-of-year."""
+    """Return the ordinal week date start for year (year, day-of-year)."""
+    return _get_ordinal_date_week_date_start(
+        year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_ordinal_date_week_date_start(year, calendar_mode=None):
+    """Return the ordinal week date start for year (year, day-of-year)."""
     cal_year, cal_month, cal_day = get_calendar_date_week_date_start(year)
     total_days = 0
     for iter_month, iter_day in iter_months_days(cal_year):
@@ -1931,12 +1969,13 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
     """
     is_leap_year = get_is_leap_year(year)
     return _iter_months_days(
-        is_leap_year, month_of_year, day_of_month, in_reverse=in_reverse)
+        is_leap_year, month_of_year, day_of_month, in_reverse=in_reverse,
+        calendar_mode=calendar.mode)
 
 
 @util.cache_results
 def _iter_months_days(is_leap_year, month_of_year, day_of_month,
-                      in_reverse=False):
+                      in_reverse=False, calendar_mode=None):
     source = calendar.INDEXED_DAYS_IN_MONTHS
     if is_leap_year:
         source = calendar.INDEXED_DAYS_IN_MONTHS_LEAP
@@ -1984,6 +2023,11 @@ def set_360_calendar():
 def set_365_calendar():
     """Adjust the calendar to a 365 day (every year has 365 days) calendar."""
     calendar.set_365()
+
+
+def set_366_calendar():
+    """Adjust the calendar to a 366 day (every year has 366 days) calendar."""
+    calendar.set_366()
 
 
 def set_gregorian_calendar():
