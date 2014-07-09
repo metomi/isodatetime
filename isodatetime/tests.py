@@ -1228,6 +1228,4 @@ def test_timepoint_at_year(test_year):
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSuite)
-    import cProfile
-    cProfile.run("unittest.TextTestRunner(verbosity=2).run(suite)",
-                 sort='cumulative')
+    unittest.TextTestRunner(verbosity=2).run(suite)

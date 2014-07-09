@@ -85,14 +85,16 @@ class Calendar(object):
 
     def set_365(self):
         """Use a 365-day calendar."""
-        self.DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS = [
+            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
         self.mode = self.MODE_365
         self.recalculate()
 
     def set_366(self):
         """Use a 366-day calendar."""
-        self.DAYS_IN_MONTHS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS = [
+            31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
         self.mode = self.MODE_366
         self.recalculate()
