@@ -24,33 +24,95 @@ from . import timezone
 from . import util
 
 
-# The following constants could be encapsulated in a calendar class.
-SECONDS_IN_MINUTE = 60
-MINUTES_IN_HOUR = 60
-SECONDS_IN_HOUR = SECONDS_IN_MINUTE * MINUTES_IN_HOUR
-HOURS_IN_DAY = 24
-SECONDS_IN_DAY = SECONDS_IN_HOUR * HOURS_IN_DAY
-MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY
-DAYS_IN_WEEK = 7
-DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-DAYS_IN_MONTHS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-MONTHS_IN_YEAR = len(DAYS_IN_MONTHS)
-# No support for MONTHS_IN_YEAR_LEAP (some calendars...)
-ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
-DAYS_IN_YEAR = sum(DAYS_IN_MONTHS)
-ROUGH_DAYS_IN_YEAR = DAYS_IN_YEAR  # = as ROUGH_DAYS_IN_MONTH
-DAYS_IN_YEAR_LEAP = sum(DAYS_IN_MONTHS_LEAP)
-HOURS_IN_YEAR = DAYS_IN_YEAR * HOURS_IN_DAY
-MINUTES_IN_YEAR = DAYS_IN_YEAR * MINUTES_IN_DAY
-SECONDS_IN_YEAR = DAYS_IN_YEAR * SECONDS_IN_DAY
-HOURS_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * HOURS_IN_DAY
-MINUTES_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * MINUTES_IN_DAY
-SECONDS_IN_YEAR_LEAP = DAYS_IN_YEAR_LEAP * SECONDS_IN_DAY
-WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
-                            "ordinal": (2000, 3)}
+class Calendar(object):
 
-UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES = {
-    "year": 1970, "time_zone_hour": 0, "time_zone_minute": 0}
+    """Store constants for Gregorian calendar date-time calculation."""
+
+    SECONDS_IN_MINUTE = 60
+    MINUTES_IN_HOUR = 60
+    HOURS_IN_DAY = 24
+    DAYS_IN_WEEK = 7
+    DAYS_IN_MONTHS = None  # This is set up in the set_* methods.
+    DAYS_IN_MONTHS_LEAP = None  # This is set up in the set_* methods
+    ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
+
+    MODE_360 = "360"
+    MODE_365 = "365"
+    MODE_366 = "366"
+    MODE_GREGORIAN = "Gregorian"
+
+    WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
+                                "ordinal": (2000, 3)}
+    UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES = {
+        "year": 1970, "time_zone_hour": 0, "time_zone_minute": 0}
+
+    def __init__(self):
+        self.mode = None
+        self.set_gregorian()
+
+    def recalculate(self):
+        self.SECONDS_IN_HOUR = self.SECONDS_IN_MINUTE * self.MINUTES_IN_HOUR
+        self.SECONDS_IN_DAY = self.SECONDS_IN_HOUR * self.HOURS_IN_DAY
+        self.MINUTES_IN_DAY = self.MINUTES_IN_HOUR * self.HOURS_IN_DAY
+        self.INDEXED_DAYS_IN_MONTHS = [
+            (i + 1, days) for i, days in enumerate(self.DAYS_IN_MONTHS)]
+        self.INDEXED_DAYS_IN_MONTHS_LEAP = [
+            (i + 1, days) for i, days in enumerate(self.DAYS_IN_MONTHS_LEAP)]
+        self.REVERSED_INDEXED_DAYS_IN_MONTHS = (
+            reversed(self.INDEXED_DAYS_IN_MONTHS))
+        self.REVERSED_INDEXED_DAYS_IN_MONTHS_LEAP = (
+            reversed(self.INDEXED_DAYS_IN_MONTHS))
+        self.MONTHS_IN_YEAR = len(self.DAYS_IN_MONTHS)
+        # No support for MONTHS_IN_YEAR_LEAP (some calendars...)
+        self.DAYS_IN_YEAR = sum(self.DAYS_IN_MONTHS)
+        self.ROUGH_DAYS_IN_YEAR = self.DAYS_IN_YEAR
+        self.DAYS_IN_YEAR_LEAP = sum(self.DAYS_IN_MONTHS_LEAP)
+        self.HOURS_IN_YEAR = self.DAYS_IN_YEAR * self.HOURS_IN_DAY
+        self.MINUTES_IN_YEAR = self.DAYS_IN_YEAR * self.MINUTES_IN_DAY
+        self.SECONDS_IN_YEAR = self.DAYS_IN_YEAR * self.SECONDS_IN_DAY
+        self.HOURS_IN_YEAR_LEAP = self.DAYS_IN_YEAR_LEAP * self.HOURS_IN_DAY
+        self.MINUTES_IN_YEAR_LEAP = (
+            self.DAYS_IN_YEAR_LEAP * self.MINUTES_IN_DAY)
+        self.SECONDS_IN_YEAR_LEAP = (
+            self.DAYS_IN_YEAR_LEAP * self.SECONDS_IN_DAY)
+
+    def set_360(self):
+        """Use a 360-day calendar."""
+        self.DAYS_IN_MONTHS = 12 * [30]
+        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
+        self.mode = self.MODE_360
+        self.recalculate()
+
+    def set_365(self):
+        """Use a 365-day calendar."""
+        self.DAYS_IN_MONTHS = [
+            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
+        self.mode = self.MODE_365
+        self.recalculate()
+
+    def set_366(self):
+        """Use a 366-day calendar."""
+        self.DAYS_IN_MONTHS = [
+            31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
+        self.mode = self.MODE_366
+        self.recalculate()
+
+    def set_gregorian(self):
+        """Use the Gregorian calendar (the default)."""
+        self.DAYS_IN_MONTHS = [
+            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.DAYS_IN_MONTHS_LEAP = [
+            31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.mode = self.MODE_GREGORIAN
+        self.recalculate()
+
+    def __repr__(self):
+        return "<%s-%s>" % (type(self).__name__, self.mode)
+
+
+calendar = Calendar()
 
 
 TIMEPOINT_DUMPER_MAP = {
@@ -115,10 +177,10 @@ class TimeRecurrence(object):
             diff_seconds = end_seconds - start_seconds
             if diff_seconds < 0:
                 diff_days -= 1
-                diff_seconds += SECONDS_IN_DAY
-            if diff_seconds >= SECONDS_IN_DAY:
+                diff_seconds += calendar.SECONDS_IN_DAY
+            if diff_seconds >= calendar.SECONDS_IN_DAY:
                 diff_days += 1
-                diff_seconds -= SECONDS_IN_DAY
+                diff_seconds -= calendar.SECONDS_IN_DAY
             if self.repetitions == 1:
                 self.interval = TimeInterval(years=0)
             else:
@@ -128,7 +190,7 @@ class TimeRecurrence(object):
                     self.repetitions - 1)
                 diff_days = int(diff_days_float)
                 diff_seconds_float += (
-                    diff_days_float - diff_days) * SECONDS_IN_DAY
+                    diff_days_float - diff_days) * calendar.SECONDS_IN_DAY
                 self.interval = TimeInterval(days=diff_days,
                                              seconds=diff_seconds_float)
         elif self.end_point is None:
@@ -299,16 +361,16 @@ class TimeInterval(object):
         self.days = days
         if weeks is not None:
             if days is None:
-                self.days = DAYS_IN_WEEK * weeks
+                self.days = calendar.DAYS_IN_WEEK * weeks
             else:
-                self.days += DAYS_IN_WEEK * weeks
+                self.days += calendar.DAYS_IN_WEEK * weeks
         self.hours = hours
         self.minutes = minutes
         self.seconds = seconds
         if (not self.years and not self.months and not self.hours and
                 not self.minutes and not self.seconds and
                 weeks and not days):
-            self.weeks = self.days / DAYS_IN_WEEK
+            self.weeks = self.days / calendar.DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
         if standardize:
@@ -346,21 +408,22 @@ class TimeInterval(object):
         derived from intervals using these units.
 
         Seconds are returned in the range
-        0 <= seconds < SECONDS_IN_DAY, which means that a TimeInterval
-        which has self.seconds = SECONDS_IN_DAY + 100 will return 1
-        day, 100 seconds or (1, 100) from this method.
+        0 <= seconds < calendar.SECONDS_IN_DAY, which means that a
+        TimeInterval which has self.seconds = calendar.SECONDS_IN_DAY +
+        100 will return 1 day, 100 seconds or (1, 100) from this
+        method.
 
         """
         # TODO: Implement error calculation for the below quantities.
         new = self.copy()
         new.to_days()
-        new_days = (new.years * ROUGH_DAYS_IN_YEAR +
-                    new.months * ROUGH_DAYS_IN_MONTH +
+        new_days = (new.years * calendar.ROUGH_DAYS_IN_YEAR +
+                    new.months * calendar.ROUGH_DAYS_IN_MONTH +
                     new.days)
-        new_seconds = (new.hours * SECONDS_IN_HOUR +
-                       new.minutes * SECONDS_IN_MINUTE +
+        new_seconds = (new.hours * calendar.SECONDS_IN_HOUR +
+                       new.minutes * calendar.SECONDS_IN_MINUTE +
                        new.seconds)
-        diff_days, new_seconds = divmod(new_seconds, SECONDS_IN_DAY)
+        diff_days, new_seconds = divmod(new_seconds, calendar.SECONDS_IN_DAY)
         new_days += diff_days
         return new_days, new_seconds
 
@@ -385,13 +448,13 @@ class TimeInterval(object):
                               "minutes", "seconds"]:
                 if getattr(self, attribute) is None:
                     setattr(self, attribute, 0)
-            self.days = self.weeks * DAYS_IN_WEEK
+            self.days = self.weeks * calendar.DAYS_IN_WEEK
             self.weeks = None
 
     def to_weeks(self):
         """Convert to week representation (warning: use with caution)."""
         if not self.get_is_in_weeks():
-            self.weeks = self.days / DAYS_IN_WEEK
+            self.weeks = self.days / calendar.DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
 
@@ -648,6 +711,8 @@ class TimePoint(object):
     truncated_property - a string that can either be "year_of_decade"
     or "year_of_century". This is used for truncated representations to
     distinguish between the two ways of truncating the year.
+    is_empty_instance - if True, do not set any properties yet. These
+    should be set as part of a copy operation.
     """
 
     DATA_ATTRIBUTES = [
@@ -665,7 +730,11 @@ class TimePoint(object):
                  second_of_minute=None, second_of_minute_decimal=None,
                  time_zone_hour=None, time_zone_minute=None,
                  dump_format=None, truncated=False,
-                 truncated_dump_format=None, truncated_property=None):
+                 truncated_dump_format=None, truncated_property=None,
+                 is_empty_instance=False):
+        if is_empty_instance:
+            # This has been created for a copy - set properties later.
+            return
         _type_checker(
             (expanded_year_digits, "expanded_year_digits", int),
             (year, "year", None, int),
@@ -827,10 +896,10 @@ class TimePoint(object):
             if minute_of_hour is None:
                 hour_decimals = hour_of_day - int(hour_of_day)
                 hour_of_day = float(int(hour_of_day))
-                minute_of_hour = MINUTES_IN_HOUR * hour_decimals
+                minute_of_hour = calendar.MINUTES_IN_HOUR * hour_decimals
             minute_decimals = minute_of_hour - int(minute_of_hour)
             minute_of_hour = float(int(minute_of_hour))
-            second_of_minute = SECONDS_IN_MINUTE * minute_decimals
+            second_of_minute = calendar.SECONDS_IN_MINUTE * minute_decimals
         return hour_of_day, minute_of_hour, second_of_minute
 
     def get_ordinal_date(self):
@@ -918,11 +987,11 @@ class TimePoint(object):
             return "+"
         if property_name == "seconds_since_unix_epoch":
             reference_timepoint = TimePoint(
-                **UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
+                **calendar.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
             days, seconds = (
                 self - reference_timepoint).get_days_and_seconds()
             # N.B. This needs altering if we implement leap seconds.
-            return str(int(SECONDS_IN_DAY * days + seconds))
+            return str(int(calendar.SECONDS_IN_DAY * days + seconds))
         raise NotImplementedError(property_name)
 
     def get_second_of_day(self):
@@ -931,8 +1000,8 @@ class TimePoint(object):
         if self.second_of_minute is not None:
             second_of_day += self.second_of_minute
         if self.minute_of_hour is not None:
-            second_of_day += self.minute_of_hour * SECONDS_IN_MINUTE
-        second_of_day += self.hour_of_day * SECONDS_IN_HOUR
+            second_of_day += self.minute_of_hour * calendar.SECONDS_IN_MINUTE
+        second_of_day += self.hour_of_day * calendar.SECONDS_IN_HOUR
         return second_of_day
 
     def get_time_zone(self):
@@ -961,7 +1030,8 @@ class TimePoint(object):
         """Apply a time zone shift represented by a TimeInterval."""
         if offset.minutes:
             if self.minute_of_hour is None:
-                self.hour_of_day += offset.minutes / float(MINUTES_IN_HOUR)
+                self.hour_of_day += (
+                    offset.minutes / float(calendar.MINUTES_IN_HOUR))
             else:
                 self.minute_of_hour += offset.minutes
             self._tick_over()
@@ -1152,16 +1222,17 @@ class TimePoint(object):
             if new.second_of_minute is None:
                 if new.minute_of_hour is None:
                     new.hour_of_day += (
-                        duration.seconds / float(SECONDS_IN_HOUR))
+                        duration.seconds / float(calendar.SECONDS_IN_HOUR))
                 else:
                     new.minute_of_hour += (
-                        duration.seconds / float(SECONDS_IN_MINUTE))
+                        duration.seconds / float(calendar.SECONDS_IN_MINUTE))
             else:
                 new.second_of_minute += duration.seconds
             new._tick_over()
         if duration.minutes:
             if new.minute_of_hour is None:
-                new.hour_of_day += duration.minutes / float(MINUTES_IN_HOUR)
+                new.hour_of_day += (
+                    duration.minutes / float(calendar.MINUTES_IN_HOUR))
             else:
                 new.minute_of_hour += duration.minutes
             new._tick_over()
@@ -1182,11 +1253,14 @@ class TimePoint(object):
         if duration.years:
             new.year += duration.years
             if new.get_is_calendar_date():
-                month_index = (new.month_of_year - 1) % MONTHS_IN_YEAR
+                month_index = (
+                    (new.month_of_year - 1) % calendar.MONTHS_IN_YEAR)
                 if get_is_leap_year(new.year):
-                    max_day_in_new_month = DAYS_IN_MONTHS_LEAP[month_index]
+                    max_day_in_new_month = (
+                        calendar.DAYS_IN_MONTHS_LEAP[month_index])
                 else:
-                    max_day_in_new_month = DAYS_IN_MONTHS[month_index]
+                    max_day_in_new_month = (
+                        calendar.DAYS_IN_MONTHS[month_index])
                 if new.day_of_month > max_day_in_new_month:
                     # For example, when Feb 29 - 1 year = Feb 28.
                     new.day_of_month = max_day_in_new_month
@@ -1202,7 +1276,7 @@ class TimePoint(object):
 
     def copy(self):
         """Copy this TimePoint without leaving references."""
-        dummy_timepoint = TimePoint()
+        dummy_timepoint = TimePoint(is_empty_instance=True)
         for attr in self.DATA_ATTRIBUTES:
             setattr(dummy_timepoint, attr, getattr(self, attr))
         dummy_timepoint.time_zone = self.time_zone.copy()
@@ -1270,13 +1344,13 @@ class TimePoint(object):
             diff_second = my_time[2] - other_time[2]
             if diff_second < 0:
                 diff_minute -= 1
-                diff_second += SECONDS_IN_MINUTE
+                diff_second += calendar.SECONDS_IN_MINUTE
             if diff_minute < 0:
                 diff_hour -= 1
-                diff_minute += MINUTES_IN_HOUR
+                diff_minute += calendar.MINUTES_IN_HOUR
             if diff_hour < 0:
                 diff_day -= 1
-                diff_hour += HOURS_IN_DAY
+                diff_hour += calendar.HOURS_IN_DAY
             return TimeInterval(days=diff_day,
                                 hours=diff_hour, minutes=diff_minute,
                                 seconds=diff_second)
@@ -1304,19 +1378,21 @@ class TimePoint(object):
         for i in range(abs(num_months)):
             if num_months > 0:
                 self.month_of_year += 1
-                if self.month_of_year > MONTHS_IN_YEAR:
-                    self.month_of_year -= MONTHS_IN_YEAR
+                if self.month_of_year > calendar.MONTHS_IN_YEAR:
+                    self.month_of_year -= calendar.MONTHS_IN_YEAR
                     self.year += 1
             if num_months < 0:
                 self.month_of_year -= 1
                 if self.month_of_year < 1:
-                    self.month_of_year += MONTHS_IN_YEAR
+                    self.month_of_year += calendar.MONTHS_IN_YEAR
                     self.year -= 1
-            month_index = (self.month_of_year - 1) % MONTHS_IN_YEAR
+            month_index = (self.month_of_year - 1) % calendar.MONTHS_IN_YEAR
             if get_is_leap_year(self.year):
-                max_day_in_new_month = DAYS_IN_MONTHS_LEAP[month_index]
+                max_day_in_new_month = (
+                    calendar.DAYS_IN_MONTHS_LEAP[month_index])
             else:
-                max_day_in_new_month = DAYS_IN_MONTHS[month_index]
+                max_day_in_new_month = (
+                    calendar.DAYS_IN_MONTHS[month_index])
             if self.day_of_month > max_day_in_new_month:
                 # For example, when 31 March + 1 month = 30 April.
                 self.day_of_month = max_day_in_new_month
@@ -1332,24 +1408,26 @@ class TimePoint(object):
                 self.minute_of_hour is not None):
             hours_remainder = self.hour_of_day - int(self.hour_of_day)
             self.hour_of_day -= hours_remainder
-            self.minute_of_hour += hours_remainder * MINUTES_IN_HOUR
+            self.minute_of_hour += (
+                hours_remainder * calendar.MINUTES_IN_HOUR)
         if (self.minute_of_hour is not None and
                 self.second_of_minute is not None):
             minutes_remainder = self.minute_of_hour - int(self.minute_of_hour)
             self.minute_of_hour -= minutes_remainder
-            self.second_of_minute += minutes_remainder * SECONDS_IN_MINUTE
+            self.second_of_minute += (
+                minutes_remainder * calendar.SECONDS_IN_MINUTE)
         if self.second_of_minute is not None:
             num_minutes, seconds = divmod(self.second_of_minute,
-                                          SECONDS_IN_MINUTE)
+                                          calendar.SECONDS_IN_MINUTE)
             self.minute_of_hour += num_minutes
             self.second_of_minute = seconds
         if self.minute_of_hour is not None:
             num_hours, minutes = divmod(self.minute_of_hour,
-                                        MINUTES_IN_HOUR)
+                                        calendar.MINUTES_IN_HOUR)
             self.hour_of_day += num_hours
             self.minute_of_hour = minutes
         if self.hour_of_day is not None:
-            num_days, hours = divmod(self.hour_of_day, HOURS_IN_DAY)
+            num_days, hours = divmod(self.hour_of_day, calendar.HOURS_IN_DAY)
             if self.day_of_week is not None:
                 self.day_of_week += num_days
             elif self.day_of_month is not None:
@@ -1358,7 +1436,8 @@ class TimePoint(object):
                 self.day_of_year += num_days
             self.hour_of_day = hours
         if self.day_of_week is not None:
-            num_weeks, days = divmod(self.day_of_week - 1, DAYS_IN_WEEK)
+            num_weeks, days = divmod(
+                self.day_of_week - 1, calendar.DAYS_IN_WEEK)
             self.week_of_year += num_weeks
             self.day_of_week = days + 1
         if self.day_of_month is not None:
@@ -1383,10 +1462,10 @@ class TimePoint(object):
                 self.year += 1
         if self.month_of_year is not None:
             while self.month_of_year < 1:
-                self.month_of_year += MONTHS_IN_YEAR
+                self.month_of_year += calendar.MONTHS_IN_YEAR
                 self.year -= 1
-            while self.month_of_year > MONTHS_IN_YEAR:
-                self.month_of_year -= MONTHS_IN_YEAR
+            while self.month_of_year > calendar.MONTHS_IN_YEAR:
+                self.month_of_year -= calendar.MONTHS_IN_YEAR
                 self.year += 1
 
     def _tick_over_day_of_month(self):
@@ -1414,11 +1493,11 @@ class TimePoint(object):
                 self.month_of_year = month
                 self.day_of_month = day
         else:
-            month_index = (self.month_of_year - 1) % MONTHS_IN_YEAR
+            month_index = (self.month_of_year - 1) % calendar.MONTHS_IN_YEAR
             if get_is_leap_year(self.year):
-                max_day_in_month = DAYS_IN_MONTHS_LEAP[month_index]
+                max_day_in_month = calendar.DAYS_IN_MONTHS_LEAP[month_index]
             else:
-                max_day_in_month = DAYS_IN_MONTHS[month_index]
+                max_day_in_month = calendar.DAYS_IN_MONTHS[month_index]
             if self.day_of_month > max_day_in_month:
                 num_days = 0
                 for month, day in iter_months_days(
@@ -1589,28 +1668,6 @@ class TimePoint(object):
     __repr__ = __str__
 
 
-def cache_results(func):
-    """Decorator to store results for given inputs.
-
-    func is the decorated function.
-
-    A maximum of 100000 arg-value pairs are stored.
-
-    """
-    cache = {}
-
-    def wrap_func(*args, **kwargs):
-        key = (str(args), str(kwargs))
-        if key in cache:
-            return cache[key]
-        else:
-            results = func(*args, **kwargs)
-            if len(cache) < 100000:
-                cache[key] = results
-            return results
-    return wrap_func
-
-
 def _format_remainder(float_time_number):
     """Format a floating point remainder of a time unit."""
     string = "," + ("%f" % float_time_number)[2:].rstrip("0")
@@ -1631,16 +1688,26 @@ def get_is_leap_year(year):
     return False
 
 
-@util.cache_results
 def get_days_in_year(year):
     """Return the number of days in this particular year."""
-    if get_is_leap_year(year):
-        return DAYS_IN_YEAR_LEAP
-    return DAYS_IN_YEAR
+    return _get_days_in_year(year, calendar_mode=calendar.mode)
 
 
 @util.cache_results
+def _get_days_in_year(year, calendar_mode=None):
+    """Return the number of days in this particular year."""
+    if get_is_leap_year(year):
+        return calendar.DAYS_IN_YEAR_LEAP
+    return calendar.DAYS_IN_YEAR
+
+
 def get_weeks_in_year(year):
+    """Return the number of calendar weeks in this week date year."""
+    return _get_weeks_in_year(year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_weeks_in_year(year, calendar_mode=None):
     """Return the number of calendar weeks in this week date year."""
     cal_year, cal_ord_days = get_ordinal_date_week_date_start(year)
     cal_year_next, cal_ord_days_next = get_ordinal_date_week_date_start(
@@ -1648,7 +1715,7 @@ def get_weeks_in_year(year):
     diff_days = cal_ord_days_next - cal_ord_days
     for intervening_year in range(cal_year, cal_year_next):
         diff_days += get_days_in_year(intervening_year)
-    return diff_days / DAYS_IN_WEEK
+    return diff_days / calendar.DAYS_IN_WEEK
 
 
 def get_calendar_date_from_ordinal_date(year, day_of_year):
@@ -1681,7 +1748,8 @@ def get_calendar_date_from_week_date(year, week_of_year, day_of_week):
     day_of_week is an integer that denotes the day of the week (1-7).
 
     """
-    num_days_week_year = (week_of_year - 1) * DAYS_IN_WEEK + day_of_week - 1
+    num_days_week_year = (
+        (week_of_year - 1) * calendar.DAYS_IN_WEEK + day_of_week - 1)
     start_year, start_month, start_day = (
         get_calendar_date_week_date_start(year))
     if num_days_week_year == 0:
@@ -1795,8 +1863,8 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
         if (start_year == year and
                 iter_month == month_of_year and
                 iter_day == day_of_month):
-            week_of_year = (total_iter_days / DAYS_IN_WEEK) + 1
-            day_of_week = (total_iter_days % DAYS_IN_WEEK) + 1
+            week_of_year = (total_iter_days / calendar.DAYS_IN_WEEK) + 1
+            day_of_week = (total_iter_days % calendar.DAYS_IN_WEEK) + 1
             return week_date_start_year, week_of_year, day_of_week
 
     for iter_start_year in [start_year + 1, start_year + 2]:
@@ -1806,8 +1874,8 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
             if (iter_start_year == year and
                     iter_month == month_of_year and
                     iter_day == day_of_month):
-                week_of_year = (total_iter_days / DAYS_IN_WEEK) + 1
-                day_of_week = (total_iter_days % DAYS_IN_WEEK) + 1
+                week_of_year = (total_iter_days / calendar.DAYS_IN_WEEK) + 1
+                day_of_week = (total_iter_days % calendar.DAYS_IN_WEEK) + 1
                 return week_date_start_year, week_of_year, day_of_week
     raise ValueError("Bad calendar date: %s-%02d-%02d" % (year,
                                                           month_of_year,
@@ -1829,11 +1897,19 @@ def get_week_date_from_ordinal_date(year, day_of_year):
     return get_week_date_from_calendar_date(year, month, day)
 
 
-@util.cache_results
 def get_calendar_date_week_date_start(year):
     """Return the calendar date of the start of (week date) year."""
-    ref_year, ref_month, ref_day = WEEK_DAY_START_REFERENCE["calendar"]
-    ref_year, ref_ordinal_day = WEEK_DAY_START_REFERENCE["ordinal"]
+    return _get_calendar_date_week_date_start(
+        year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_calendar_date_week_date_start(year, calendar_mode=None):
+    """Return the calendar date of the start of (week date) year."""
+    ref_year, ref_month, ref_day = (
+        calendar.WEEK_DAY_START_REFERENCE["calendar"])
+    ref_year, ref_ordinal_day = (
+        calendar.WEEK_DAY_START_REFERENCE["ordinal"])
     if year == ref_year:
         return ref_year, ref_month, ref_day
     # Calculate the weekday for 1 January in this calendar year.
@@ -1845,12 +1921,12 @@ def get_calendar_date_week_date_start(year):
         days_diff = ref_ordinal_day - 2
     for intervening_year in years:
         days_diff += get_days_in_year(intervening_year)
-    weekdays_diff = (days_diff) % DAYS_IN_WEEK
+    weekdays_diff = (days_diff) % calendar.DAYS_IN_WEEK
     if year > ref_year:
         day_of_week_start_year = weekdays_diff + 1
     else:
         # Jan 1 as day of week.
-        day_of_week_start_year = DAYS_IN_WEEK - weekdays_diff
+        day_of_week_start_year = calendar.DAYS_IN_WEEK - weekdays_diff
     if day_of_week_start_year == 1:
         return year, 1, 1
     if day_of_week_start_year > 4:
@@ -1864,8 +1940,13 @@ def get_calendar_date_week_date_start(year):
             return year - 1, month, day
 
 
-@util.cache_results
 def get_days_since_1_ad(year):
+    """Return the number of days since Jan 1, 1 A.D. to the year end."""
+    return _get_days_since_1_ad(year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_days_since_1_ad(year, calendar_mode=None):
     """Return the number of days since Jan 1, 1 A.D. to the year end."""
     if year == 1:
         return get_days_in_year(year)
@@ -1878,9 +1959,15 @@ def get_days_since_1_ad(year):
     return days
 
 
-@util.cache_results
 def get_ordinal_date_week_date_start(year):
-    """Return the week date start for year in year, day-of-year."""
+    """Return the ordinal week date start for year (year, day-of-year)."""
+    return _get_ordinal_date_week_date_start(
+        year, calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _get_ordinal_date_week_date_start(year, calendar_mode=None):
+    """Return the ordinal week date start for year (year, day-of-year)."""
     cal_year, cal_month, cal_day = get_calendar_date_week_date_start(year)
     total_days = 0
     for iter_month, iter_day in iter_months_days(cal_year):
@@ -1903,7 +1990,7 @@ def get_timepoint_from_seconds_since_unix_epoch(num_seconds):
 
     """
     reference_timepoint = TimePoint(
-        **UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
+        **calendar.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
     return reference_timepoint + TimeInterval(seconds=float(num_seconds))
 
 
@@ -1928,78 +2015,73 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
     True (default False).
 
     """
-    source = DAYS_IN_MONTHS
-    if get_is_leap_year(year):
-        source = DAYS_IN_MONTHS_LEAP
+    is_leap_year = get_is_leap_year(year)
+    return _iter_months_days(
+        is_leap_year, month_of_year, day_of_month, in_reverse=in_reverse,
+        calendar_mode=calendar.mode)
+
+
+@util.cache_results
+def _iter_months_days(is_leap_year, month_of_year, day_of_month,
+                      in_reverse=False, calendar_mode=None):
+    source = calendar.INDEXED_DAYS_IN_MONTHS
+    if is_leap_year:
+        source = calendar.INDEXED_DAYS_IN_MONTHS_LEAP
     if day_of_month is not None and month_of_year is None:
         raise ValueError("Need to specify start month as well as day.")
+    results = []
     if in_reverse:
         if month_of_year is None:
-            for i, days in enumerate(reversed(source)):
+            for month_num, days in reversed(source):
                 day_range = range(days, 0, -1)
-                j = len(source) - i
                 for day in day_range:
-                    yield j, day
+                    results.append((month_num, day))
         else:
-            for i, days in enumerate(reversed(source)):
-                j = len(source) - i
-                if j > month_of_year:
+            for month_num, days in reversed(source):
+                if month_num > month_of_year:
                     continue
-                elif j == month_of_year and day_of_month is not None:
+                elif month_num == month_of_year and day_of_month is not None:
                     day_range = range(day_of_month, 0, -1)
                 else:
                     day_range = range(days, 0, -1)
                 for day in day_range:
-                    yield j, day
+                    results.append((month_num, day))
     else:
         if month_of_year is None:
-            for i, days in enumerate(source):
+            for month_num, days in source:
                 day_range = range(1, days + 1)
                 for day in day_range:
-                    yield i + 1, day
+                    results.append((month_num, day))
         else:
-            for i, days in enumerate(source):
-                if i + 1 < month_of_year:
-                    continue
-                elif i + 1 == month_of_year and day_of_month is not None:
+            for month_num, days in source[month_of_year - 1:]:
+                if month_num == month_of_year and day_of_month is not None:
                     day_range = range(day_of_month, days + 1)
                 else:
                     day_range = range(1, days + 1)
                 for day in day_range:
-                    yield i + 1, day
+                    results.append((month_num, day))
+    return results
 
 
 def set_360_calendar():
-    """Set constants for the 360 day calendar"""
-    globals()['DAYS_IN_MONTHS'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
-    globals()['DAYS_IN_MONTHS_LEAP'] = [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
-    globals()['MONTHS_IN_YEAR'] = 12
-    globals()['ROUGH_DAYS_IN_MONTH'] = 30 # Used for duration conversion, nowhere else.
-    globals()['DAYS_IN_YEAR'] = 360
-    globals()['ROUGH_DAYS_IN_YEAR'] = 360
-    globals()['DAYS_IN_YEAR_LEAP'] = 360
-    globals()['HOURS_IN_YEAR'] = 360 * HOURS_IN_DAY
-    globals()['MINUTES_IN_YEAR'] = 360 * MINUTES_IN_DAY
-    globals()['SECONDS_IN_YEAR'] = 360 * SECONDS_IN_DAY
-    globals()['HOURS_IN_YEAR_LEAP'] = 360 * HOURS_IN_DAY
-    globals()['MINUTES_IN_YEAR_LEAP'] = 360 * MINUTES_IN_DAY
-    globals()['SECONDS_IN_YEAR_LEAP'] = 360 * SECONDS_IN_DAY
+    """Adjust the calendar to a 360 day (every year has 360 days) calendar."""
+    calendar.set_360()
+
+
+def set_365_calendar():
+    """Adjust the calendar to a 365 day (every year has 365 days) calendar."""
+    calendar.set_365()
+
+
+def set_366_calendar():
+    """Adjust the calendar to a 366 day (every year has 366 days) calendar."""
+    calendar.set_366()
+
 
 def set_gregorian_calendar():
-    """Set constants for the gregorian calendar"""
-    globals()['DAYS_IN_MONTHS'] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    globals()['DAYS_IN_MONTHS_LEAP'] = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    globals()['MONTHS_IN_YEAR'] = 12
-    globals()['ROUGH_DAYS_IN_MONTH'] = 30 # Used for duration conversion, nowhere else.
-    globals()['DAYS_IN_YEAR'] = sum(DAYS_IN_MONTHS)
-    globals()['ROUGH_DAYS_IN_YEAR'] = DAYS_IN_YEAR
-    globals()['DAYS_IN_YEAR_LEAP'] = sum(DAYS_IN_MONTHS_LEAP)
-    globals()['HOURS_IN_YEAR'] = DAYS_IN_YEAR* HOURS_IN_DAY
-    globals()['MINUTES_IN_YEAR'] = DAYS_IN_YEAR * MINUTES_IN_DAY
-    globals()['SECONDS_IN_YEAR'] = DAYS_IN_YEAR * SECONDS_IN_DAY
-    globals()['HOURS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * HOURS_IN_DAY
-    globals()['MINUTES_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * MINUTES_IN_DAY
-    globals()['SECONDS_IN_YEAR_LEAP'] = DAYS_IN_YEAR_LEAP * SECONDS_IN_DAY
+    """Adjust the calendar to the Gregorian calendar (the default)."""
+    calendar.set_gregorian()
+
 
 def _int_caster(number, name="number", allow_none=False):
     if allow_none and number is None:
@@ -2020,25 +2102,26 @@ def _type_checker(*objects):
     for type_info in objects:
         value, name = type_info[:2]
         allowed_types = list(type_info[2:])
+        none_is_allowed = False
         if None in allowed_types:
+            if value is None:
+                break
+            none_is_allowed = True
             allowed_types.remove(None)
             allowed_types.append(type(None))
+        if allowed_types and isinstance(value, allowed_types[0]):
+            break
         if int in allowed_types and float not in allowed_types:
-            value = _int_caster(value, name=name, allow_none=(
-                type(None) in allowed_types))
-        is_ok = False
-        for type_ in allowed_types:
-            if isinstance(value, type_):
-                is_ok = True
-                break
-        if not is_ok:
-            values_string = ""
-            if allowed_types:
-                values_string = " should be: "
-                values_string += " or ".join(
-                    [str(v) for v in allowed_types])
-            raise BadInputError(
-                BadInputError.TYPE, name, repr(value), values_string)
+            value = _int_caster(value, name=name, allow_none=none_is_allowed)
+        if any([isinstance(value, type_) for type_ in allowed_types]):
+            break
+        values_string = ""
+        if allowed_types:
+            values_string = " should be: "
+            values_string += " or ".join(
+                [str(v) for v in allowed_types])
+        raise BadInputError(
+            BadInputError.TYPE, name, repr(value), values_string)
 
 
 PARSE_PROPERTY_TRANSLATORS = {
