@@ -41,6 +41,17 @@ class Calendar(object):
     MODE_366 = "366day"
     MODE_GREGORIAN = "gregorian"
 
+    # {mode: (days_in_months, days_in_months_leap), ...}
+    MODES = {
+        MODE_360: (12 * [30], None),
+        MODE_365: ([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], None),
+        MODE_366: ([31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], None),
+        MODE_GREGORIAN: (
+            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+        ),
+    }
+
     WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
                                 "ordinal": (2000, 3)}
     UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES = {
@@ -55,10 +66,25 @@ class Calendar(object):
         return cls._DEFAULT
 
     def __init__(self):
-        self.mode = None
-        self.set_gregorian()
+        self.set_mode()
 
-    def recalculate(self):
+    def set_mode(self, mode=None):
+        """Set calendar mode.
+
+        mode -- calendar mode, which can be one of the keys in Calendar.MODES.
+                If None, default to MODE_GREGORIAN.
+
+        """
+        if not mode:
+            mode = self.MODE_GREGORIAN
+        days_in_months, days_in_months_leap = self.MODES[mode.lower()]
+        if days_in_months_leap is None:
+            days_in_months_leap = days_in_months
+        self.DAYS_IN_MONTHS = days_in_months
+        self.DAYS_IN_MONTHS_LEAP = days_in_months_leap
+        self.mode = mode
+
+        # Recalculate
         self.SECONDS_IN_HOUR = self.SECONDS_IN_MINUTE * self.MINUTES_IN_HOUR
         self.SECONDS_IN_DAY = self.SECONDS_IN_HOUR * self.HOURS_IN_DAY
         self.MINUTES_IN_DAY = self.MINUTES_IN_HOUR * self.HOURS_IN_DAY
@@ -83,47 +109,6 @@ class Calendar(object):
             self.DAYS_IN_YEAR_LEAP * self.MINUTES_IN_DAY)
         self.SECONDS_IN_YEAR_LEAP = (
             self.DAYS_IN_YEAR_LEAP * self.SECONDS_IN_DAY)
-
-    def set_mode(self, mode=MODE_GREGORIAN):
-        """Set calendar mode."""
-        mode_methods = {
-            self.MODE_360: self.set_360,
-            self.MODE_365: self.set_365,
-            self.MODE_366: self.set_366,
-            self.MODE_GREGORIAN: self.set_gregorian}
-        mode_methods[mode.lower()]()
-
-    def set_360(self):
-        """Use a 360-day calendar."""
-        self.DAYS_IN_MONTHS = 12 * [30]
-        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
-        self.mode = self.MODE_360
-        self.recalculate()
-
-    def set_365(self):
-        """Use a 365-day calendar."""
-        self.DAYS_IN_MONTHS = [
-            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
-        self.mode = self.MODE_365
-        self.recalculate()
-
-    def set_366(self):
-        """Use a 366-day calendar."""
-        self.DAYS_IN_MONTHS = [
-            31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        self.DAYS_IN_MONTHS_LEAP = self.DAYS_IN_MONTHS
-        self.mode = self.MODE_366
-        self.recalculate()
-
-    def set_gregorian(self):
-        """Use the Gregorian calendar (the default)."""
-        self.DAYS_IN_MONTHS = [
-            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        self.DAYS_IN_MONTHS_LEAP = [
-            31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        self.mode = self.MODE_GREGORIAN
-        self.recalculate()
 
     def __repr__(self):
         return "<%s-%s>" % (type(self).__name__, self.mode)

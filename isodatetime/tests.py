@@ -1094,7 +1094,7 @@ class TestSuite(unittest.TestCase):
     def test_timerecurrence_alt_calendars(self):
         """Test recurring date/time series for alternate calendars."""
         for calendar_mode in ["360", "365", "366"]:
-            getattr(data.CALENDAR, "set_" + calendar_mode)()
+            data.CALENDAR.set_mode(calendar_mode + "day")
             self.assertEqual(
                 data.CALENDAR.mode,
                 getattr(data.Calendar, "MODE_%s" % calendar_mode)
