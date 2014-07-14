@@ -1094,9 +1094,9 @@ class TestSuite(unittest.TestCase):
     def test_timerecurrence_alt_calendars(self):
         """Test recurring date/time series for alternate calendars."""
         for calendar_mode in ["360", "365", "366"]:
-            getattr(data, "set_%s_calendar" % calendar_mode)()
+            data.CALENDAR.set_mode(calendar_mode + "day")
             self.assertEqual(
-                data.calendar.mode,
+                data.CALENDAR.mode,
                 getattr(data.Calendar, "MODE_%s" % calendar_mode)
             )
             parser = parsers.TimeRecurrenceParser()
@@ -1115,8 +1115,9 @@ class TestSuite(unittest.TestCase):
                     test_results.append(str(time_point))
                 self.assertEqual(test_results, ctrl_results,
                                  expression + "(%s)" % calendar_mode)
-            data.set_gregorian_calendar()
-            self.assertEqual(data.calendar.mode, data.Calendar.MODE_GREGORIAN)
+            data.CALENDAR.set_mode()
+            self.assertEqual(data.CALENDAR.mode,
+                             data.Calendar.MODE_GREGORIAN)
 
     def test_timerecurrence(self):
         """Test the recurring date/time series data model."""
