@@ -378,19 +378,19 @@ class TimeInterval(object):
         if standardize:
             if self.seconds:
                 num_minutes, self.seconds = divmod(
-                    self.seconds, SECONDS_IN_MINUTE)
+                    self.seconds, CALENDAR.SECONDS_IN_MINUTE)
                 if self.minutes is None:
                     self.minutes = 0
                 self.minutes += num_minutes
             if self.minutes:
                 num_hours, self.minutes = divmod(
-                    self.minutes, MINUTES_IN_HOUR)
+                    self.minutes, CALENDAR.MINUTES_IN_HOUR)
                 if self.hours is None:
                     self.hours = 0
                 self.hours += num_hours
             if self.hours:
                 num_days, self.hours = divmod(
-                    self.hours, HOURS_IN_DAY)
+                    self.hours, CALENDAR.HOURS_IN_DAY)
                 if self.days is None:
                     self.days = 0
                 self.days += num_days
@@ -410,8 +410,8 @@ class TimeInterval(object):
         derived from intervals using these units.
 
         Seconds are returned in the range
-        0 <= seconds < calendar.SECONDS_IN_DAY, which means that a
-        TimeInterval which has self.seconds = calendar.SECONDS_IN_DAY +
+        0 <= seconds < CALENDAR.SECONDS_IN_DAY, which means that a
+        TimeInterval which has self.seconds = CALENDAR.SECONDS_IN_DAY +
         100 will return 1 day, 100 seconds or (1, 100) from this
         method.
 
@@ -437,7 +437,7 @@ class TimeInterval(object):
 
         """
         days, seconds = self.get_days_and_seconds()
-        return days * SECONDS_IN_DAY + seconds
+        return days * CALENDAR.SECONDS_IN_DAY + seconds
 
     def get_is_in_weeks(self):
         """Return whether we are in week representation."""
@@ -1692,7 +1692,7 @@ def get_is_leap_year(year):
 
 def get_days_in_year(year):
     """Return the number of days in this particular year."""
-    return _get_days_in_year(year, calendar_mode=calendar.mode)
+    return _get_days_in_year(year, calendar_mode=CALENDAR.mode)
 
 
 @util.cache_results

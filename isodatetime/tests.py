@@ -1115,7 +1115,7 @@ class TestSuite(unittest.TestCase):
                     test_results.append(str(time_point))
                 self.assertEqual(test_results, ctrl_results,
                                  expression + "(%s)" % calendar_mode)
-            data.CALENDAR.set_gregorian()
+            data.CALENDAR.set_mode()
             self.assertEqual(data.CALENDAR.mode,
                              data.Calendar.MODE_GREGORIAN)
 
