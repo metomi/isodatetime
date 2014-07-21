@@ -62,9 +62,9 @@ Syntax      | Example
 Either:
 `CCYY`
 or
-`+-XCCYY`
+`+XCCYY`
 
-`+-X` is a plus or minus sign (`+-` => `+` or `-`), followed by a fixed,
+`+X` stands for a plus or minus sign (`+` or `-`), followed by a fixed,
 agreed number of expanded year digits (`X`). For example, if we agree to have
 2 expanded year digits, we can represent years from -999999 to +999999
 (1000000 BC to 999999 AD). Note that 1 BC is the year 0 in the proleptic
@@ -83,20 +83,20 @@ Month 1 in that year - `1995` implies `1995-01` => `1995-01-01` =>
 Either:
 `CCYY-MM`
 or
-`+-XCCYY-MM` (+- standing in here for a `+` or `-` sign)
+`+XCCYY-MM` (+ standing in here for a `+` or `-` sign)
 
-(not allowed: `CCYYMM` or `+-XCCYYMM`).
+(not allowed: `CCYYMM` or `+XCCYYMM`).
 
 ### How do I write dates past the year 9999 and before 0000?
 
-Syntax         | Example (2 expanded year digits)
- ------------- | ---------
- +-XCCYYMMDD   | +0020151231
- +-XCCYY-MM-DD | +002015-12-31
- +-XCCYYWwwD   | +002015W534
- +-XCCYY-Www-D | +002015-W53-4
- +-XCCYYDDD    | +002015365
- +-XCCYY-DDD   | +002015-365
+Syntax        | Example (2 expanded year digits)
+ ------------ | ---------
+ +XCCYYMMDD   | +0020151231
+ +XCCYY-MM-DD | +002015-12-31
+ +XCCYYWwwD   | +002015W534
+ +XCCYY-Www-D | +002015-W53-4
+ +XCCYYDDD    | +002015365
+ +XCCYY-DDD   | +002015-365
 
 ### How do I write down time information by itself?
 
@@ -246,6 +246,6 @@ Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ---------------------------------------------------------------
 R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly counting back from 2012-01-02T00Z
 R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years counting back from 2000-01-01.
-R/PTnS/+-XCCYYDDDThhmm    | R/PT5s/-002500012T1800   | Repeat every 5 seconds counting back from the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
+R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds counting back from the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
 Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minut counting back from 2012-01-02T00Z
 Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, counting back from 2000-05-01.
