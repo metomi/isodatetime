@@ -5,9 +5,9 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
-## isodatetime next release (2014-Q3?)
+## isodatetime 2014.07.0 (Released 2014-07-29)
 
-This will be the 3rd release of isodatetime.
+This is the 3rd release of isodatetime.
 
 ### Noteworthy Changes
 
