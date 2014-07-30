@@ -790,6 +790,20 @@ class TestSuite(unittest.TestCase):
                     (source, test, control))
         super(TestSuite, self).assertEqual(test, control, info)
 
+    def test_days_in_year_range(self):
+        """Test the summing-over-days-in-year-range shortcut code."""
+        for start_year in range(-401, 2):
+            for end_year in range(start_year, 2):
+               test_days = data.get_days_in_year_range(
+                   start_year, end_year)
+               control_days = 0
+               for year in xrange(start_year, end_year + 1):
+                   control_days += data.get_days_in_year(year)
+               self.assertEqual(
+                   control_days, test_days, "days in %s to %s" % (
+                       start_year, end_year)
+               )
+
     def test_timeinterval(self):
         """Test the time interval class methods."""
         for test_props, method, method_args, ctrl_results in (
