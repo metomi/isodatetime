@@ -36,6 +36,8 @@ class Calendar(object):
     DAYS_IN_MONTHS_LEAP = None  # This is set up in the set_* methods
     ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
 
+    LEAP_YEAR_FACTOR_TRUTHS = [(4, True), (100, False), (400, True)]
+
     MODE_360 = "360day"
     MODE_365 = "365day"
     MODE_366 = "366day"
@@ -1679,14 +1681,12 @@ def _format_remainder(float_time_number):
 
 @util.cache_results
 def get_is_leap_year(year):
-    """Return if year is a leap year in the proleptic Gregorian calendar."""
-    if year % 4 == 0:
-        # A multiple of 4.
-        if year % 100 == 0 and year % 400 != 0:
-            # A centennial leap year must be a multiple of 400.
-            return False
-        return True
-    return False
+    """Return if year is a leap year."""
+    year_is_leap = False
+    for factor, is_leap_factor in CALENDAR.LEAP_YEAR_FACTOR_TRUTHS:
+        if year % factor == 0:
+            year_is_leap = is_leap_factor
+    return year_is_leap 
 
 
 def get_days_in_year_range(start_year, end_year):
@@ -1696,7 +1696,17 @@ def get_days_in_year_range(start_year, end_year):
 
 @util.cache_results
 def _get_days_in_year_range(start_year, end_year, calendar_mode=None):
-    """Return the number of days within this year range (inclusive)."""
+    """Return the number of days within this year range (inclusive).
+
+    If end_year > start_year, return the days in start_year plus
+    the days in the intervening years before end_year, plus the
+    days in end_year.
+
+    If end_year == start_year, return the days in start_year.
+
+    If end_year < start_year, return 0.
+
+    """
     # Get the number of days discounting leap years.
     if start_year == end_year:
         return get_days_in_year(start_year)
@@ -1704,21 +1714,21 @@ def _get_days_in_year_range(start_year, end_year, calendar_mode=None):
         return 0
     days = (end_year + 1 - start_year) * CALENDAR.DAYS_IN_YEAR
     diff_days_leap = (CALENDAR.DAYS_IN_YEAR_LEAP - CALENDAR.DAYS_IN_YEAR)
-    for year_factor in [4, 100, 400]:
+    for factor, is_leap_factor in CALENDAR.LEAP_YEAR_FACTOR_TRUTHS:
         num_corrections = 0
-        if start_year % year_factor == 0:
+        if start_year % factor == 0:
             num_corrections += 1
-        if end_year != start_year and end_year % year_factor == 0:
+        if end_year != start_year and end_year % factor == 0:
             num_corrections += 1
         factor_start_year = start_year + 1
-        while (factor_start_year % year_factor != 0 and
+        while (factor_start_year % factor != 0 and
                factor_start_year < end_year):
             factor_start_year += 1
         if factor_start_year < end_year:
             num_corrections += 1
             num_corrections += (
-                end_year - (factor_start_year + 1)) / year_factor
-        if year_factor in [4, 400]:
+                end_year - (factor_start_year + 1)) / factor
+        if is_leap_factor:
             days += num_corrections * diff_days_leap
         else:
             days -= num_corrections * diff_days_leap
