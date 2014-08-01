@@ -227,6 +227,32 @@ def get_timepoint_dumper_tests():
     ]
 
 
+def get_timepointdumper_failure_tests():
+    """Yield tests that raise exceptions for custom time point dumps."""
+    bounds_error = dumpers.TimePointDumperBoundsError
+    return [
+        (
+            {"year": 10000, "month_of_year": 1, "day_of_month": 4,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            [("CCYY-MMDDThhmmZ", bounds_error, 0)]
+        ),
+        (
+            {"year": -10000, "month_of_year": 1, "day_of_month": 4,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            [("CCYY-MMDDThhmmZ", bounds_error, 0)]
+        ),
+        (
+            {"year": 1000000, "month_of_year": 1, "day_of_month": 4,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            [("+XCCYY-MMDDThhmmZ", bounds_error, 2)]
+        ),
+        (
+            {"year": -1000000, "month_of_year": 1, "day_of_month": 4,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            [("+XCCYY-MMDDThhmmZ", bounds_error, 2)]
+        )
+    ]
+
 def get_timepointparser_tests(allow_only_basic=False,
                               allow_truncated=False,
                               skip_time_zones=False):
@@ -937,6 +963,15 @@ class TestSuite(unittest.TestCase):
             for format_, ctrl_data in format_results:
                 test_data = dumper.dump(ctrl_timepoint, format_)
                 self.assertEqual(test_data, ctrl_data, format_)
+        for timepoint_kwargs, format_exception_results in (
+                get_timepointdumper_failure_tests()):
+            ctrl_timepoint = data.TimePoint(**timepoint_kwargs)
+            for format_, ctrl_exception, num_expanded_year_digits in (
+                    format_exception_results):
+                dumper = dumpers.TimePointDumper(
+                    num_expanded_year_digits=num_expanded_year_digits)
+                self.assertRaises(ctrl_exception, dumper.dump,
+                                  ctrl_timepoint, format_)
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
