@@ -164,7 +164,7 @@ class TimePointDumper(object):
             value = timepoint.year
             if not (min_value <= value <= max_value):
                 raise TimePointDumperBoundsError(
-                    "year", value, min_dumpable_value, max_dumpable_value)
+                    "year", value, min_value, max_value)
         return expression % property_map
 
     @util.cache_results
