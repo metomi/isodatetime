@@ -9,18 +9,6 @@ ISO 8601 Primer
 
 ISO 8601 is an international standard for writing down date/time information.
 
-```
-  /\
-  ||__ 
-  ||  \_____________________
-  ||                        \_____
-  || e.g. 2014-02-28T11:30:01Z __/
-  || _________________________/
-  ||/                 
-  ||
-  ||
-```
-
 It is the correct, internationally-friendly, computer-sortable way to 
 numerically represent date/time information.
 
@@ -209,7 +197,7 @@ date-time-like duration (`PCCYY-MM-DDThh:mm:ss`) where the numbers given for
 years, months, days, hours, minutes, and seconds are used literally
 (`P1995-00-00T00:10:00` = `P1995YT10M`).
 
-## Recurring time intervals
+## Recurring date-time series
 
 ### 1 - Recur with a duration given by the difference between a start date
 and a subsequent date, starting at the start date
