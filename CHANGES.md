@@ -5,6 +5,25 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2014.08.0 (Released 2014-08-11)
+
+This is the 4th release of isodatetime.
+
+### Noteworthy Changes
+
+[#59](https://github.com/metomi/isodatetime/pull/59):
+Rename *time interval* and *interval* to *duration*.
+
+[#58](https://github.com/metomi/isodatetime/pull/58):
+Raise error when a year cannot be represented with the given number of year
+digits.
+
+[#57](https://github.com/metomi/isodatetime/pull/57):
+Speeds up calculations involving counting the days over a number of consecutive
+years.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2014.07.0 (Released 2014-07-29)
 
 This is the 3rd release of isodatetime.
