@@ -5,6 +5,17 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## Next Release (2014-Q3?)
+
+This will be the 5th release of isodatetime.
+
+### Noteworthy Changes
+
+[#60](https://github.com/metomi/isodatetime/pull/60):
+Stricter dumper year bounds checking.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2014.08.0 (Released 2014-08-11)
 
 This is the 4th release of isodatetime.
