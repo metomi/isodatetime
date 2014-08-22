@@ -645,7 +645,7 @@ def get_timepoint_subtract_tests():
             {"year": 41, "month_of_year": 12, "day_of_month": 2,
              "hour_of_day": 13, "minute_of_hour": 23, "second_of_minute": 1,
              "time_zone_hour": 3, "time_zone_minute": 20},
-            "P763DT3H58M1S"
+            "P762DT18H58M1S"
         ),
         (
             {"year": 41, "month_of_year": 12, "day_of_month": 2,
@@ -654,7 +654,7 @@ def get_timepoint_subtract_tests():
             {"year": 44, "month_of_year": 1, "day_of_month": 4,
              "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
              "time_zone_hour": 0, "time_zone_minute": 0},
-            "-P763DT3H58M1S"
+            "-P762DT18H58M1S"
         ),
     ]
 
