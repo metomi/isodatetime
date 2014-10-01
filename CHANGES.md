@@ -11,6 +11,14 @@ This will be the 5th release of isodatetime.
 
 ### Noteworthy Changes
 
+[#63](https://github.com/metomi/isodatetime/pull/63):
+Remove unnecessary unicode, which happened to trigger a Python 2.6.2 unicode
+bug.
+
+[#61](https://github.com/metomi/isodatetime/pull/61):
+Fix `date1 - date2` where `date2` is greater than `date1` and `date1` and
+`date2` are in different calendar years.
+
 [#60](https://github.com/metomi/isodatetime/pull/60):
 Stricter dumper year bounds checking.
 
