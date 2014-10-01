@@ -5,9 +5,9 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
-## Next Release (2014-Q3?)
+## isodatetime 2014.10.0 (Released 2014-10-01)
 
-This will be the 5th release of isodatetime.
+This is the 5th release of isodatetime.
 
 ### Noteworthy Changes
 
