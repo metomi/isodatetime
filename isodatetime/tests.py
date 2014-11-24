@@ -894,9 +894,12 @@ def get_local_time_zone_hours_minutes():
     """Provide an independent method of getting the local time zone."""
     import datetime
     utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
-    utc_offset_hours = (utc_offset.seconds + 1800) // 3600
+    # datetime.timedelta represents -21 microseconds as -1 day,
+    # +86399 seconds, +999979 microseconds. This is not nice.
+    utc_offset_seconds = utc_offset.seconds + 86400 * utc_offset.days
+    utc_offset_hours = (utc_offset_seconds + 1800) // 3600
     utc_offset_minutes = (
-        ((utc_offset.seconds - 3600 * utc_offset_hours) + 30) // 60
+        ((utc_offset_seconds - 3600 * utc_offset_hours) + 30) // 60
     )
     return utc_offset_hours, utc_offset_minutes
 
