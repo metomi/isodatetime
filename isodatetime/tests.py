@@ -974,6 +974,46 @@ class TestSuite(unittest.TestCase):
         time_point = data.TimePoint(year=2000) + data.Duration(seconds=1.0)
         self.assertEqual(type(time_point.day_of_month), int)
 
+    def test_timepoint_plus_truncated_sundays(self):
+        """Test time point + truncated sunday time points."""
+        for test_props1, test_props2, ctrl_string in (
+                (
+                    {"year": 2014, "week_of_year": 53, "day_of_week": 1},
+                    {"day_of_week": 0, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                ),
+                (
+                    {"year": 2014, "week_of_year": 53, "day_of_week": 1},
+                    {"day_of_week": 7, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                ),
+                (
+                    {"year": 2015, "week_of_year": 1, "day_of_week": 7},
+                    {"day_of_week": 0, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                ),
+                (
+                    {"year": 2015, "week_of_year": 1, "day_of_week": 7},
+                    {"day_of_week": 7, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                ),
+                (
+                    {"year": 2015, "week_of_year": 2, "day_of_week": 0},
+                    {"day_of_week": 0, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                ),
+                (
+                    {"year": 2015, "week_of_year": 2, "day_of_week": 0},
+                    {"day_of_week": 7, "truncated": True},
+                    "2015-01-04T00:00:00Z"
+                )):
+            point1 = data.TimePoint(
+                time_zone_hour=0, time_zone_minute=0, **test_props1)
+            point2 = data.TimePoint(**test_props2)
+            test_string = str((point1 + point2).to_calendar_date())
+            self.assertEqual(
+                test_string, ctrl_string, "%s + %s" % (point1, point2))
+
     def test_timepoint_subtract(self):
         """Test subtracting one time point from another."""
         for test_props1, test_props2, ctrl_string in (
