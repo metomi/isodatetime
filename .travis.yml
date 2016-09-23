@@ -1,0 +1,10 @@
+# Configuration for running isodatetime tests on Travis CI
+# See https://travis-ci.org/ for more info.
+
+---
+language: python
+python:
+  - "2.6"
+  - "2.7"
+script: 
+    - python -m isodatetime.tests
