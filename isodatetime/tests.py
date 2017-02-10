@@ -969,6 +969,12 @@ class TestSuite(unittest.TestCase):
             self.assertEqual(test_expression, ctrl_expression,
                              str(test_props))
 
+    def test_timeduration_add_week(self):
+        """Test the duration not in weeks add duration in weeks."""
+        self.assertEqual(
+            str(data.Duration(days=7) + data.Duration(weeks=1)),
+            "P14D")
+
     def test_timepoint(self):
         """Test the time point data model (takes a while)."""
         pool = multiprocessing.Pool(processes=4)
