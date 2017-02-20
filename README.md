@@ -2,6 +2,7 @@ isodatetime
 ===========
 
 [![Build Status](https://travis-ci.org/metomi/isodatetime.svg?branch=master)](https://travis-ci.org/metomi/isodatetime)
+[![DOI](https://zenodo.org/badge/11450932.svg)](https://zenodo.org/badge/latestdoi/11450932)
 
 Python ISO 8601 full-specification parser and data model/manipulation utilities. 
 Intended to be used in a similar way to Python's datetime module.
