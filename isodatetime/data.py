@@ -1161,6 +1161,9 @@ class TimePoint(object):
                 new._tick_over()
         if day_of_week is not None:
             new.to_week_date()
+            new._tick_over()
+            if new.day_of_week > 0 and day_of_week == 0:
+                day_of_week = Calendar.DAYS_IN_WEEK
             while new.day_of_week != day_of_week:
                 new.day_of_week += 1
                 new._tick_over()
