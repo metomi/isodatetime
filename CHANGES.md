@@ -5,6 +5,17 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2017.02.0 (Released 2017-02-20)
+
+This is the 6th release of isodatetime.
+
+### Noteworthy Changes
+
+[#73](https://github.com/metomi/isodatetime/pull/73):
+Fix adding duration not in weeks and duration in weeks.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2014.10.0 (Released 2014-10-01)
 
 This is the 5th release of isodatetime.
