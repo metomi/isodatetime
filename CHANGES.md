@@ -5,6 +5,12 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2017.02.1 (Released 2017-02-21)
+
+This is the 7th release of isodatetime. Admin only release.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2017.02.0 (Released 2017-02-20)
 
 This is the 6th release of isodatetime.

@@ -26,6 +26,7 @@ below:
 
 * Ben Fitzpatrick (Met Office, UK)
 * Andrew Clark (Met Office, UK)
+* Oliver Sanders (Met Office, UK)
 * Matt Shin (Met Office, UK)
 
 (All contributors are identifiable with email addresses in the version control
