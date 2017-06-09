@@ -1094,7 +1094,7 @@ class TimePoint(object):
         hour, minute, second = self.get_hour_minute_second()
         self.hour_of_day = hour
         self.minute_of_hour = minute
-        self.second_of_day = second
+        self.second_of_minute = second
 
     def to_week_date(self):
         """Reformat the date in years, week-of-year, day-of-week."""
