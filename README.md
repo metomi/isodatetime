@@ -1,6 +1,7 @@
 isodatetime
 ===========
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fd1147b75474d4d9a0f64bececf3bb5)](https://www.codacy.com/app/matthewrmshin/isodatetime?utm_source=github.com&utm_medium=referral&utm_content=metomi/isodatetime&utm_campaign=badger)
 [![Build Status](https://travis-ci.org/metomi/isodatetime.svg?branch=master)](https://travis-ci.org/metomi/isodatetime)
 [![DOI](https://zenodo.org/badge/11450932.svg)](https://zenodo.org/badge/latestdoi/11450932)
 
