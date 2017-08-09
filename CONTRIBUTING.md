@@ -28,6 +28,7 @@ below:
 * Andrew Clark (Met Office, UK)
 * Oliver Sanders (Met Office, UK)
 * Matt Shin (Met Office, UK)
+* Hilary Oliver (NIWA, NZ)
 
 (All contributors are identifiable with email addresses in the version control
 logs or otherwise.)
