@@ -5,6 +5,20 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2017.08.0 (Released 2017-08-09)
+
+This is the 8th release of isodatetime.
+
+### Noteworthy Changes
+
+[#75](https://github.com/metomi/isodatetime/pull/75):
+Fix error string for bad conversion for strftime/strptime.
+
+[#74](https://github.com/metomi/isodatetime/pull/74):
+Slotted the data classes to improve memory footprint.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2017.02.1 (Released 2017-02-21)
 
 This is the 7th release of isodatetime. Admin only release.
