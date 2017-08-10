@@ -287,9 +287,12 @@ class StrftimeSyntaxError(ValueError):
 def get_date_translate_info(num_expanded_year_digits=2):
     """Return list of 4-element tuples with date translate information.
 
-    Each tuple is (
-        basic regex, regex with capture group, format substitution,
-        property name)
+    returns:
+        list: List tuples. Each tuple has 4 elements:
+            - regex1 (str) - regex to match a date info substitution string
+            - regex2 (str) - regex to capture date info
+            - format (str) - template string to format date info
+            - name (str) - name of this property
     """
     expanded_year_digit_regex = r"\d" * num_expanded_year_digits
     return _DATE_TRANSLATE_INFO + [
@@ -303,9 +306,12 @@ def get_date_translate_info(num_expanded_year_digits=2):
 def get_time_translate_info():
     """Return list of 4-element tuples with time translate information.
 
-    Each tuple is (
-        basic regex, regex with capture group, format substitution,
-        property name)
+    returns:
+        list: List tuples. Each tuple has 4 elements:
+            - regex1 (str) - regex to match a time info substitution string
+            - regex2 (str) - regex to capture a time info
+            - format (str) - template string to format time info
+            - name (str) - name of this property
     """
     return _TIME_TRANSLATE_INFO
 
@@ -313,9 +319,12 @@ def get_time_translate_info():
 def get_time_zone_translate_info():
     """Return list of 4-element tuples with time zone translate information.
 
-    Each tuple is (
-        basic regex, regex with capture group, format substitution,
-        property name)
+    returns:
+        list: List tuples. Each tuple has 4 elements:
+            - regex1 (str) - regex to match a time zone substitution string
+            - regex2 (str) - regex to capture a time zone
+            - format (str) - template string to format time zone
+            - name (str) - name of this property
     """
     return _TIME_ZONE_TRANSLATE_INFO
 
