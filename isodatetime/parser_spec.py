@@ -270,7 +270,7 @@ STRFTIME_TRANSLATE_INFO = {
 STRPTIME_EXCLUSIVE_GROUP_INFO = {
     "%X": ("%H", "%M", "%S"),
     "%F": ("%Y", "%y", "%m", "%d"),
-    "%s": tuple([i for i in STRFTIME_TRANSLATE_INFO if i != "%s"])
+    "%s": tuple(i for i in STRFTIME_TRANSLATE_INFO if i != "%s")
 }
 
 
