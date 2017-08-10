@@ -32,7 +32,7 @@ def cache_results(func):
     """
     cache = {}
 
-    def wrap_func(*args, **kwargs):
+    def _wrap_func(*args, **kwargs):
         key = (str(args), str(kwargs))
         if key in cache:
             return cache[key]
@@ -42,4 +42,4 @@ def cache_results(func):
                 cache.popitem()
             cache[key] = results
             return results
-    return wrap_func
+    return _wrap_func
