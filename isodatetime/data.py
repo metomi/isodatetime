@@ -215,9 +215,7 @@ class TimeRecurrence(object):
                     self.end_point - self.duration * (self.repetitions - 1))
         else:
             raise BadInputError(
-                BadInputError.RECURRENCE,
-                (i[:2] for i in inputs)
-            )
+                BadInputError.RECURRENCE, [i[:2] for i in inputs])
 
     def get_is_valid(self, timepoint):
         """Return whether the timepoint is valid for this recurrence."""
