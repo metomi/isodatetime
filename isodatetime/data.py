@@ -205,23 +205,17 @@ class TimeRecurrence(object):
             # Third form.
             self.format_number = 3
             if self.repetitions is not None:
-                point = self.start_point
-                for i in range(self.repetitions - 1):
-                    point += self.duration
-                self.end_point = point
+                self.end_point = (
+                    self.start_point + self.duration * (self.repetitions - 1))
         elif self.start_point is None:
             # Fourth form.
             self.format_number = 4
             if self.repetitions is not None:
-                point = self.end_point
-                for i in range(self.repetitions - 1):
-                    point -= self.duration
-                self.start_point = point
+                self.start_point = (
+                    self.end_point - self.duration * (self.repetitions - 1))
         else:
             raise BadInputError(
-                BadInputError.RECURRENCE,
-                [i[:2] for i in inputs]
-            )
+                BadInputError.RECURRENCE, [i[:2] for i in inputs])
 
     def get_is_valid(self, timepoint):
         """Return whether the timepoint is valid for this recurrence."""
@@ -509,15 +503,10 @@ class Duration(object):
                 "'%s' should be integer." %
                 type(other).__name__
             )
-        if self.get_is_in_weeks():
-            new.weeks *= other
-            return new
-        new.years *= other
-        new.months *= other
-        new.days *= other
-        new.hours *= other
-        new.minutes *= other
-        new.seconds *= other
+        for attr in new.DATA_ATTRIBUTES:
+            value = getattr(new, attr)
+            if value is not None:
+                setattr(new, attr, value * other)
         return new
 
     def __rmul__(self, other):
@@ -2142,13 +2131,12 @@ def _type_checker(*objects):
             break
         if int in allowed_types and float not in allowed_types:
             value = _int_caster(value, name=name, allow_none=none_is_allowed)
-        if any([isinstance(value, type_) for type_ in allowed_types]):
+        if any(isinstance(value, type_) for type_ in allowed_types):
             break
         values_string = ""
         if allowed_types:
             values_string = " should be: "
-            values_string += " or ".join(
-                [str(v) for v in allowed_types])
+            values_string += " or ".join(str(v) for v in allowed_types)
         raise BadInputError(
             BadInputError.TYPE, name, repr(value), values_string)
 

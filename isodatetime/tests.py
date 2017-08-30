@@ -913,14 +913,14 @@ class TestSuite(unittest.TestCase):
 
     """Test the functionality of parsers and data model manipulation."""
 
-    def assertEqual(self, test, control, source=None):
+    def assertEqual(self, test, control, info=None):
         """Override the assertEqual method to provide more information."""
-        if source is None:
-            info = None
-        else:
-            info = ("Source %s produced:\n'%s'\nshould be:\n'%s'" %
-                    (source, test, control))
-        super(TestSuite, self).assertEqual(test, control, info)
+        superinfo = None
+        if info is not None:
+            superinfo = (
+                "Source %s produced:\n'%s'\nshould be:\n'%s'" %
+                (info, test, control))
+        super(TestSuite, self).assertEqual(test, control, superinfo)
 
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
@@ -975,7 +975,8 @@ class TestSuite(unittest.TestCase):
             str(data.Duration(days=7) + data.Duration(weeks=1)),
             "P14D")
 
-    def test_timepoint(self):
+    @staticmethod
+    def test_timepoint():
         """Test the time point data model (takes a while)."""
         pool = multiprocessing.Pool(processes=4)
         pool.map_async(test_timepoint_at_year, range(1801, 2403)).get()
@@ -1033,35 +1034,30 @@ class TestSuite(unittest.TestCase):
 
                 test_dates[3].set_time_zone(
                     data.TimeZone(hours=8, minutes=30))
-                for i in range(len(test_dates)):
-                    i_date_str = str(test_dates[i])
-                    date_no_tz = test_dates[i].copy()
+                for i_test_date in list(test_dates):
+                    i_test_date_str = str(i_test_date)
+                    date_no_tz = i_test_date.copy()
                     date_no_tz.time_zone = data.TimeZone(hours=0, minutes=0)
-
-                    # TODO: https://github.com/metomi/isodatetime/issues/34.
-                    if (test_dates[i].time_zone.hours >= 0 or
-                            test_dates[i].time_zone.minutes >= 0):
-                        utc_offset = date_no_tz - test_dates[i]
+                    if (i_test_date.time_zone.hours >= 0 or
+                            i_test_date.time_zone.minutes >= 0):
+                        utc_offset = date_no_tz - i_test_date
                     else:
-                        utc_offset = (test_dates[i] - date_no_tz) * -1
-
+                        utc_offset = (i_test_date - date_no_tz) * -1
                     self.assertEqual(utc_offset.hours,
-                                     test_dates[i].time_zone.hours,
-                                     i_date_str + " utc offset (hrs)")
+                                     i_test_date.time_zone.hours,
+                                     i_test_date_str + " utc offset (hrs)")
                     self.assertEqual(utc_offset.minutes,
-                                     test_dates[i].time_zone.minutes,
-                                     i_date_str + " utc offset (mins)")
-                    for j in range(len(test_dates)):
-                        j_date_str = str(test_dates[j])
+                                     i_test_date.time_zone.minutes,
+                                     i_test_date_str + " utc offset (mins)")
+                    for j_test_date in list(test_dates):
+                        j_test_date_str = str(j_test_date)
                         self.assertEqual(
-                            test_dates[i], test_dates[j],
-                            i_date_str + " == " + j_date_str
-                        )
-                        duration = test_dates[j] - test_dates[i]
+                            i_test_date, j_test_date,
+                            i_test_date_str + " == " + j_test_date_str)
+                        duration = j_test_date - i_test_date
                         self.assertEqual(
                             duration, data.Duration(days=0),
-                            i_date_str + " - " + j_date_str
-                        )
+                            i_test_date_str + " - " + j_test_date_str)
 
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
@@ -1369,7 +1365,8 @@ class TestSuite(unittest.TestCase):
 
 def assert_equal(data1, data2):
     """A function-level equivalent of the unittest method."""
-    assert data1 == data2
+    if data1 != data2:
+        raise AssertionError()
 
 
 def test_timepoint_at_year(test_year):
@@ -1381,7 +1378,7 @@ def test_timepoint_at_year(test_year):
     test_duration_attributes = [
         ("weeks", 110),
         ("days", 770),
-        ("hours", 770*24),
+        ("hours", 770 * 24),
         ("minutes", 770 * 24 * 60),
         ("seconds", 770 * 24 * 60 * 60)
     ]
@@ -1404,8 +1401,7 @@ def test_timepoint_at_year(test_year):
         test_data += data.get_days_since_1_ad(year - 1)
         assert_equal(test_data, ctrl_data)
         for attribute, attr_max in test_duration_attributes:
-            delta_attr = random.randrange(0, attr_max)
-            kwargs = {attribute: delta_attr}
+            kwargs = {attribute: random.randrange(0, attr_max)}
             ctrl_data = my_date + datetime.timedelta(**kwargs)
             ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
             test_data = (
@@ -1420,8 +1416,7 @@ def test_timepoint_at_year(test_year):
             assert_equal(test_data, ctrl_data)
         kwargs = {}
         for attribute, attr_max in test_duration_attributes:
-            delta_attr = random.randrange(0, attr_max)
-            kwargs[attribute] = delta_attr
+            kwargs[attribute] = random.randrange(0, attr_max)
         test_date_minus = (
             test_date - data.Duration(**kwargs))
         test_data = test_date - test_date_minus
