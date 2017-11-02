@@ -1324,6 +1324,8 @@ class TimePoint(object):
 
     def __sub__(self, other):
         if isinstance(other, TimePoint):
+            if other > self:
+                return -1* (other - self)
             other = other.copy()
             other.set_time_zone(self.get_time_zone())
             my_year, my_day_of_year = self.get_ordinal_date()
@@ -1333,8 +1335,6 @@ class TimePoint(object):
                 diff_day += get_days_in_year_range(other_year, my_year - 1)
             else:
                 diff_day -= get_days_in_year_range(my_year, other_year - 1)
-            if diff_day < 0:
-                return -1 * (other - self)
             my_hour, my_minute, my_second = self.get_hour_minute_second()
             other_hour, other_minute, other_second = (
                 other.get_hour_minute_second())
