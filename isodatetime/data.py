@@ -1325,7 +1325,7 @@ class TimePoint(object):
     def __sub__(self, other):
         if isinstance(other, TimePoint):
             if other > self:
-                return -1* (other - self)
+                return -1 * (other - self)
             other = other.copy()
             other.set_time_zone(self.get_time_zone())
             my_year, my_day_of_year = self.get_ordinal_date()
