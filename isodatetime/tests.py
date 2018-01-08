@@ -689,6 +689,30 @@ def get_timepoint_subtract_tests():
     ]
 
 
+def get_timepoint_add_truncated_tests():
+    """Yields tests for adding truncated timepoints to regular timepoints."""
+    return [
+        (
+            {"year": 2000, "month_of_year": 1, "day_of_month": 2,
+             "hour_of_day": 0, "minute_of_hour": 0, "second_of_minute": 0,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            {"truncated": True, "month_of_year": 1, "day_of_month": 1,
+             "hour_of_day": 0, "minute_of_hour": 0, "second_of_minute": 0,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            "2001-01-01T00:00:00Z"
+        ),
+        (
+            {"year": 2000, "month_of_year": 1, "day_of_month": 1,
+             "hour_of_day": 0, "minute_of_hour": 0, "second_of_minute": 0,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            {"truncated": True, "month_of_year": 3, "day_of_month": 30,
+             "hour_of_day": 0, "minute_of_hour": 0, "second_of_minute": 0,
+             "time_zone_hour": 0, "time_zone_minute": 0},
+            "2000-03-30T00:00:00Z"
+        )
+    ]
+
+
 def get_timerecurrence_expansion_tests():
     """Return test expansion expressions for data.TimeRecurrence."""
     return [
@@ -993,6 +1017,16 @@ class TestSuite(unittest.TestCase):
             point1 = data.TimePoint(**test_props1)
             point2 = data.TimePoint(**test_props2)
             test_string = str(point1 - point2)
+            self.assertEqual(test_string, ctrl_string,
+                             "%s - %s" % (point1, point2))
+
+    def test_timepoint_add_truncated(self):
+        """Test subtracting one time point from another."""
+        for test_props1, test_props2, ctrl_string in (
+                get_timepoint_add_truncated_tests()):
+            point1 = data.TimePoint(**test_props1)
+            point2 = data.TimePoint(**test_props2)
+            test_string = str(point1 + point2)
             self.assertEqual(test_string, ctrl_string,
                              "%s - %s" % (point1, point2))
 

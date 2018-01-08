@@ -1175,9 +1175,11 @@ class TimePoint(object):
                 new.tick_over()
         if month_of_year is not None:
             new.to_calendar_date()
+            new.day_of_month = 0  # tick_over month independent of day.
             while new.month_of_year != month_of_year:
                 new.month_of_year += 1
                 new.tick_over()
+            new.day_of_month = day_of_month
         if year_of_decade is not None:
             new.to_calendar_date()
             new_year_of_decade = new.year % 10
