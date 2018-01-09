@@ -634,6 +634,21 @@ def get_timepoint_subtract_tests():
             "P29DT19H"
         ),
         (
+            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
+             "hour_of_day": 20, "time_zone_hour": 0, "time_zone_minute": 0},
+            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
+             "hour_of_day": 19, "time_zone_hour": 0, "time_zone_minute": 0},
+            "PT1H"
+        ),
+
+        (
+            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
+             "hour_of_day": 19, "time_zone_hour": 0, "time_zone_minute": 0},
+            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
+             "hour_of_day": 20, "time_zone_hour": 0, "time_zone_minute": 0},
+            "-PT1H"
+        ),
+        (
             {"year": 1991, "month_of_year": 5, "day_of_month": 4,
              "hour_of_day": 5, "time_zone_hour": 0, "time_zone_minute": 0},
             {"year": 1991, "month_of_year": 6, "day_of_month": 3,
