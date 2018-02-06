@@ -5,6 +5,17 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2018.02.0 (Released 2018-02-06)
+
+This is the 9th release of isodatetime.
+
+### Noteworthy Changes
+
+[#82](https://github.com/metomi/isodatetime/pull/82):
+Fix subtracting a later timepoint from an earlier one.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2017.08.0 (Released 2017-08-09)
 
 This is the 8th release of isodatetime.
