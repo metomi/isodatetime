@@ -1112,7 +1112,8 @@ class TimePoint(object):
         return None
 
     def get_smallest_missing_property_name(self):
-        """Return the smallest unit missing from a truncated representation."""
+        """Return the next smallest unit missing
+        from a truncated representation."""
         if not self.truncated:
             return None
         prop_dict = self.get_truncated_properties()
