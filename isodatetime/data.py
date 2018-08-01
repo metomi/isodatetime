@@ -1111,6 +1111,20 @@ class TimePoint(object):
                 return attr
         return None
 
+    def get_smallest_missing_property_name(self):
+        """Return the smallest unit missing from a truncated representation."""
+        if not self.truncated:
+            return None
+        prop_dict = self.get_truncated_properties()
+        attr_list = ["year_of_century", "year_of_decade", "month_of_year",
+                     "week_of_year", "day_of_year", "day_of_month",
+                     "day_of_week", "hour_of_day", "minute_of_hour",
+                     "second_of_minute"]
+        for i_attr, attr in enumerate(attr_list):
+            if attr in prop_dict:
+                return attr_list[i_attr - 1]
+        return None
+
     def get_truncated_properties(self):
         """Return a map of properties if this is a truncated representation."""
         if not self.truncated:
