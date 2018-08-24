@@ -615,11 +615,11 @@ def get_truncated_property_tests():
                   "month_of_year": 1,
                   "largest_truncated_property_name": "year_of_century",
                   "smallest_missing_property_name": "century"},
-        "960328": {"year": 96,
+        "20960328": {"year": 96,
                    "month_of_year": 3,
                    "day_of_month": 28,
-                   "largest_truncated_property_name": "year_of_century",
-                   "smallest_missing_property_name": "century"},
+                   "largest_truncated_property_name": None,
+                   "smallest_missing_property_name": None},
         "-90": {"year": 90,
                 "largest_truncated_property_name": "year_of_century",
                 "smallest_missing_property_name": "century"},
@@ -651,7 +651,7 @@ def get_truncated_property_tests():
         "-1W02": {"year": 1,
                   "week_of_year": 2,
                   "largest_truncated_property_name": "year_of_decade",
-                  "smallest_missing_property_name": "year_of_century"},
+                  "smallest_missing_property_name": "decade_of_century"},
         "-W031": {"week_of_year": 3,
                   "day_of_week": 1,
                   "largest_truncated_property_name": "week_of_year",
@@ -1055,9 +1055,10 @@ class TestSuite(unittest.TestCase):
                     expression, syn_exc))
 
             self.assertEqual(
-                truncated_property_tests[expression][
-                    "largest_truncated_property_name"],
-                test_data.get_largest_truncated_property_name())
+                test_data.get_largest_truncated_property_name(),
+                truncated_property_tests[expression]
+                ["largest_truncated_property_name"],
+                info=expression)
 
     def test_smallest_missing_property_name(self):
         """Test the smallest missing property name."""
@@ -1074,9 +1075,10 @@ class TestSuite(unittest.TestCase):
                     expression, syn_exc))
 
             self.assertEqual(
-                truncated_property_tests[expression][
-                    "smallest_missing_property_name"],
-                test_data.get_smallest_missing_property_name())
+                test_data.get_smallest_missing_property_name(),
+                truncated_property_tests[expression]
+                ["smallest_missing_property_name"],
+                info=expression)
 
     def test_timeduration(self):
         """Test the duration class methods."""
