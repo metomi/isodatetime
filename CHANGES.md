@@ -5,6 +5,18 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2018.09.0 (Released 2018-09-11)
+
+This is the 10th release of isodatetime.
+
+### Noteworthy Changes
+
+[#86](https://github.com/metomi/isodatetime/pull/86):
+New TimePoint method to find the next smallest property that is missing from a
+truncated representation.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2018.02.0 (Released 2018-02-06)
 
 This is the 9th release of isodatetime.
