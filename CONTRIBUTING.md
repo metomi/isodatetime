@@ -30,6 +30,7 @@ below:
 * Matt Shin (Met Office, UK)
 * Hilary Oliver (NIWA, NZ)
 * Lois Huggett (Met Office, UK)
+* Bruno P. Kinoshita (NIWA, NZ)
 
 (All contributors are identifiable with email addresses in the version control
 logs or otherwise.)
