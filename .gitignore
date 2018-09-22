@@ -6,3 +6,9 @@
 .coverage.*
 coverage.xml
 htmlcov/
+
+# distutils files
+dist
+MANIFEST
+isodatetime.egg-info/
+.eggs
