@@ -1,2 +1,8 @@
 *.py[co]
 *.swp
+
+# coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/

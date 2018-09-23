@@ -3,11 +3,48 @@
 
 ---
 language: python
+
 python:
-    - "2.6"
-    - "2.7"
-install:
-    - pip install pycodestyle
+  - 2.6
+  - 2.7
+env:
+  - RUN_COVERAGE=false
+  - RUN_COVERAGE=true
+
+matrix:
+  fast_finish: true
+  exclude:
+    - python: 2.6
+      env: RUN_COVERAGE=true
+    - python: 2.7
+      env: RUN_COVERAGE=false
+
+before_install:
+  # Coverage dependencies
+  - pip install coverage pytest-cov
+  # Code style dependencies
+  - pip install pycodestyle
 script:
-    - python -m isodatetime.tests
-    - pycodestyle -v isodatetime
+  - |
+    export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
+    # NOTE: the way to handle long-living commands in the documentation is
+    # travis_wait 40 coverage run -m isodatetime.tests
+    # but it does not produce any output, which can be frustrating in case of errors.
+    # So here we are using the approach documented in the issue
+    # https://github.com/travis-ci/travis-ci/issues/4190.
+    coverage run -m isodatetime.tests &
+    minutes=0
+    limit=40
+    while kill -0 $! >/dev/null 2>&1; do
+      echo -n -e " \b" # never leave evidences!
+      if [ $minutes == $limit ]; then
+        break;
+      fi
+      minutes=$((minutes+1))
+      sleep 60
+    done
+after_script:
+  - coverage xml --ignore-errors
+  # Report metrics, such as coverage
+  - '[[ "$RUN_COVERAGE" = true ]] && bash <(curl -s https://codecov.io/bash)'
+  - pycodestyle -v isodatetime
