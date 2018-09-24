@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ----------------------------------------------------------------------------
 
-"""This provides utilites for extracting the local time zone."""
+"""This provides utilities for extracting the local time zone."""
 
 import time
 

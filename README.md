@@ -239,5 +239,5 @@ Example Syntax             | Example                  | Meaning
 R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly counting back from 2012-01-02T00Z
 R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years counting back from 2000-01-01.
 R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds counting back from the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
-Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minut counting back from 2012-01-02T00Z
+Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes counting back from 2012-01-02T00Z
 Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, counting back from 2000-05-01.
