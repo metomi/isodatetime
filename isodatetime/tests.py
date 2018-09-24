@@ -84,7 +84,7 @@ def get_timedurationparser_tests():
         "P0004-078": {"years": 4, "days": 78},
         "P0004-078T10,5": {"years": 4, "days": 78, "hours": 10.5},
         "P00000020T133702": {"days": 20, "hours": 13, "minutes": 37,
-                             "seconds": 02},
+                             "seconds": 2},
         "-P3YT4H2M": {"years": -3, "hours": -4, "minutes": -2},
         "-PT5M": {"minutes": -5},
         "-P7Y": {"years": -7, "hours": 0}
