@@ -21,12 +21,14 @@
 import copy
 import multiprocessing
 import unittest
+import mock
 
 from . import data
 from . import dumpers
 from . import parsers
 from . import parser_spec
 from . import util
+from . import timezone
 
 
 def get_timeduration_tests():
@@ -1568,6 +1570,68 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(2, temp_class.sum(1, 1))
         # in total, we have only three calls, as 2 were cached!
         self.assertEqual(3, temp_class.times_called)
+
+    # data provider for the test test_get_local_time_zone_no_dst
+    # the format for the parameters is [tz_seconds, expected_hours, expected_minutes]]
+    get_local_time_zone_no_dst = [
+        [45900, 12, 45],  # pacific/chatham, +12:45
+        [20700, 5, 45],  # asia/kathmandu, +05:45
+        [3600, 1, 0],  # arctic/longyearbyen, +01:00
+        [0, 0, 0],  # UTC
+        [-10800, -3, 0],  # america/sao_paulo, -03:00
+        [-12600, -3, 30]  # america/st_johns, -03:30
+    ]
+
+    @mock.patch('isodatetime.timezone.time')
+    def test_get_local_time_zone_no_dst(self, mock_time):
+        """Test that the hour/minute returned is correct.
+
+        Parts of the time module are mocked so that we can specify scenarios
+        without daylight saving time."""
+        for tz_seconds, expected_hours, expected_minutes in self.get_local_time_zone_no_dst:
+            # for a pre-defined timezone
+            mock_time.timezone.__neg__.return_value = tz_seconds
+            # time without dst
+            mock_time.daylight = False
+            # and localtime also without dst
+            mock_localtime = mock.Mock()
+            mock_time.localtime.return_value = mock_localtime
+            mock_localtime.tm_isdst = 0
+            hours, minutes = timezone.get_local_time_zone()
+            self.assertEqual(expected_hours, hours)
+            self.assertEqual(expected_minutes, minutes)
+
+    # data provider for the test test_get_local_time_zone_with_dst
+    # the format for the parameters is [tz_seconds, tz_alt_seconds, expected_hours, expected_minutes]
+    get_local_time_zone_with_dst = [
+        [45900, 49500, 13, 45],  # pacific/chatham, +12:45 and +13:45
+        [43200, 46800, 13, 0],  # pacific/auckland, +12:00 and +13:00
+        [3600, 7200, 2, 0],  # arctic/longyearbyen, +01:00
+        [0, 0, 0, 0],  # UTC
+        [-10800, -7200, -2, 0],  # america/sao_paulo, -03:00 and -02:00,
+        [-12600, -9000, -2, 30]  # america/st_johns, -03:30 and -02:30
+    ]
+
+    @mock.patch('isodatetime.timezone.time')
+    def test_get_local_time_zone_with_dst(self, mock_time):
+        """Test that the hour/minute returned is correct
+
+        Parts of the time module are mocked so that we can specify scenarios
+        with daylight saving time."""
+        for tz_seconds, tz_alt_seconds, expected_hours, expected_minutes in self.get_local_time_zone_with_dst:
+            # for a pre-defined timezone
+            mock_time.timezone.__neg__.return_value = tz_seconds
+            # time without dst
+            mock_time.daylight = True
+            # and localtime also without dst
+            mock_localtime = mock.MagicMock()
+            mock_time.localtime.return_value = mock_localtime
+            mock_localtime.tm_isdst = 1
+            # and finally with the following alternative time for when dst is set
+            mock_time.altzone.__neg__.return_value = tz_alt_seconds
+            hours, minutes = timezone.get_local_time_zone()
+            self.assertEqual(expected_hours, hours)
+            self.assertEqual(expected_minutes, minutes)
 
 
 def assert_equal(data1, data2):
