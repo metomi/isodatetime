@@ -1234,6 +1234,9 @@ class TestSuite(unittest.TestCase):
                     num_expanded_year_digits=num_expanded_year_digits)
                 self.assertRaises(ctrl_exception, dumper.dump,
                                   ctrl_timepoint, format_)
+        value_error_timepoint = data.TimePoint(minute_of_hour=10)
+        value_error_timepoint.minute_of_hour = "1O"
+        self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
