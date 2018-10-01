@@ -1238,6 +1238,20 @@ class TestSuite(unittest.TestCase):
         value_error_timepoint.minute_of_hour = "1O"
         self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
 
+    def test_timepoint_dumper_bounds_error_message(self):
+        """Test the exception text contains the information expected"""
+        the_error = dumpers.TimePointDumperBoundsError("TimePoint1", "year",
+                                                       10, 20)
+        the_string = the_error.__str__()
+        self.assertTrue("TimePoint1" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("year" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("10" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("20" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
 
