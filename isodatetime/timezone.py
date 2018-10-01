@@ -28,8 +28,8 @@ def get_local_time_zone():
     if time.localtime().tm_isdst == 1 and time.daylight:
         utc_offset_seconds = -time.altzone
     utc_offset_minutes = (utc_offset_seconds // 60) % 60
-    utc_offset_hours = math.floor(utc_offset_seconds / float(3600)) if utc_offset_seconds > 0 else math.ceil(
-        utc_offset_seconds / float(3600))
+    utc_offset_hours = math.floor(utc_offset_seconds / float(3600)) if \
+        utc_offset_seconds > 0 else math.ceil(utc_offset_seconds / float(3600))
     return int(utc_offset_hours), utc_offset_minutes
 
 
