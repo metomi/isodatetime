@@ -1572,7 +1572,8 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(3, temp_class.times_called)
 
     # data provider for the test test_get_local_time_zone_no_dst
-    # the format for the parameters is [tz_seconds, expected_hours, expected_minutes]]
+    # the format for the parameters is
+    # [tz_seconds, expected_hours, expected_minutes]]
     get_local_time_zone_no_dst = [
         [45900, 12, 45],  # pacific/chatham, +12:45
         [20700, 5, 45],  # asia/kathmandu, +05:45
@@ -1588,7 +1589,8 @@ class TestSuite(unittest.TestCase):
 
         Parts of the time module are mocked so that we can specify scenarios
         without daylight saving time."""
-        for tz_seconds, expected_hours, expected_minutes in self.get_local_time_zone_no_dst:
+        for tz_seconds, expected_hours, expected_minutes in \
+                self.get_local_time_zone_no_dst:
             # for a pre-defined timezone
             mock_time.timezone.__neg__.return_value = tz_seconds
             # time without dst
@@ -1602,7 +1604,8 @@ class TestSuite(unittest.TestCase):
             self.assertEqual(expected_minutes, minutes)
 
     # data provider for the test test_get_local_time_zone_with_dst
-    # the format for the parameters is [tz_seconds, tz_alt_seconds, expected_hours, expected_minutes]
+    # the format for the parameters is
+    # [tz_seconds, tz_alt_seconds, expected_hours, expected_minutes]
     get_local_time_zone_with_dst = [
         [45900, 49500, 13, 45],  # pacific/chatham, +12:45 and +13:45
         [43200, 46800, 13, 0],  # pacific/auckland, +12:00 and +13:00
@@ -1618,7 +1621,8 @@ class TestSuite(unittest.TestCase):
 
         Parts of the time module are mocked so that we can specify scenarios
         with daylight saving time."""
-        for tz_seconds, tz_alt_seconds, expected_hours, expected_minutes in self.get_local_time_zone_with_dst:
+        for tz_seconds, tz_alt_seconds, expected_hours, expected_minutes in \
+                self.get_local_time_zone_with_dst:
             # for a pre-defined timezone
             mock_time.timezone.__neg__.return_value = tz_seconds
             # time without dst
@@ -1627,24 +1631,25 @@ class TestSuite(unittest.TestCase):
             mock_localtime = mock.MagicMock()
             mock_time.localtime.return_value = mock_localtime
             mock_localtime.tm_isdst = 1
-            # and finally with the following alternative time for when dst is set
+            # and with the following alternative time for when dst is set
             mock_time.altzone.__neg__.return_value = tz_alt_seconds
             hours, minutes = timezone.get_local_time_zone()
             self.assertEqual(expected_hours, hours)
             self.assertEqual(expected_minutes, minutes)
 
     # data provider for the test test_get_local_time_zone_format
-    # the format for the parameters is [tz_seconds, extended_mode, reduced_mode, expected_format]
+    # the format for the parameters is
+    # [tz_seconds, extended_mode, reduced_mode, expected_format]
     get_test_get_local_time_zone_format = [
         # UTC
-        [0, False, False, "Z"], # UTC, returns Z, the flags are never used for UTC
+        [0, False, False, "Z"],  # UTC, returns Z, flags are never used for UTC
         # Positive values, some with minutes != 0
         [28800, False, False, "+0800"],  # asia/macao, +08:00
         [28800, True, False, "+08:00"],  # asia/macao, +08:00
         [28800, False, True, "+08"],  # asia/macao, +08:00
         [45900, False, False, "+1245"],  # pacific/chatham, +12:45
         [45900, True, False, "+12:45"],  # pacific/chatham, +12:45
-        [45900, False, True, "+1245"],  # pacific/chatham, +12:45 (attention as it's different in this case)
+        [45900, False, True, "+1245"],  # pacific/chatham, +12:45
         # Negative values, some with minutes != 0
         [-10800, False, False, "-0300"],  # america/buenos_aires, -03:00
         [-10800, True, False, "-03:00"],  # america/buenos_aires, -03:00
@@ -1659,9 +1664,10 @@ class TestSuite(unittest.TestCase):
         """Test that the UTC offset string format is correct
 
         Parts of the time module are mocked so that we can specify scenarios
-        with certain timezone seconds offsets. Daylight saving time is not really
+        with certain timezone seconds offsets. DST is not really
         important for this test case"""
-        for tz_seconds, extended_mode, reduced_mode, expected_format in self.get_test_get_local_time_zone_format:
+        for tz_seconds, extended_mode, reduced_mode, expected_format in \
+                self.get_test_get_local_time_zone_format:
             # for a pre-defined timezone
             mock_time.timezone.__neg__.return_value = tz_seconds
             # time without dst
@@ -1670,7 +1676,8 @@ class TestSuite(unittest.TestCase):
             mock_localtime = mock.Mock()
             mock_time.localtime.return_value = mock_localtime
             mock_localtime.tm_isdst = 0
-            tz_format = timezone.get_local_time_zone_format(extended_mode, reduced_mode)
+            tz_format = timezone.get_local_time_zone_format(extended_mode,
+                                                            reduced_mode)
             self.assertEqual(expected_format, tz_format)
 
 
