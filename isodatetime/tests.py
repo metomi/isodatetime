@@ -26,6 +26,7 @@ from . import data
 from . import dumpers
 from . import parsers
 from . import parser_spec
+from . import util
 
 
 def get_timeduration_tests():
@@ -1505,6 +1506,30 @@ class TestSuite(unittest.TestCase):
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
+
+    def test_util_cache(self):
+        """Test the cache provided in the util file"""
+        # here we change the cache size to simplify testing when cache is full
+        util.MAX_CACHE_SIZE = 2
+
+        class TempClass(object):
+            times_called = 0
+
+            @util.cache_results
+            def sum(self, x, y):
+                self.times_called += 1
+                return x + y
+        temp_class = TempClass()
+        # call it twice, filling the cache
+        self.assertEqual(3, temp_class.sum(1, 2))
+        self.assertEqual(3, temp_class.sum(2, 1))
+        # next two calls are cached
+        self.assertEqual(3, temp_class.sum(1, 2))
+        self.assertEqual(3, temp_class.sum(2, 1))
+        # this call should remove element from cache
+        self.assertEqual(2, temp_class.sum(1, 1))
+        # in total, we have only three calls, as 2 were cached!
+        self.assertEqual(3, temp_class.times_called)
 
 
 def assert_equal(data1, data2):
