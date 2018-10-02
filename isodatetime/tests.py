@@ -1252,6 +1252,27 @@ class TestSuite(unittest.TestCase):
         self.assertTrue("20" in the_string,
                         "Failed to find TimePoint1 in {}".format(the_string))
 
+    get_test_timepoint_dumper_get_time_zone = [
+        ["+250:00", None],
+        ["+25:00", ('25', '00')],
+        ["+12:00", ('12', '00')],
+        ["+12:45", ('12', '45')],
+        ["+01:00", ('01', '00')],
+        ["Z", (0, 0)],
+        ["-03:00", (-3, 0)],
+        ["-03:30", (-3, -30)],
+        ["-11:00", (-11, 0)],
+        ["+00:00", ('00', '00')],
+        ["-00:00", (0, 0)]
+    ]
+
+    def test_timepoint_dumper_get_time_zone(self):
+        """Test the time zone returned by TimerPointDumper.get_time_zone"""
+        dumper = dumpers.TimePointDumper(num_expanded_year_digits=2)
+        for value, expected in self.get_test_timepoint_dumper_get_time_zone:
+            tz = dumper.get_time_zone(value)
+            self.assertEqual(expected, tz)
+
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
 
