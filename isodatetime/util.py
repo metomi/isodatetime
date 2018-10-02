@@ -38,7 +38,7 @@ def cache_results(func):
             return cache[key]
         else:
             results = func(*args, **kwargs)
-            if len(cache) > MAX_CACHE_SIZE:
+            if len(cache) >= MAX_CACHE_SIZE:
                 cache.popitem()
             cache[key] = results
             return results
