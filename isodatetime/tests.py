@@ -1235,6 +1235,44 @@ class TestSuite(unittest.TestCase):
                     num_expanded_year_digits=num_expanded_year_digits)
                 self.assertRaises(ctrl_exception, dumper.dump,
                                   ctrl_timepoint, format_)
+        value_error_timepoint = data.TimePoint(minute_of_hour=10)
+        value_error_timepoint.minute_of_hour = "1O"
+        self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
+
+    def test_timepoint_dumper_bounds_error_message(self):
+        """Test the exception text contains the information expected"""
+        the_error = dumpers.TimePointDumperBoundsError("TimePoint1", "year",
+                                                       10, 20)
+        the_string = the_error.__str__()
+        self.assertTrue("TimePoint1" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("year" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("10" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+        self.assertTrue("20" in the_string,
+                        "Failed to find TimePoint1 in {}".format(the_string))
+
+    get_test_timepoint_dumper_get_time_zone = [
+        ["+250:00", None],
+        ["+25:00", ('25', '00')],
+        ["+12:00", ('12', '00')],
+        ["+12:45", ('12', '45')],
+        ["+01:00", ('01', '00')],
+        ["Z", (0, 0)],
+        ["-03:00", (-3, 0)],
+        ["-03:30", (-3, -30)],
+        ["-11:00", (-11, 0)],
+        ["+00:00", ('00', '00')],
+        ["-00:00", (0, 0)]
+    ]
+
+    def test_timepoint_dumper_get_time_zone(self):
+        """Test the time zone returned by TimerPointDumper.get_time_zone"""
+        dumper = dumpers.TimePointDumper(num_expanded_year_digits=2)
+        for value, expected in self.get_test_timepoint_dumper_get_time_zone:
+            tz = dumper.get_time_zone(value)
+            self.assertEqual(expected, tz)
 
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
