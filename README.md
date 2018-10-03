@@ -2,6 +2,7 @@ isodatetime
 ===========
 
 [![Build Status](https://travis-ci.org/metomi/isodatetime.svg?branch=master)](https://travis-ci.org/metomi/isodatetime)
+[![codecov](https://codecov.io/gh/metomi/isodatetime/branch/master/graph/badge.svg)](https://codecov.io/gh/metomi/isodatetime)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597555.svg)](https://doi.org/10.5281/zenodo.597555)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fd1147b75474d4d9a0f64bececf3bb5)](https://www.codacy.com/app/metomi/isodatetime?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=metomi/isodatetime&amp;utm_campaign=Badge_Grade)
 
