@@ -22,6 +22,12 @@ import time
 import math
 
 
+class TimeZoneFormatMode(object):
+    normal = "normal"
+    reduced = "reduced"
+    extended = "extended"
+
+
 def get_local_time_zone():
     """Return the current local UTC offset in hours and minutes."""
     utc_offset_seconds = -time.timezone
@@ -33,17 +39,21 @@ def get_local_time_zone():
     return int(utc_offset_hours), utc_offset_minutes
 
 
-def get_local_time_zone_format(extended_mode=False, reduced_mode=False):
-    """Return a string denoting the current local UTC offset."""
+def get_local_time_zone_format(tz_fmt_mode=TimeZoneFormatMode.normal):
+    """Return a string denoting the current local UTC offset.
+
+    :param tz_fmt_mode:
+    :type tz_fmt_mode: TimeZoneFormat:
+    """
     utc_offset_hours, utc_offset_minutes = get_local_time_zone()
     if utc_offset_hours == 0 and utc_offset_minutes == 0:
         return "Z"
     reduced_timezone_template = "%s%02d"
     timezone_template = "%s%02d%02d"
-    if extended_mode:
+    if tz_fmt_mode == TimeZoneFormatMode.extended:
         timezone_template = "%s%02d:%02d"
     sign = "-" if (utc_offset_hours < 0 or utc_offset_minutes < 0) else "+"
-    if reduced_mode and utc_offset_minutes == 0:
+    if tz_fmt_mode == TimeZoneFormatMode.reduced and utc_offset_minutes == 0:
         return reduced_timezone_template % (sign, abs(utc_offset_hours))
     return timezone_template % (
         sign, abs(utc_offset_hours), abs(utc_offset_minutes))
