@@ -1639,24 +1639,37 @@ class TestSuite(unittest.TestCase):
 
     # data provider for the test test_get_local_time_zone_format
     # the format for the parameters is
-    # [tz_seconds, extended_mode, reduced_mode, expected_format]
+    # [tz_seconds, tz_format_mode, expected_format]
     get_test_get_local_time_zone_format = [
         # UTC
-        [0, False, False, "Z"],  # UTC, returns Z, flags are never used for UTC
+        # UTC, returns Z, flags are never used for UTC
+        [0, timezone.TimeZoneFormatMode.normal, "Z"],
         # Positive values, some with minutes != 0
-        [28800, False, False, "+0800"],  # asia/macao, +08:00
-        [28800, True, False, "+08:00"],  # asia/macao, +08:00
-        [28800, False, True, "+08"],  # asia/macao, +08:00
-        [45900, False, False, "+1245"],  # pacific/chatham, +12:45
-        [45900, True, False, "+12:45"],  # pacific/chatham, +12:45
-        [45900, False, True, "+1245"],  # pacific/chatham, +12:45
+        # asia/macao, +08:00
+        [28800, timezone.TimeZoneFormatMode.normal, "+0800"],
+        # asia/macao, +08:00
+        [28800, timezone.TimeZoneFormatMode.extended, "+08:00"],
+        # asia/macao, +08:00
+        [28800, timezone.TimeZoneFormatMode.reduced, "+08"],
+        # pacific/chatham, +12:45
+        [45900, timezone.TimeZoneFormatMode.normal, "+1245"],
+        # pacific/chatham, +12:45
+        [45900, timezone.TimeZoneFormatMode.extended, "+12:45"],
+        # pacific/chatham, +12:45
+        [45900, timezone.TimeZoneFormatMode.reduced, "+1245"],
         # Negative values, some with minutes != 0
-        [-10800, False, False, "-0300"],  # america/buenos_aires, -03:00
-        [-10800, True, False, "-03:00"],  # america/buenos_aires, -03:00
-        [-10800, False, True, "-03"],  # america/buenos_aires, -03:00
-        [-12600, False, False, "-0330"],  # america/st_johns, -03:30
-        [-12600, True, False, "-03:30"],  # america/st_johns, -03:30
-        [-12600, False, True, "-0330"]  # america/st_johns, -03:30
+        # america/buenos_aires, -03:00
+        [-10800, timezone.TimeZoneFormatMode.normal, "-0300"],
+        # america/buenos_aires, -03:00
+        [-10800, timezone.TimeZoneFormatMode.extended, "-03:00"],
+        # america/buenos_aires, -03:00
+        [-10800, timezone.TimeZoneFormatMode.reduced, "-03"],
+        # america/st_johns, -03:30
+        [-12600, timezone.TimeZoneFormatMode.normal, "-0330"],
+        # america/st_johns, -03:30
+        [-12600, timezone.TimeZoneFormatMode.extended, "-03:30"],
+        # america/st_johns, -03:30
+        [-12600, timezone.TimeZoneFormatMode.reduced, "-0330"]
     ]
 
     @mock.patch('isodatetime.timezone.time')
@@ -1666,7 +1679,7 @@ class TestSuite(unittest.TestCase):
         Parts of the time module are mocked so that we can specify scenarios
         with certain timezone seconds offsets. DST is not really
         important for this test case"""
-        for tz_seconds, extended_mode, reduced_mode, expected_format in \
+        for tz_seconds, tz_format_mode, expected_format in \
                 self.get_test_get_local_time_zone_format:
             # for a pre-defined timezone
             mock_time.timezone.__neg__.return_value = tz_seconds
@@ -1676,8 +1689,7 @@ class TestSuite(unittest.TestCase):
             mock_localtime = mock.Mock()
             mock_time.localtime.return_value = mock_localtime
             mock_localtime.tm_isdst = 0
-            tz_format = timezone.get_local_time_zone_format(extended_mode,
-                                                            reduced_mode)
+            tz_format = timezone.get_local_time_zone_format(tz_format_mode)
             self.assertEqual(expected_format, tz_format)
 
 
