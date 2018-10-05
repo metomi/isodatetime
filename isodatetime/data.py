@@ -717,10 +717,10 @@ class TimePoint(object):
         "day_of_year", "day_of_month", "day_of_week",
         "week_of_year", "hour_of_day", "minute_of_hour",
         "second_of_minute", "truncated", "truncated_property",
-        "dump_format", "time_zone"
+        "truncated_dump_format", "dump_format", "time_zone"
     ]
 
-    __slots__ = DATA_ATTRIBUTES + ["truncated_dump_format"]
+    __slots__ = DATA_ATTRIBUTES
 
     def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
                  week_of_year=None, day_of_year=None, day_of_month=None,
