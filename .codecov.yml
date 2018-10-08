@@ -1,0 +1,64 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# (C) British Crown Copyright 2013-2018 Met Office.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# ----------------------------------------------------------------------------
+
+# Codecov settings
+# After modifying this file, it might be worth to validate it with:
+# `curl --data-binary @.codecov.yml https://codecov.io/validate`
+
+# which branch to monitor and whether wait for ci success
+codecov:
+  branch: master
+  notify:
+    require_ci_to_pass: yes
+
+# define the colour bar limits here
+coverage:
+  precision: 2
+  round: down
+  range: "75...100"
+
+  # diff type
+  status:
+    project:
+      default:
+        # commits below this threshold will be marked as failed
+        target: '75%'
+        # how much we allow the coverage to drop
+        threshold: '5%'
+    patch:
+      default:
+        # basic
+        target: '75%'
+        threshold: '5%'
+        base: auto
+        # advanced
+        branches: null
+        if_no_uploads: error
+        if_not_found: success
+        if_ci_failed: error
+        only_pulls: false
+        flags: null
+        paths: null
+    changes: no
+
+# files to ignore
+ignore:
+  - "isodatetime/tests.py"
+
+# turn off comments to pull requests
+comment: off
