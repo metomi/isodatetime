@@ -1246,6 +1246,69 @@ class TestSuite(unittest.TestCase):
                             duration, data.Duration(days=0),
                             i_test_date_str + " - " + j_test_date_str)
 
+    def test_timepoint_adding_truncated_timepoint(self):
+        """See issue #80. When adding a truncated time, the result timepoint
+        must not be inconsistent, e.g.
+
+        2000-01-01T00:00:00Z + 03-30T00:00:00Z = 2000-03-30T00:00:00Z
+        """
+        t1 = data.TimePoint(year=2000, month_of_year=1, day_of_month=1,
+                            hour_of_day=0, minute_of_hour=0,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0)
+        t2 = data.TimePoint(month_of_year=3, day_of_month=30,
+                            hour_of_day=0, minute_of_hour=0,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0, truncated=True)
+        t3 = t1 + t2
+        self.assertEqual(2000, t3.year)
+        self.assertEqual(3, t3.month_of_year)
+        self.assertEqual(30, t3.day_of_month)
+        self.assertEqual(0, t3.hour_of_day)
+        self.assertEqual(0, t3.minute_of_hour)
+        self.assertEqual(0, t3.second_of_minute)
+        self.assertEqual(data.Duration(hours=0, minutes=0), t3.get_time_zone())
+        self.assertEqual("2000-03-30T00:00:00Z", str(t3))
+
+    def test_timepoint_adding_truncated_timepoint_new_years_eve(self):
+        """Test rolling over the year."""
+        t1 = data.TimePoint(year=2000, month_of_year=12, day_of_month=31,
+                            hour_of_day=0, minute_of_hour=0,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0)
+        t2 = data.TimePoint(month_of_year=1, day_of_month=1,
+                            hour_of_day=0, minute_of_hour=0,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0, truncated=True)
+        t3 = t1 + t2
+        self.assertEqual(2001, t3.year)
+        self.assertEqual(1, t3.month_of_year)
+        self.assertEqual(1, t3.day_of_month)
+        self.assertEqual(0, t3.hour_of_day)
+        self.assertEqual(0, t3.minute_of_hour)
+        self.assertEqual(0, t3.second_of_minute)
+        self.assertEqual(data.Duration(hours=0, minutes=0), t3.get_time_zone())
+        self.assertEqual("2001-01-01T00:00:00Z", str(t3))
+
+    def test_timepoint_adding_truncated_timepoint_new_years_eve_hour(self):
+        """Test rolling over the year and hour."""
+        t1 = data.TimePoint(year=2000, month_of_year=12, day_of_month=31,
+                            hour_of_day=23, minute_of_hour=0,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0)
+        t2 = data.TimePoint(hour_of_day=0, minute_of_hour=20,
+                            second_of_minute=0, time_zone_hour=0,
+                            time_zone_minute=0, truncated=True)
+        t3 = t1 + t2
+        self.assertEqual(2001, t3.year)
+        self.assertEqual(1, t3.month_of_year)
+        self.assertEqual(1, t3.day_of_month)
+        self.assertEqual(0, t3.hour_of_day)
+        self.assertEqual(20, t3.minute_of_hour)
+        self.assertEqual(0, t3.second_of_minute)
+        self.assertEqual(data.Duration(hours=0, minutes=0), t3.get_time_zone())
+        self.assertEqual("2001-01-01T00:20:00Z", str(t3))
+
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
         parser = parsers.TimePointParser(allow_truncated=True,
