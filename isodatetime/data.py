@@ -1158,62 +1158,58 @@ class TimePoint(object):
                       minute_of_hour=None, second_of_minute=None):
         """Combine this TimePoint with truncated time properties."""
         new = self.copy()
-        if hour_of_day is not None and minute_of_hour is None:
-            minute_of_hour = 0
-        if ((hour_of_day is not None or minute_of_hour is not None) and
-                second_of_minute is None):
-            second_of_minute = 0
-        if second_of_minute is not None or minute_of_hour is not None:
-            new.to_hour_minute_second()
-        if second_of_minute is not None:
-            while new.second_of_minute != second_of_minute:
-                new.second_of_minute += 1.0
-                new.tick_over()
-        if minute_of_hour is not None:
-            while new.minute_of_hour != minute_of_hour:
-                new.minute_of_hour += 1.0
-                new.tick_over()
-        if hour_of_day is not None:
-            while new.hour_of_day != hour_of_day:
-                new.hour_of_day += 1.0
-                new.tick_over()
-        if day_of_week is not None:
-            new.to_week_date()
-            while new.day_of_week != day_of_week:
-                new.day_of_week += 1
-                new.tick_over()
-        if day_of_month is not None:
-            new.to_calendar_date()
-            while new.day_of_month != day_of_month:
-                new.day_of_month += 1
-                new.tick_over()
-        if day_of_year is not None:
-            new.to_ordinal_date()
-            while new.day_of_year != day_of_year:
-                new.day_of_year += 1
-                new.tick_over()
-        if week_of_year is not None:
-            new.to_week_date()
-            while new.week_of_year != week_of_year:
-                new.week_of_year += 1
-                new.tick_over()
-        if month_of_year is not None:
-            new.to_calendar_date()
-            while new.month_of_year != month_of_year:
-                new.month_of_year += 1
-                new.tick_over()
-        if year_of_decade is not None:
-            new.to_calendar_date()
-            new_year_of_decade = new.year % 10
-            while new_year_of_decade != year_of_decade:
-                new.year += 1
-                new_year_of_decade = new.year % 10
+
         if year_of_century is not None:
             new.to_calendar_date()
             new_year_of_century = new.year % 100
             while new_year_of_century != year_of_century:
                 new.year += 1
                 new_year_of_century = new.year % 100
+        if year_of_decade is not None:
+            new.to_calendar_date()
+            new_year_of_decade = new.year % 10
+            while new_year_of_decade != year_of_decade:
+                new.year += 1
+                new_year_of_decade = new.year % 10
+        if month_of_year is not None:
+            new.to_calendar_date()
+            while new.month_of_year != month_of_year:
+                new.month_of_year += 1
+                new.tick_over()
+        if week_of_year is not None:
+            new.to_week_date()
+            while new.week_of_year != week_of_year:
+                new.week_of_year += 1
+                new.tick_over()
+        if day_of_month is not None:
+            new.to_calendar_date()
+            while new.day_of_month != day_of_month:
+                new.day_of_month += 1
+                new.tick_over()
+        if day_of_week is not None:
+            new.to_week_date()
+            while new.day_of_week != day_of_week:
+                new.day_of_week += 1
+                new.tick_over()
+        if hour_of_day is not None:
+            while new.hour_of_day != hour_of_day:
+                new.hour_of_day += 1.0
+                new.tick_over()
+        if minute_of_hour is not None:
+            while new.minute_of_hour != minute_of_hour:
+                new.minute_of_hour += 1.0
+                new.tick_over()
+        if second_of_minute is not None:
+            while new.second_of_minute != second_of_minute:
+                new.second_of_minute += 1.0
+                new.tick_over()
+        if second_of_minute is not None or minute_of_hour is not None:
+            new.to_hour_minute_second()
+        if ((hour_of_day is not None or minute_of_hour is not None) and
+                second_of_minute is None):
+            second_of_minute = 0
+        if hour_of_day is not None and minute_of_hour is None:
+            minute_of_hour = 0
         return new
 
     def __add__(self, other, no_copy=False):
