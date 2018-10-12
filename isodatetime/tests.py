@@ -1692,6 +1692,52 @@ class TestSuite(unittest.TestCase):
             tz_format = timezone.get_local_time_zone_format(tz_format_mode)
             self.assertEqual(expected_format, tz_format)
 
+    def test_duration_to_weeks(self):
+        """Test that the duration does not lose precision when converted
+        from days"""
+        duration_in_days = data.Duration(days=365)
+        duration_in_days.to_weeks()
+        duration_in_weeks = data.Duration(weeks=52)
+        self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
+
+    def test_duration_floordiv(self):
+        """Test the existing dunder floordir, which will be removed when we
+        move to Python 3"""
+        duration = data.Duration(years=4, months=4, days=4, hours=4,
+                                 minutes=4, seconds=4)
+        duration //= 2
+        self.assertEqual(2, duration.years)
+        self.assertEqual(2, duration.months)
+        self.assertEqual(2, duration.days)
+        self.assertEqual(2, duration.hours)
+        self.assertEqual(2, duration.minutes)
+        self.assertEqual(2, duration.seconds)
+
+    def test_duration_in_weeks_floordiv(self):
+        """Test the existing dunder floordir, which will be removed when we
+        move to Python 3"""
+        duration = data.Duration(weeks=4)
+        duration //= 2
+        self.assertEqual(2, duration.weeks)
+
+    def test_timepoint_add_duration(self):
+        """Test adding a duration to a timepoint"""
+        seconds_added = 5
+        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
+                                   hour_of_day=1, minute_of_hour=1)
+        duration = data.Duration(seconds=seconds_added)
+        t = timepoint + duration
+        self.assertEqual(seconds_added, t.second_of_minute)
+
+    def test_timepoint_add_duration_without_minute(self):
+        """Test adding a duration to a timepoint"""
+        seconds_added = 5
+        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
+                                   hour_of_day=1)
+        duration = data.Duration(seconds=seconds_added)
+        t = timepoint + duration
+        self.assertEqual(seconds_added, t.second_of_minute)
+
 
 def assert_equal(data1, data2):
     """A function-level equivalent of the unittest method."""
