@@ -427,7 +427,8 @@ def get_timepointparser_tests(allow_only_basic=False,
                 "-W03-1": {"week_of_year": 3, "day_of_week": 1,
                            "truncated": True},
                 "-W32": {"week_of_year": 32, "truncated": True},
-                "-W-1": {"day_of_week": 1, "truncated": True}
+                "-W-1": {"day_of_week": 1, "truncated": True},
+                "-200": {"day_of_year": 200, "truncated": True}
             }
         }
     }
@@ -665,6 +666,9 @@ def get_truncated_property_tests():
         "-W-1": {"day_of_week": 1,
                  "largest_truncated_property_name": "day_of_week",
                  "smallest_missing_property_name": "week_of_year"},
+        "-200": {"day_of_year": 200,
+                 "largest_truncated_property_name": "day_of_year",
+                 "smallest_missing_property_name": "year_of_century"},
         "T04:30": {"hour_of_day": 4,
                    "minute_of_hour": 30,
                    "largest_truncated_property_name": "hour_of_day",

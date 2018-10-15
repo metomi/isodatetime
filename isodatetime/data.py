@@ -1120,24 +1120,19 @@ class TimePoint(object):
         if not self.truncated:
             return None
         prop_dict = self.get_truncated_properties()
-        attr_keys = ["year_of_century", "decade_of_century",
-                     "year_of_decade", "month_of_year",
-                     "week_of_year", "day_of_year", "day_of_month",
-                     "day_of_week", "hour_of_day", "minute_of_hour",
-                     "second_of_minute"]
-        attr_dict = {"year_of_century": "century",
-                     "year_of_decade": "decade_of_century",
-                     "month_of_year": "year_of_century",
-                     "week_of_year": "year_of_century",
-                     "day_of_year": "year_of_century",
-                     "day_of_month": "month_of_year",
-                     "day_of_week": "week_of_year",
-                     "hour_of_day": "day_of_month",
-                     "minute_of_hour": "hour_of_day",
-                     "second_of_minute": "minute_of_hour"}
-        for attr in attr_keys:
-            if attr in prop_dict:
-                return attr_dict[attr]
+        attr_list = (("year_of_century", "century"),
+                     ("year_of_decade", "decade_of_century"),
+                     ("month_of_year", "year_of_century"),
+                     ("week_of_year", "year_of_century"),
+                     ("day_of_year", "year_of_century"),
+                     ("day_of_month", "month_of_year"),
+                     ("day_of_week", "week_of_year"),
+                     ("hour_of_day", "day_of_month"),
+                     ("minute_of_hour", "hour_of_day"),
+                     ("second_of_minute", "minute_of_hour"))
+        for attr_key, attr_value in attr_list:
+            if attr_key in prop_dict:
+                return attr_value
         return None
 
     def get_truncated_properties(self):
