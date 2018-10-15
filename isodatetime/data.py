@@ -530,6 +530,7 @@ class Duration(object):
         new.hours //= other
         new.minutes //= other
         new.seconds //= other
+        return new
 
     def __cmp__(self, other):
         if not isinstance(other, Duration):
