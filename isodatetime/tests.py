@@ -1280,6 +1280,14 @@ class TestSuite(unittest.TestCase):
             tz = dumper.get_time_zone(value)
             self.assertEqual(expected, tz)
 
+    def test_timepoint_dumper_after_copy(self):
+        """Test that printing the TimePoint attributes works after it has
+        been copied, see issue #102 for more information"""
+        time_point = data.TimePoint(year=2000, truncated=True,
+                                    truncated_dump_format='CCYY')
+        the_copy = time_point.copy()
+        self.assertEqual(str(time_point), str(the_copy))
+
     def test_timepoint_parser(self):
         """Test the parsing of date/time expressions."""
 
