@@ -1289,11 +1289,11 @@ class TimePoint(object):
                     new.day_of_month = max_day_in_new_month
             elif new.get_is_ordinal_date():
                 max_days_in_year = get_days_in_year(new.year)
-                if max_days_in_year > new.day_of_year:
+                if max_days_in_year < new.day_of_year:
                     new.day_of_year = max_days_in_year
             elif new.get_is_week_date():
                 max_weeks_in_year = get_weeks_in_year(new.year)
-                if max_weeks_in_year > new.week_of_year:
+                if max_weeks_in_year < new.week_of_year:
                     new.week_of_year = max_weeks_in_year
         return new
 
