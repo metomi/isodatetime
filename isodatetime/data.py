@@ -1158,58 +1158,71 @@ class TimePoint(object):
                       minute_of_hour=None, second_of_minute=None):
         """Combine this TimePoint with truncated time properties."""
         new = self.copy()
+        target = TimePoint(year=None, month_of_year=month_of_year,
+                 week_of_year=week_of_year, day_of_month=day_of_month,
+                 day_of_week=day_of_week, hour_of_day=hour_of_day,
+                 minute_of_hour=minute_of_hour,
+                 second_of_minute=second_of_minute, truncated=True)
 
+        # actions that do not tick the clock
         if year_of_century is not None:
             new.to_calendar_date()
             new_year_of_century = new.year % 100
             while new_year_of_century != year_of_century:
                 new.year += 1
                 new_year_of_century = new.year % 100
+            target.year = new.year
         if year_of_decade is not None:
             new.to_calendar_date()
             new_year_of_decade = new.year % 10
             while new_year_of_decade != year_of_decade:
                 new.year += 1
                 new_year_of_decade = new.year % 10
+            target.year = new.year
+        if ((hour_of_day is not None or minute_of_hour is not None) and
+                second_of_minute is None):
+            second_of_minute = 0
+            target.second_of_minute = 0
+        if hour_of_day is not None and minute_of_hour is None:
+            minute_of_hour = 0
+            target.minute_of_hour = 0
+        if second_of_minute is not None or minute_of_hour is not None:
+            new.to_hour_minute_second()
+            target.to_hour_minute_second()
+
+        # any change here will need to tick and check
         if month_of_year is not None:
             new.to_calendar_date()
             while new.month_of_year != month_of_year:
                 new.month_of_year += 1
-                new.tick_over()
+                new.tick_over(target)
         if week_of_year is not None:
             new.to_week_date()
             while new.week_of_year != week_of_year:
                 new.week_of_year += 1
-                new.tick_over()
+                new.tick_over(target)
         if day_of_month is not None:
             new.to_calendar_date()
             while new.day_of_month != day_of_month:
                 new.day_of_month += 1
-                new.tick_over()
+                new.tick_over(target)
         if day_of_week is not None:
             new.to_week_date()
             while new.day_of_week != day_of_week:
                 new.day_of_week += 1
-                new.tick_over()
+                new.tick_over(target)
         if hour_of_day is not None:
             while new.hour_of_day != hour_of_day:
                 new.hour_of_day += 1.0
-                new.tick_over()
+                new.tick_over(target)
         if minute_of_hour is not None:
             while new.minute_of_hour != minute_of_hour:
                 new.minute_of_hour += 1.0
-                new.tick_over()
+                new.tick_over(target)
         if second_of_minute is not None:
             while new.second_of_minute != second_of_minute:
                 new.second_of_minute += 1.0
-                new.tick_over()
-        if second_of_minute is not None or minute_of_hour is not None:
-            new.to_hour_minute_second()
-        if ((hour_of_day is not None or minute_of_hour is not None) and
-                second_of_minute is None):
-            second_of_minute = 0
-        if hour_of_day is not None and minute_of_hour is None:
-            minute_of_hour = 0
+                new.tick_over(target)
         return new
 
     def __add__(self, other, no_copy=False):
@@ -1421,7 +1434,7 @@ class TimePoint(object):
         if was_week_date:
             self.to_week_date()
 
-    def tick_over(self):
+    def tick_over(self, target=None):
         """Correct all the units going from smallest to largest."""
         if (self.hour_of_day is not None and
                 self.minute_of_hour is not None):
@@ -1461,7 +1474,7 @@ class TimePoint(object):
             self.week_of_year += num_weeks
             self.day_of_week = days + 1
         if self.day_of_month is not None:
-            self._tick_over_day_of_month()
+            self._tick_over_day_of_month(target)
         if self.day_of_year is not None:
             while self.day_of_year < 1:
                 days_in_last_year = get_days_in_year(self.year - 1)
@@ -1488,7 +1501,13 @@ class TimePoint(object):
                 self.month_of_year -= CALENDAR.MONTHS_IN_YEAR
                 self.year += 1
 
-    def _tick_over_day_of_month(self):
+    def _tick_over_day_of_month(self, target=None):
+        """
+        Tick over day of month, using target as limit if provided.
+        :param target: target time point
+        :type target: TimePoint
+        :return:
+        """
         if self.day_of_month < 1:
             num_days = 2
             for month, day in iter_months_days(
@@ -1512,7 +1531,9 @@ class TimePoint(object):
                         if num_days == self.day_of_month:
                             break
                 self.year = start_year
-                self.month_of_year = month
+                if (target is None or
+                    self.month_of_year != target.month_of_year):
+                    self.month_of_year = month
                 self.day_of_month = day
         else:
             month_index = (self.month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR
@@ -1528,7 +1549,9 @@ class TimePoint(object):
                         day_of_month=1):
                     num_days += 1
                     if num_days == self.day_of_month:
-                        self.month_of_year = month
+                        if (target is None or
+                                self.month_of_year != target.month_of_year):
+                            self.month_of_year = month
                         self.day_of_month = day
                         break
                 else:
@@ -1538,8 +1561,13 @@ class TimePoint(object):
                         for month, day in iter_months_days(start_year):
                             num_days += 1
                             if num_days == self.day_of_month:
-                                self.year = start_year
-                                self.month_of_year = month
+                                if (target is None or
+                                        self.year != target.year):
+                                    self.year = start_year
+                                if (target is None or
+                                        self.month_of_year !=
+                                        target.month_of_year):
+                                    self.month_of_year = month
                                 self.day_of_month = day
                                 return
 
