@@ -5,6 +5,30 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2018.11.0 (Released 2018-11-05)
+
+This is the 11th release of isodatetime.
+
+This release features general improvement to unit test coverage, amongst
+various fixes.
+
+### Noteworthy Changes
+
+[#106](https://github.com/metomi/isodatetime/pull/106),
+[#108](https://github.com/metomi/isodatetime/pull/108):
+Fix ordinal date and week additon.
+
+[#103](https://github.com/metomi/isodatetime/pull/103):
+Fix `TimePoint` dumper behaviour after the `TimePoint` object has been copied.
+
+[#93](https://github.com/metomi/isodatetime/pull/93):
+Fix for timezone offsets where minutes are not 0.
+
+[#87](https://github.com/metomi/isodatetime/pull/87):
+Add `setup.py`.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2018.09.0 (Released 2018-09-11)
 
 This is the 10th release of isodatetime.

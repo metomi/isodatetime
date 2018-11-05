@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# (C) British Crown Copyright 2013-2018 Met Office.
+# Copyright (C) 2013-2018 British Crown (Met Office) & Contributors.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -42,9 +42,9 @@ setup(
     version=__version__,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
-    description=("Python ISO 8601 date time parser and data \
-        model/manipulation utilities"),
-    license="GPL",
+    description=("Python ISO 8601 date time parser" +
+                 " and data model/manipulation utilities"),
+    license="LGPLv3",
     keywords="isodatetime datetime iso8601 date time parser",
     url="https://github.com/metomi/isodatetime",
     packages=['isodatetime'],
@@ -56,7 +56,8 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        ("License :: OSI Approved" +
+         " :: GNU Lesser General Public License v3 (LGPLv3)"),
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 2.7",
         "Topic :: Software Development :: Libraries :: Python Modules",
