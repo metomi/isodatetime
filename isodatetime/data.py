@@ -1989,7 +1989,7 @@ def _get_calendar_date_week_date_start(year, _):
         days_diff = ref_ordinal_day - 2
         days_diff += get_days_in_year_range(year, ref_year - 1)
 
-    weekdays_diff = (days_diff) % CALENDAR.DAYS_IN_WEEK
+    weekdays_diff = days_diff % CALENDAR.DAYS_IN_WEEK
     if year > ref_year:
         day_of_week_start_year = weekdays_diff + 1
     else:

@@ -226,7 +226,7 @@ class TimePointDumper(object):
             return None
         info = self._timepoint_parser.process_time_zone_info(info)
         if info.get('time_zone_utc'):
-            return (0, 0)
+            return 0, 0
         if "time_zone_hour" not in info and "time_zone_minute" not in info:
             return None
         return info.get("time_zone_hour", 0), info.get("time_zone_minute", 0)
