@@ -754,12 +754,12 @@ class TimePoint(object):
             (time_zone_minute, "time_zone_minute", None, int)
         )
         if (dump_format is not None and not
-                isinstance(dump_format, basestring)):
+                isinstance(dump_format, str)):
             raise BadInputError(
                 BadInputError.TYPE,
                 "dump_format", repr(dump_format), type(dump_format))
         if (truncated_dump_format is not None and not
-                isinstance(truncated_dump_format, basestring)):
+                isinstance(truncated_dump_format, str)):
             raise BadInputError(
                 BadInputError.TYPE,
                 "truncated_dump_format", repr(truncated_dump_format),
