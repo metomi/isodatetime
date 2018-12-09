@@ -1064,7 +1064,7 @@ class TestSuite(unittest.TestCase):
                 test_days = data.get_days_in_year_range(
                     start_year, end_year)
                 control_days = 0
-                for year in xrange(start_year, end_year + 1):
+                for year in range(start_year, end_year + 1):
                     control_days += data.get_days_in_year(year)
                 self.assertEqual(
                     control_days, test_days, "days in %s to %s" % (

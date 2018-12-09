@@ -1782,7 +1782,7 @@ def _get_weeks_in_year(year, _):
     cal_year_next, cal_ord_days_next = get_ordinal_date_week_date_start(
         year + 1)
     diff_days = cal_ord_days_next - cal_ord_days
-    for intervening_year in xrange(cal_year, cal_year_next):
+    for intervening_year in range(cal_year, cal_year_next):
         diff_days += get_days_in_year(intervening_year)
     return diff_days / CALENDAR.DAYS_IN_WEEK
 
