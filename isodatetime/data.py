@@ -543,7 +543,7 @@ class Duration(object):
         other_data = other.get_days_and_seconds()
         return cmp(my_data, other_data)
 
-    def __nonzero__(self):
+    def __bool__(self):
         for attr in ["years", "months", "weeks", "days", "hours",
                      "minutes", "seconds"]:
             if getattr(self, attr, None):
