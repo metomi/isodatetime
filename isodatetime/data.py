@@ -369,7 +369,7 @@ class Duration(object):
         if (not self.years and not self.months and not self.hours and
                 not self.minutes and not self.seconds and
                 weeks and not days):
-            self.weeks = self.days / CALENDAR.DAYS_IN_WEEK
+            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
         if standardize:
@@ -453,7 +453,7 @@ class Duration(object):
     def to_weeks(self):
         """Convert to week representation (warning: use with caution)."""
         if not self.get_is_in_weeks():
-            self.weeks = self.days / CALENDAR.DAYS_IN_WEEK
+            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
             self.years, self.months, self.days = (None, None, None)
             self.hours, self.minutes, self.seconds = (None, None, None)
 
@@ -948,7 +948,7 @@ class TimePoint(object):
         if property_name == "year_of_decade":
             return abs(self.year) % 10
         if property_name == "decade_of_century":
-            return (abs(self.year) % 100 - abs(self.year) % 10) / 10
+            return (abs(self.year) % 100 - abs(self.year) % 10) // 10
         if property_name == "minute_of_hour":
             if self.minute_of_hour is None:
                 return self.get_hour_minute_second()[1]
@@ -1749,7 +1749,7 @@ def _get_days_in_year_range(start_year, end_year, _):
         if factor_start_year < end_year:
             num_corrections += 1
             num_corrections += (
-                end_year - (factor_start_year + 1)) / factor
+                end_year - (factor_start_year + 1)) // factor
         if is_leap_factor:
             days += num_corrections * diff_days_leap
         else:
@@ -1784,7 +1784,7 @@ def _get_weeks_in_year(year, _):
     diff_days = cal_ord_days_next - cal_ord_days
     for intervening_year in range(cal_year, cal_year_next):
         diff_days += get_days_in_year(intervening_year)
-    return diff_days / CALENDAR.DAYS_IN_WEEK
+    return diff_days // CALENDAR.DAYS_IN_WEEK
 
 
 def get_calendar_date_from_ordinal_date(year, day_of_year):
@@ -1932,7 +1932,7 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
         if (start_year == year and
                 iter_month == month_of_year and
                 iter_day == day_of_month):
-            week_of_year = (total_iter_days / CALENDAR.DAYS_IN_WEEK) + 1
+            week_of_year = (total_iter_days // CALENDAR.DAYS_IN_WEEK) + 1
             day_of_week = (total_iter_days % CALENDAR.DAYS_IN_WEEK) + 1
             return week_date_start_year, week_of_year, day_of_week
 
@@ -1943,7 +1943,7 @@ def get_week_date_from_calendar_date(year, month_of_year, day_of_month):
             if (iter_start_year == year and
                     iter_month == month_of_year and
                     iter_day == day_of_month):
-                week_of_year = (total_iter_days / CALENDAR.DAYS_IN_WEEK) + 1
+                week_of_year = (total_iter_days // CALENDAR.DAYS_IN_WEEK) + 1
                 day_of_week = (total_iter_days % CALENDAR.DAYS_IN_WEEK) + 1
                 return week_date_start_year, week_of_year, day_of_week
     raise ValueError("Bad calendar date: %s-%02d-%02d" % (year,
