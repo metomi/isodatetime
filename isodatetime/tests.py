@@ -569,7 +569,8 @@ def get_timepointparser_tests(allow_only_basic=False,
                             time_expr
                         )
                         combo_info = {}
-                        for key, value in info.items() + time_info.items():
+                        for key, value in \
+                                list(info.items()) + list(time_info.items()):
                             combo_info[key] = value
                         yield combo_expr, combo_info
                         if skip_time_zones:
@@ -578,8 +579,9 @@ def get_timepointparser_tests(allow_only_basic=False,
                         for time_zone_expr, time_zone_info in time_zone_items:
                             tz_expr = combo_expr + time_zone_expr
                             tz_info = {}
-                            for key, value in (combo_info.items() +
-                                               time_zone_info.items()):
+                            for key, value in \
+                                list(combo_info.items()) + \
+                                    list(time_zone_info.items()):
                                 tz_info[key] = value
                             yield tz_expr, tz_info
         if not allow_truncated:
@@ -602,8 +604,9 @@ def get_timepointparser_tests(allow_only_basic=False,
                 for time_zone_expr, time_zone_info in time_zone_items:
                     tz_expr = combo_expr + time_zone_expr
                     tz_info = {}
-                    for key, value in (combo_info.items() +
-                                       time_zone_info.items()):
+                    for key, value in \
+                        list(combo_info.items()) + \
+                            list(time_zone_info.items()):
                         tz_info[key] = value
                     yield tz_expr, tz_info
 
@@ -1416,7 +1419,7 @@ class TestSuite(unittest.TestCase):
         """Test the strftime/strptime for date/time expressions."""
         import datetime
         parser = parsers.TimePointParser()
-        parse_tokens = parser_spec.STRFTIME_TRANSLATE_INFO.keys()
+        parse_tokens = list(parser_spec.STRFTIME_TRANSLATE_INFO.keys())
         parse_tokens.remove("%z")  # Don't test datetime's tz handling.
         format_string = ""
         for i, token in enumerate(parse_tokens):
