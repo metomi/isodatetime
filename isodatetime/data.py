@@ -1371,7 +1371,7 @@ class TimePoint(object):
                 "Cannot compare truncated to non-truncated " +
                 "TimePoint: %s, %s" % (self, other))
         if self.get_props() == other.get_props():
-            return True
+            return False
         if self.truncated:
             for attribute in self.DATA_ATTRIBUTES:
                 other_attr = getattr(other, attribute)
@@ -1421,13 +1421,13 @@ class TimePoint(object):
 
     def __gt__(self, other: "TimePoint") -> bool:
         if other is None:
-            return False
+            return True
         if self.truncated != other.truncated:
             raise TypeError(
                 "Cannot compare truncated to non-truncated " +
                 "TimePoint: %s, %s" % (self, other))
         if self.get_props() == other.get_props():
-            return True
+            return False
         if self.truncated:
             for attribute in self.DATA_ATTRIBUTES:
                 other_attr = getattr(other, attribute)
