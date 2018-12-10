@@ -5,8 +5,8 @@
 language: python
 
 python:
-  - 2.6
-  - 2.7
+  - 3.6
+  - 3.7-dev
 env:
   - RUN_COVERAGE=false
   - RUN_COVERAGE=true
@@ -14,16 +14,18 @@ env:
 matrix:
   fast_finish: true
   exclude:
-    - python: 2.6
-      env: RUN_COVERAGE=true
-    - python: 2.7
+    - python: 3.6
       env: RUN_COVERAGE=false
+    - python: 3.7-dev
+      env: RUN_COVERAGE=true
 
 before_install:
   # Coverage dependencies
   - pip install coverage pytest-cov
   # Code style dependencies
   - pip install pycodestyle
+before_script:
+  - pycodestyle -v isodatetime
 script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
@@ -33,18 +35,19 @@ script:
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
     coverage run -m isodatetime.tests &
+    TEST_PID="$!"
     minutes=0
     limit=40
-    while kill -0 $! >/dev/null 2>&1; do
+    while kill -0 "${TEST_PID}" >'/dev/null' 2>&1; do
       echo -n -e " \b" # never leave evidences!
-      if [ $minutes == $limit ]; then
-        break;
+      if ((minutes == limit)); then
+        exit 1
       fi
-      minutes=$((minutes+1))
+      minutes=$((minutes + 1))
       sleep 60
     done
-after_script:
+    wait "${TEST_PID}"
+after_success:
   - coverage xml --ignore-errors
   # Report metrics, such as coverage
-  - '[[ "$RUN_COVERAGE" = true ]] && bash <(curl -s https://codecov.io/bash)'
-  - pycodestyle -v isodatetime
+  - '"${RUN_COVERAGE:-false}" && bash <(curl -s https://codecov.io/bash)'
