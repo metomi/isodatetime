@@ -5,6 +5,8 @@
 language: python
 
 python:
+  - 3.4
+  - 3.5
   - 3.6
   - 3.7-dev
 env:
@@ -14,6 +16,10 @@ env:
 matrix:
   fast_finish: true
   exclude:
+    - python: 3.4
+      env: RUN_COVERAGE=true
+    - python: 3.5
+      env: RUN_COVERAGE=true
     - python: 3.6
       env: RUN_COVERAGE=false
     - python: 3.7-dev
