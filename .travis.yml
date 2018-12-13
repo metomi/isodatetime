@@ -44,7 +44,7 @@ script:
     TEST_PID="$!"
     minutes=0
     limit=40
-    while kill -0 "${TEST_PID}" >'/dev/null' 2>&1; do
+    while ps -p "${TEST_PID}" >/dev/null 2>&1; do
       echo -n -e " \b" # never leave evidences!
       if ((minutes == limit)); then
         exit 1
