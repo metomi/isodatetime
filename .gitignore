@@ -8,6 +8,7 @@ coverage.xml
 htmlcov/
 
 # distutils files
+build/
 dist
 MANIFEST
 isodatetime.egg-info/
