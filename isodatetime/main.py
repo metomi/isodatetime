@@ -1,34 +1,164 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Copyright (C) 2012-2018 British Crown (Met Office) & Contributors.
+# Copyright (C) 2013-2018 British Crown (Met Office) & Contributors.
 #
-# This file is part of Rose, a framework for meteorological suites.
-#
-# Rose is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Rose is distributed in the hope that it will be useful,
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with Rose. If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
-"""Parse and format date and time."""
+"""Parse and format date and time.
 
+SYNOPSIS
+    # 1. Print date time point
+    # 1.1 Current date time with an optional offset
+    isodate [--offset=OFFSET]
+    isodate now [--offset=OFFSET]
+    isodate ref [--offset=OFFSET]
+    # 1.2 Task cycle date time with an optional offset
+    #     Assume: export ISODATEREF=20371225T000000Z
+    isodate -c [--offset=OFFSET]
+    isodate -c ref [--offset=OFFSET]
+    # 1.3 A specific date time with an optional offset
+    isodate 20380119T031407Z [--offset=OFFSET]
+
+    # 2. Print duration
+    # 2.1 Between now (+ OFFSET1) and a future date time (+ OFFSET2)
+    isodate now [--offset1=OFFSET1] 20380119T031407Z [--offset2=OFFSET2]
+    # 2.2 Between a date time in the past and now
+    isodate 19700101T000000Z now
+    # 2.3 Between task cycle time (+ OFFSET1) and a future date time
+    #     Assume: export ISODATEREF=20371225T000000Z
+    isodate -c ref [--offset1=OFFSET1] 20380119T031407Z
+    # 2.4 Between task cycle time and now (+ OFFSET2)
+    #     Assume: export ISODATEREF=20371225T000000Z
+    isodate -c ref now [--offset2=OFFSET2]
+    # 2.5 Between a date time in the past and the task cycle date time
+    #     Assume: export ISODATEREF=20371225T000000Z
+    isodate -c 19700101T000000Z ref
+    # 2.6 Between 2 specific date times
+    isodate 19700101T000000Z 20380119T031407Z
+
+    # 3.  Convert ISO8601 duration
+    # 3.1 Into the total number of hours (H), minutes (M) or seconds (S)
+    #     it represents, preceed negative durations with a double backslash
+    #     (e.g. \\-PT1H)
+    isodate --as-total=s PT1H
+
+DESCRIPTION
+    Parse and print 1. a date time point or 2. a duration.
+
+    1. With 0 or 1 argument. Print the current or the specified date time
+       point with an optional offset.
+
+    2. With 2 arguments. Print the duration between the 2 arguments.
+
+CALENDAR MODE
+    The calendar mode is determined (in order) by:
+
+    1. The `--calendar=MODE` option.
+    2. The `ISODATECALENDAR` environment variable.
+    3. Default to "gregorian".
+
+ENVIRONMENT VARIABLES
+    ISODATECALENDAR=gregorian|360day|365day|366day
+        Specify the calendar mode.
+    ISODATEREF
+        Specify the current cycle time of a task in a suite. If the
+        `--use-task-cycle-time` option is set, the value of this environment
+        variable is used by the command as the reference time instead of the
+        current time.
+
+OFFSET FORMAT
+    `OFFSET` must follow the ISO 8601 duration representations such as
+    `PnW` or `PnYnMnDTnHnMnS - P` followed by a series of `nU` where `U` is
+    the unit (`Y`, `M`, `D`, `H`, `M`, `S`) and `n` is a positive integer,
+    where `T` delimits the date series from the time series if any time units
+    are used. `n` may also have a decimal (e.g. `PT5.5M`) part for a unit
+    provided no smaller units are supplied. It is not necessary to
+    specify zero values for units. If `OFFSET` is negative, prefix a `-`.
+    For example:
+
+    * `P6D` - 6 day offset
+    * `PT6H` - 6 hour offset
+    * `PT1M` - 1 minute offset
+    * `-PT1M` - (negative) 1 minute offset
+    * `P3M` - 3 month offset
+    * `P2W` - 2 week offset (note no other units may be combined with weeks)
+    * `P2DT5.5H` - 2 day, 5.5 hour offset
+    * `-P2YT4S` - (negative) 2 year, 4 second offset
+
+    The following deprecated syntax is supported:
+    `OFFSET` in the form `nU` where `U` is the unit (`w` for weeks, `d` for
+    days, `h` for hours, `m` for minutes and `s` for seconds) and `n` is a
+    positive or negative integer.
+
+PARSE FORMAT
+    The format for parsing a date time point should be compatible with the
+    POSIX strptime template format (see the strptime command help), with the
+    following subset supported across all date/time ranges:
+
+    `%F`, `%H`, `%M`, `%S`, `%Y`, `%d`, `%j`, `%m`, `%s`, `%z`
+
+    If not specified, the system will attempt to parse `DATE-TIME` using
+    the following formats:
+
+    * ctime: `%a %b %d %H:%M:%S %Y`
+    * Unix date: `%a %b %d %H:%M:%S %Z %Y`
+    * Basic ISO8601: `%Y-%m-%dT%H:%M:%S`, `%Y%m%dT%H%M%S`
+    * Cylc: `%Y%m%d%H`
+
+    If none of these match, the date time point will be parsed according to
+    the full ISO 8601 date/time standard.
+
+PRINT FORMAT
+    For printing a date time point, the print format will default to the same
+    format as the parse format. Also supports the isodatetime library dump
+    syntax for these operations which follows ISO 8601 example syntax - for
+    example:
+
+    * `CCYY-MM-DDThh:mm:ss` -> `1955-11-05T09:28:00`,
+    * `CCYY` -> `1955`,
+    * `CCYY-DDD` -> `1955-309`,
+    * `CCYY-Www-D` -> `1955-W44-6`.
+
+    Usage of this ISO 8601-like syntax should be as ISO 8601-compliant
+    as possible.
+
+    Note that specifying an explicit timezone in this format (e.g.
+    `CCYY-MM-DDThh:mm:ss+0100` or `CCYYDDDThhmmZ` will automatically
+    adapt the date/time to that timezone i.e. apply the correct
+    hour/minute UTC offset.
+
+    For printing a duration, the following can be used in format
+    statements:
+
+    * `y`: years
+    * `m`: months
+    * `d`: days
+    * `h`: hours
+    * `M`: minutes
+    * `s`: seconds
+
+    For example, for a duration `P57DT12H` - `y,m,d,h` -> `0,0,57,12`
+"""
+
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from datetime import datetime
+import os
+import re
+import sys
 from isodatetime.data import Calendar, Duration, get_timepoint_for_now
 from isodatetime.dumpers import TimePointDumper
 from isodatetime.parsers import TimePointParser, DurationParser
-import os
-import re
-from rose.env import UnboundEnvironmentVariableError
-from rose.opt_parse import RoseOptionParser
-from rose.reporter import Reporter
-import sys
 
 
 class OffsetValueError(ValueError):
@@ -39,14 +169,15 @@ class OffsetValueError(ValueError):
         return "%s: bad offset value" % self.args[0]
 
 
-class RoseDateTimeOperator(object):
+class DateTimeOperator(object):
 
     """A class to parse and print date string with an offset."""
 
-    CURRENT_TIME_DUMP_FORMAT = u"CCYY-MM-DDThh:mm:ss+hh:mm"
-    CURRENT_TIME_DUMP_FORMAT_Z = u"CCYY-MM-DDThh:mm:ssZ"
+    CURRENT_TIME_DUMP_FORMAT = "CCYY-MM-DDThh:mm:ss+hh:mm"
+    CURRENT_TIME_DUMP_FORMAT_Z = "CCYY-MM-DDThh:mm:ssZ"
 
-    NEGATIVE = "-"
+    ENV_REF = "ISODATEREF"
+    ENV_CALENDAR_MODE = "ISODATECALENDAR"
 
     # strptime formats and their compatibility with the ISO 8601 parser.
     PARSE_FORMATS = [
@@ -58,22 +189,26 @@ class RoseDateTimeOperator(object):
     ]
 
     REC_OFFSET = re.compile(r"""\A[\+\-]?(?:\d+[wdhms])+\Z""", re.I)
-
     REC_OFFSET_FIND = re.compile(r"""(?P<num>\d+)(?P<unit>[wdhms])""")
 
     STR_NOW = "now"
     STR_REF = "ref"
 
-    TASK_CYCLE_TIME_ENV = "ROSE_TASK_CYCLE_TIME"
+    UNITS = {
+        "w": "weeks",
+        "d": "days",
+        "h": "hours",
+        "m": "minutes",
+        "s": "seconds",
+    }
 
-    UNITS = {"w": "weeks",
-             "d": "days",
-             "h": "hours",
-             "m": "minutes",
-             "s": "seconds"}
-
-    def __init__(self, parse_format=None, utc_mode=False, calendar_mode=None,
-                 ref_point_str=None):
+    def __init__(
+        self,
+        parse_format=None,
+        utc_mode=False,
+        calendar_mode=None,
+        ref_point_str=None,
+    ):
         """Constructor.
 
         parse_format -- If specified, parse with the specified format.
@@ -105,7 +240,10 @@ class RoseDateTimeOperator(object):
             assumed_time_zone=assumed_time_zone)
         self.duration_parser = DurationParser()
 
-        self.ref_point_str = ref_point_str
+        if ref_point_str is None:
+            self.ref_point_str = os.getenv(self.ENV_REF)
+        else:
+            self.ref_point_str = ref_point_str
 
     def date_format(self, print_format, time_point=None):
         """Reformat time_point according to print_format.
@@ -219,11 +357,10 @@ class RoseDateTimeOperator(object):
         """Return (duration, is_negative) between two TimePoint objects.
 
         duration -- is a Duration instance.
-        is_negative -- is a RoseDateTimeOperator.NEGATIVE if time_point_2 is
-                       in the past of time_point_1.
+        is_negative -- is "-" if time_point_2 is in the past of time_point_1.
         """
         if time_point_2 < time_point_1:
-            return (time_point_1 - time_point_2, self.NEGATIVE)
+            return (time_point_1 - time_point_2, "-")
         else:
             return (time_point_2 - time_point_1, "")
 
@@ -231,12 +368,14 @@ class RoseDateTimeOperator(object):
     def date_diff_format(cls, print_format, duration, sign):
         """Format a duration."""
         if print_format:
-            delta_lookup = {"y": duration.years,
-                            "m": duration.months,
-                            "d": duration.days,
-                            "h": duration.hours,
-                            "M": duration.minutes,
-                            "s": duration.seconds}
+            delta_lookup = {
+                "y": duration.years,
+                "m": duration.months,
+                "d": duration.days,
+                "h": duration.hours,
+                "M": duration.minutes,
+                "s": duration.seconds,
+            }
             expression = ""
             for item in print_format:
                 if item in delta_lookup:
@@ -259,16 +398,15 @@ class RoseDateTimeOperator(object):
         """Return True if the string offset can be parsed as an offset."""
         return (self.REC_OFFSET.match(offset) is not None)
 
-    @staticmethod
-    def set_calendar_mode(calendar_mode=None):
+    @classmethod
+    def set_calendar_mode(cls, calendar_mode=None):
         """Set calendar mode for subsequent operations.
 
         Raise KeyError if calendar_mode is invalid.
 
         """
         if not calendar_mode:
-            calendar_mode = os.getenv("ROSE_CYCLING_MODE")
-
+            calendar_mode = os.getenv(cls.ENV_CALENDAR_MODE)
         if calendar_mode and calendar_mode in Calendar.MODES:
             Calendar.default().set_mode(calendar_mode)
 
@@ -282,8 +420,8 @@ class RoseDateTimeOperator(object):
     def strptime(self, time_point_str, parse_format):
         """Use either the isodatetime or datetime strptime time parsing."""
         try:
-            return self.time_point_parser.strptime(time_point_str,
-                                                   parse_format)
+            return self.time_point_parser.strptime(
+                time_point_str, parse_format)
         except ValueError:
             return self.get_datetime_strptime(time_point_str, parse_format)
 
@@ -297,8 +435,8 @@ class RoseDateTimeOperator(object):
         hour = int(hour)
         minute = int(minute)
         second = int(second)
-        date_time = datetime(year, month, day, hour, minute, second,
-                             microsecond)
+        date_time = datetime(
+            year, month, day, hour, minute, second, microsecond)
         return date_time.strftime(print_format)
 
     def get_datetime_strptime(self, time_point_str, parse_format):
@@ -306,107 +444,194 @@ class RoseDateTimeOperator(object):
         date_time = datetime.strptime(time_point_str, parse_format)
         return self.time_point_parser.parse(date_time.isoformat())
 
+    def process_time_point_str(
+        self,
+        time_point_str=None,
+        offsets=None,
+        print_format=None,
+    ):
+        """Process time point string with optional offsets."""
+        time_point, parse_format = self.date_parse(time_point_str)
+        if offsets:
+            for offset in offsets:
+                time_point = self.date_shift(time_point, offset)
+        if print_format:
+            return self.date_format(print_format, time_point)
+        elif parse_format:
+            return self.date_format(parse_format, time_point)
+        else:
+            return str(time_point)
+
+    def diff_time_point_strs(
+        self,
+        time_point_str_1,
+        time_point_str_2,
+        offsets1=None,
+        offsets2=None,
+        print_format=None,
+        duration_print_format=None,
+    ):
+        """Calculate duration between 2 time point strings.
+
+        Each time point string may have optional offsets.
+        """
+        time_point_1 = self.date_parse(time_point_str_1)[0]
+        time_point_2 = self.date_parse(time_point_str_2)[0]
+        if offsets1:
+            for offset in offsets1:
+                time_point_1 = self.date_shift(time_point_1, offset)
+        if offsets2:
+            for offset in offsets2:
+                time_point_2 = self.date_shift(time_point_2, offset)
+        duration, sign = self.date_diff(time_point_1, time_point_2)
+        out = self.date_diff_format(print_format, duration, sign)
+        if duration_print_format:
+            return self.format_duration_str(out)
+        else:
+            return out
+
+    def format_duration_str(self, duration_str, duration_print_format):
+        """Parse duration string, return as total of a unit.
+
+        Unit can be H, M or S (for hours, minutes or seconds).
+        """
+        duration = self.duration_parser.parse(
+            duration_str.replace('\\', ''))  # allows negative durations
+        time = duration.get_seconds()
+        options = {'S': time, 'M': time / 60, 'H': time / 3600}
+        if duration_print_format.upper() in options:
+            # supplied duration format is valid (upper removes case-sensitivity)
+            return options[duration_print_format.upper()]
+        else:
+            # supplied duration format not valid
+            raise ValueError(
+                'Invalid duration print format, '
+                'should use one of H, M, S for (hours, minutes, seconds)'
+            )
+
 
 def main():
-    """Implement "rose date"."""
-    opt_parser = RoseOptionParser()
-    opt_parser.add_my_options(
-        "calendar",
-        "diff",
-        "offsets1",
-        "offsets2",
-        "parse_format",
-        "print_format",
-        "task_cycle_time_mode",
-        "as_total",
-        "utc_mode")
-    opts, args = opt_parser.parse_args()
-    report = Reporter(opts.verbosity - opts.quietness)
-
-    ref_point_str = None
-    if opts.task_cycle_time_mode:
-        ref_point_str = os.getenv(
-            RoseDateTimeOperator.TASK_CYCLE_TIME_ENV)
-        if ref_point_str is None:
-            exc = UnboundEnvironmentVariableError(
-                RoseDateTimeOperator.TASK_CYCLE_TIME_ENV)
-            report(exc)
-            if opts.debug_mode:
-                raise exc
-            sys.exit(1)
-
-    date_time_oper = RoseDateTimeOperator(
-        parse_format=opts.parse_format,
-        utc_mode=opts.utc_mode,
-        calendar_mode=opts.calendar,
-        ref_point_str=ref_point_str)
+    """Implement "isodate" command."""
+    arg_parser = ArgumentParser(
+        prog='isodate',
+        formatter_class=RawDescriptionHelpFormatter,
+        description=__doc__)
+    for o_args, o_kwargs in [
+        [
+            ["items"],
+            {
+                "nargs": "*",
+                "help": "Time point or duration string",
+                "metavar": "ITEM",
+            },
+        ],
+        [
+            ["--as-total"],
+            {
+                "action": "store",
+                "dest": "duration_print_format",
+                "help": "Express a duration string in the provided units.",
+            },
+        ],
+        [
+            ["--calendar"],
+            {
+                "action": "store",
+                "choices": ["360day", "365day", "366day", "gregorian"],
+                "metavar": "MODE",
+                "help": "Set the calendar mode.",
+            },
+        ],
+        [
+            ["--diff"],
+            {
+                "action": "store",
+                "dest": "diff",
+                "default": None,
+                "help": "Set a datetime to subtract from DATE-TIME.",
+            },
+        ],
+        [
+            ["--offset1", "--offset", "-s", "-1"],
+            {
+                "action": "append",
+                "dest": "offsets1",
+                "metavar": "OFFSET",
+                "help": "Specify offsets for 1st date time point.",
+            },
+        ],
+        [
+            ["--offset2", "-2"],
+            {
+                "action": "append",
+                "dest": "offsets2",
+                "metavar": "OFFSET",
+                "help": "Specify offsets for 2nd date time point.",
+            },
+        ],
+        [
+            ["--parse-format", "-p"],
+            {
+                "metavar": "FORMAT",
+                "help": "Specify the format for parsing inputs.",
+            },
+        ],
+        [
+            ["--print-format", "--format", "-f"],
+            {
+                "metavar": "FORMAT",
+                "help": "Specify the format for printing results.",
+            },
+        ],
+        [
+            ["--ref", "-R"],
+            {
+                "action": "store",
+                "dest": "ref_point_str",
+                "help": "Specify a reference point string.",
+                "metavar": "REF",
+            },
+        ],
+        [
+            ["--utc", "-u"],
+            {
+                "action": "store_true",
+                "default": False,
+                "dest": "utc_mode",
+                "help": "Switch on UTC mode.",
+            },
+        ],
+    ]:
+        arg_parser.add_argument(*o_args, **o_kwargs)
+    args = arg_parser.parse_args()
+    date_time_oper = DateTimeOperator(
+        parse_format=args.parse_format,
+        utc_mode=args.utc_mode,
+        calendar_mode=args.calendar,
+        ref_point_str=args.ref_point_str)
 
     try:
-        if len(args) < 2:
-            if opts.duration_print_format:
-                _convert_duration(date_time_oper, opts, args)
-            else:
-                _print_time_point(date_time_oper, opts, args)
+        if len(args.items) >= 2:
+            out = self.diff_time_point_strs(
+                args.items[0],
+                args.items[1],
+                args.offsets1,
+                args.offsets2,
+                args.print_format,
+                args.duration_print_format)
+        elif args.items and args.duration_print_format:
+            out = date_time_oper.format_duration_str(
+                args.items[0], args.duration_print_format)
         else:
-            _print_duration(date_time_oper, opts, args)
-    except OffsetValueError as exc:
-        report(exc)
-        if opts.debug_mode:
-            raise exc
-        sys.exit(1)
-
-
-def _print_time_point(date_time_oper, opts, args):
-    """Implement usage 1 of "rose date", print time point."""
-
-    time_point_str = None
-    if args:
-        time_point_str = args[0]
-    time_point, parse_format = date_time_oper.date_parse(time_point_str)
-    if opts.offsets1:
-        for offset in opts.offsets1:
-            time_point = date_time_oper.date_shift(time_point, offset)
-    if opts.print_format:
-        print date_time_oper.date_format(opts.print_format, time_point)
-    elif parse_format:
-        print date_time_oper.date_format(parse_format, time_point)
+            time_point_str = None
+            if args.items:
+                time_point_str = args.items[0]
+            out = date_time_oper.process_time_point_str(
+                time_point_str, args.offsets1, args.print_format)
+    except ValueError as exc:
+        sys.exit(exc)
     else:
-        print str(time_point)
-
-
-def _print_duration(date_time_oper, opts, args):
-    """Implement usage 2 of "rose date", print duration."""
-    time_point_str_1, time_point_str_2 = args
-    time_point_1 = date_time_oper.date_parse(time_point_str_1)[0]
-    time_point_2 = date_time_oper.date_parse(time_point_str_2)[0]
-    if opts.offsets1:
-        for offset in opts.offsets1:
-            time_point_1 = date_time_oper.date_shift(time_point_1, offset)
-    if opts.offsets2:
-        for offset in opts.offsets2:
-            time_point_2 = date_time_oper.date_shift(time_point_2, offset)
-    duration, sign = date_time_oper.date_diff(time_point_1, time_point_2)
-    out = date_time_oper.date_diff_format(opts.print_format, duration, sign)
-    if opts.duration_print_format:
-        _convert_duration(date_time_oper, opts, [out])
-        sys.exit(0)
-    print out
-
-
-def _convert_duration(date_time_oper, opts, args):
-    """Implement usage 3 of "rose date", convert ISO8601 duration."""
-    time_in_8601 = date_time_oper.duration_parser.parse(
-        args[0].replace('\\', ''))  # allows parsing of negative durations
-    time = time_in_8601.get_seconds()
-    options = {'S': time, 'M': time / 60, 'H': time / 3600}
-    if opts.duration_print_format.upper() in options:
-        # supplied duration format is valid (upper removes case-sensitivity)
-        print options[opts.duration_print_format.upper()]
-    else:
-        # supplied duration format not valid
-        print 'Invalid date/time format, please use one of H, M, S ' + \
-            '(hours, minutes, seconds)'
-        sys.exit(1)
+        print(out)
 
 
 if __name__ == "__main__":
