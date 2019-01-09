@@ -81,4 +81,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities"
     ],
+    entry_points = {
+        'console_scripts': ['isodatetime=isodatetime.main:main'],
+    },
 )
