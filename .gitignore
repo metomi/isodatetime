@@ -12,4 +12,5 @@ build/
 dist
 MANIFEST
 isodatetime.egg-info/
+python_isodatetime.egg-info/
 .eggs

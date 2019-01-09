@@ -23,6 +23,9 @@ from setuptools import setup
 # https://github.com/pypa/setuptools/issues/308
 from setuptools.extern.packaging import version
 from isodatetime import __version__
+# overriding setuptools command
+# https://stackoverflow.com/a/51294311
+from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
 
 
 version.Version = version.LegacyVersion
@@ -37,11 +40,21 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
+class bdist_rpm(bdist_rpm_original):
+
+    def run(self):
+        """Before calling the original run method, let's change the
+        distribution name to create an RPM for python-isodatetime."""
+        self.distribution.metadata.name = "python-isodatetime"
+        super().run()
+
+
 setup(
     name="isodatetime",
     version=__version__,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
+    cmdclass={"bdist_rpm": bdist_rpm},
     description=("Python ISO 8601 date time parser" +
                  " and data model/manipulation utilities"),
     license="LGPLv3",
