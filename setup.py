@@ -49,6 +49,7 @@ setup(
     url="https://github.com/metomi/isodatetime",
     packages=['isodatetime'],
     long_description=read('README.md'),
+    long_description_content_type="text/markdown",
     platforms='any',
     install_requires=[],
     python_requires='>=3.4, <3.8',
