@@ -496,13 +496,13 @@ class Duration(object):
 
     def __mul__(self, other):
         # TODO: support float multiplication?
-        new = self.copy()
         if not isinstance(other, int):
             raise TypeError(
                 "Invalid type for multiplication: " +
                 "'%s' should be integer." %
                 type(other).__name__
             )
+        new = self.copy()
         for attr in new.DATA_ATTRIBUTES:
             value = getattr(new, attr)
             if value is not None:
@@ -514,13 +514,13 @@ class Duration(object):
 
     def __floordiv__(self, other):
         # TODO: support float division?
-        new = self.copy()
         if not isinstance(other, int):
             raise TypeError(
                 "Invalid type for division: " +
                 "'%s' should be integer." %
                 type(other).__name__
             )
+        new = self.copy()
         if self.get_is_in_weeks():
             new.weeks //= other
             return new
@@ -752,24 +752,6 @@ class TimePoint(object):
         if is_empty_instance:
             # This has been created for a copy - set properties later.
             return
-        _type_checker(
-            (expanded_year_digits, "expanded_year_digits", int),
-            (year, "year", None, int),
-            (month_of_year, "month_of_year", None, int),
-            (week_of_year, "week_of_year", None, int),
-            (day_of_year, "day_of_year", None, int),
-            (day_of_month, "day_of_month", None, int),
-            (day_of_week, "day_of_week", None, int),
-            (hour_of_day, "hour_of_day", None, int, float),
-            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
-            (minute_of_hour, "minute_of_hour", None, int, float),
-            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
-            (second_of_minute, "second_of_minute", None, int, float),
-            (second_of_minute_decimal, "second_of_minute_decimal", None,
-             float),
-            (time_zone_hour, "time_zone_hour", None, int),
-            (time_zone_minute, "time_zone_minute", None, int)
-        )
         if (dump_format is not None and not
                 isinstance(dump_format, str)):
             raise BadInputError(
@@ -789,6 +771,24 @@ class TimePoint(object):
                 BadInputError.VALUES, "truncated_property",
                 repr(truncated_property),
                 "'year_of_decade' or 'year_of_century'")
+        _type_checker(
+            (expanded_year_digits, "expanded_year_digits", int),
+            (year, "year", None, int),
+            (month_of_year, "month_of_year", None, int),
+            (week_of_year, "week_of_year", None, int),
+            (day_of_year, "day_of_year", None, int),
+            (day_of_month, "day_of_month", None, int),
+            (day_of_week, "day_of_week", None, int),
+            (hour_of_day, "hour_of_day", None, int, float),
+            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
+            (minute_of_hour, "minute_of_hour", None, int, float),
+            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
+            (second_of_minute, "second_of_minute", None, int, float),
+            (second_of_minute_decimal, "second_of_minute_decimal", None,
+             float),
+            (time_zone_hour, "time_zone_hour", None, int),
+            (time_zone_minute, "time_zone_minute", None, int)
+        )
         self.dump_format = dump_format
         self.expanded_year_digits = _int_caster(expanded_year_digits,
                                                 "expanded_year_digits")
@@ -2215,11 +2215,11 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
 @util.cache_results
 def _iter_months_days(is_leap_year, month_of_year, day_of_month, _,
                       in_reverse=False):
+    if day_of_month is not None and month_of_year is None:
+        raise ValueError("Need to specify start month as well as day.")
     source = CALENDAR.INDEXED_DAYS_IN_MONTHS
     if is_leap_year:
         source = CALENDAR.INDEXED_DAYS_IN_MONTHS_LEAP
-    if day_of_month is not None and month_of_year is None:
-        raise ValueError("Need to specify start month as well as day.")
     results = []
     if in_reverse:
         if month_of_year is None:
