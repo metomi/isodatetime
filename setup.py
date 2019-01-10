@@ -49,9 +49,10 @@ setup(
     url="https://github.com/metomi/isodatetime",
     packages=['isodatetime'],
     long_description=read('README.md'),
+    long_description_content_type="text/markdown",
     platforms='any',
     install_requires=[],
-    python_requires='>=2.6, <3.0',
+    python_requires='>=3.4, <3.8',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
@@ -59,7 +60,11 @@ setup(
         ("License :: OSI Approved" +
          " :: GNU Lesser General Public License v3 (LGPLv3)"),
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3 :: Only",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities"
     ],
