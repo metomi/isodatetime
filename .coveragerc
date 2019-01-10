@@ -39,7 +39,7 @@ debug=
 #include
 note=
 omit=
-    */isodatetime/tests*
+    */isodatetime/test*
 parallel = False
 plugins=
 source=
@@ -59,7 +59,7 @@ fail_under=0
 ignore_errors = False
 include=
 omit=
-    */isodatetime/tests*
+    */isodatetime/test*
 partial_branches=
 precision=2
 show_missing=False

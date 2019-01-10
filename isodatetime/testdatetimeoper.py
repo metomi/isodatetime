@@ -362,3 +362,7 @@ class TestDateTimeOperator(unittest.TestCase):
                     offsets2,
                     print_format,
                     duration_print_format))
+
+
+if __name__ == '__main__':
+    unittest.main()
