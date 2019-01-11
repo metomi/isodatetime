@@ -58,8 +58,7 @@ coverage:
 
 # files to ignore
 ignore:
-  - "isodatetime/tests.py"
-  - "isodatetime/testdatetimeoper.py"
+  - "isodatetime/tests*"
 
 # turn off comments to pull requests
 comment: off

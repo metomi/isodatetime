@@ -19,8 +19,7 @@
 
 from datetime import datetime
 import os
-import re
-from .data import Calendar, Duration, get_timepoint_for_now
+from .data import Calendar, get_timepoint_for_now
 from .dumpers import TimePointDumper
 from .parsers import TimePointParser, DurationParser
 
@@ -45,10 +44,10 @@ class DateTimeOperator(object):
 
     # strptime formats and their compatibility with the ISO 8601 parser.
     PARSE_FORMATS = [
-        ("%a %b %d %H:%M:%S %Y", True),     # ctime
-        ("%a %b %d %H:%M:%S %Z %Y", True),  # Unix "date"
-        ("%Y-%m-%dT%H:%M:%S", False),       # ISO8601, extended
-        ("%Y%m%dT%H%M%S", False),           # ISO8601, basic
+        "%a %b %d %H:%M:%S %Y",     # ctime
+        "%a %d %b %H:%M:%S %Z %Y",  # Unix "date"
+        "%Y-%m-%dT%H:%M:%S",       # ISO8601, extended
+        "%Y%m%dT%H%M%S",           # ISO8601, basic
     ]
 
     STR_NOW = "now"
@@ -117,10 +116,7 @@ class DateTimeOperator(object):
         if print_format is None:
             return str(time_point)
         if "%" in print_format:
-            try:
-                return time_point.strftime(print_format)
-            except ValueError:
-                return self.get_datetime_strftime(time_point, print_format)
+            return self.strftime(time_point, print_format)
         return self.time_point_dumper.dump(time_point, print_format)
 
     def date_parse(self, time_point_str=None):
@@ -133,7 +129,7 @@ class DateTimeOperator(object):
                           Otherwise, use ref time.
 
         """
-        if time_point_str is None or time_point_str == self.STR_REF:
+        if time_point_str == self.STR_REF:
             time_point_str = self.ref_point_str
         if time_point_str is None or time_point_str == self.STR_NOW:
             time_point = get_timepoint_for_now()
@@ -146,19 +142,10 @@ class DateTimeOperator(object):
             parse_format = self.custom_parse_format
             time_point = self.strptime(time_point_str, parse_format)
         else:
-            parse_formats = list(self.parse_formats)
             time_point = None
-            while parse_formats:
-                parse_format, should_use_datetime = parse_formats.pop(0)
+            for parse_format in self.parse_formats:
                 try:
-                    if should_use_datetime:
-                        time_point = self.get_datetime_strptime(
-                            time_point_str,
-                            parse_format)
-                    else:
-                        time_point = self.time_point_parser.strptime(
-                            time_point_str,
-                            parse_format)
+                    time_point = self.strptime(time_point_str, parse_format)
                     break
                 except ValueError:
                     pass
@@ -202,7 +189,8 @@ class DateTimeOperator(object):
 
         return time_point
 
-    def date_diff(self, time_point_1=None, time_point_2=None):
+    @staticmethod
+    def date_diff(time_point_1=None, time_point_2=None):
         """Return (duration, is_negative) between two TimePoint objects.
 
         duration -- is a Duration instance.
@@ -227,13 +215,12 @@ class DateTimeOperator(object):
             }
             expression = ""
             for item in print_format:
-                if item in delta_lookup:
-                    if float(delta_lookup[item]).is_integer():
-                        expression += str(int(delta_lookup[item]))
-                    else:
-                        expression += str(delta_lookup[item])
-                else:
+                if item not in delta_lookup:
                     expression += item
+                elif float(delta_lookup[item]).is_integer():
+                    expression += str(int(delta_lookup[item]))
+                else:
+                    expression += str(delta_lookup[item])
             return sign + expression
         else:
             return sign + str(duration)
@@ -301,10 +288,8 @@ class DateTimeOperator(object):
                 time_point = self.date_shift(time_point, offset)
         if print_format:
             return self.date_format(print_format, time_point)
-        elif parse_format:
-            return self.date_format(parse_format, time_point)
         else:
-            return str(time_point)
+            return self.date_format(parse_format, time_point)
 
     def diff_time_point_strs(
         self,

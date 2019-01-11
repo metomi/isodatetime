@@ -20,7 +20,7 @@
 
 import os
 import unittest
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch
 
 
 from isodatetime.data import (
@@ -102,6 +102,12 @@ class TestDateTimeOperator(unittest.TestCase):
         # 2009-02-13T23:31:30Z
         point_str = str(seconds2point(1234567890))
         datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+        # Unix time
+        self.assertEqual(
+            '2019-01-11T10:40:15Z',
+            datetimeoper.process_time_point_str(
+                'Fri 11 Jan 10:40:15 UTC 2019',
+                print_format=datetimeoper.CURRENT_TIME_DUMP_FORMAT_Z))
         # Basic
         self.assertEqual(
             point_str,
@@ -134,9 +140,11 @@ class TestDateTimeOperator(unittest.TestCase):
             ValueError,
             datetimeoper.process_time_point_str, 'teatime')
         # Bad offset string
-        self.assertRaises(
-            ValueError,
-            datetimeoper.process_time_point_str, point_str, ['ages'])
+        with self.assertRaises(
+            isodatetime.datetimeoper.OffsetValueError,
+        ) as ctxmgr:
+            datetimeoper.process_time_point_str(point_str, ['ages'])
+        self.assertEqual('ages: bad offset value', str(ctxmgr.exception))
 
     def test_process_time_point_str_calendar(self):
         """DateTimeOperator.process_time_point_str(...)
@@ -270,6 +278,26 @@ class TestDateTimeOperator(unittest.TestCase):
                 None,
                 None,
                 'P58DT12H',
+            ),
+            (   # Positive, non integer seconds
+                # Use (3.1 - 3.0) to bypass str(float) precision issue
+                '20190101T010203',
+                '20190101T010203.1',
+                None,
+                None,
+                None,
+                None,
+                'PT%sS' % (str(3.1 - 3.0).replace('.', ',')),
+            ),
+            (   # Positive, non integer seconds, print format
+                # Use (3.1 - 3.0) to bypass str(float) precision issue
+                '20190101T010203',
+                '20190101T010203.1',
+                None,
+                None,
+                's',
+                None,
+                str(3.1 - 3.0),
             ),
             (   # Offset 1, reference time 2, positive
                 '20140101',

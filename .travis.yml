@@ -35,13 +35,16 @@ before_script:
 script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
-    coverage run -m isodatetime.testdatetimeoper
+    export COVERAGE_FILE="${TRAVIS_BUILD_DIR}/.coverage"
+    coverage run -m isodatetime.tests.test_00
+    coverage run -a -m isodatetime.tests.test_datetimeoper
+    coverage run -a -m isodatetime.tests.test_main
     # NOTE: the way to handle long-living commands in the documentation is
-    # travis_wait 40 coverage run -m isodatetime.tests
+    # travis_wait 40 coverage run -m isodatetime.tests.test_time_point
     # but it does not produce any output, which can be frustrating in case of errors.
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
-    coverage run -a -m isodatetime.tests &
+    coverage run -a -m isodatetime.tests.test_time_point &
     TEST_PID="$!"
     minutes=0
     limit=40

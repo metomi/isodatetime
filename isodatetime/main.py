@@ -168,9 +168,9 @@ def main():
         [
             ["items"],
             {
-                "nargs": "*",
                 "help": "Time point or duration string",
                 "metavar": "ITEM",
+                "nargs": "*",
             },
         ],
         [
@@ -186,17 +186,8 @@ def main():
             {
                 "action": "store",
                 "choices": ["360day", "365day", "366day", "gregorian"],
-                "metavar": "MODE",
                 "help": "Set the calendar mode.",
-            },
-        ],
-        [
-            ["--diff"],
-            {
-                "action": "store",
-                "dest": "diff",
-                "default": None,
-                "help": "Set a datetime to subtract from DATE-TIME.",
+                "metavar": "MODE",
             },
         ],
         [
@@ -260,7 +251,7 @@ def main():
 
     try:
         if len(args.items) >= 2:
-            out = self.diff_time_point_strs(
+            out = date_time_oper.diff_time_point_strs(
                 args.items[0],
                 args.items[1],
                 args.offsets1,

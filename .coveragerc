@@ -22,7 +22,7 @@
 branch=True
 cover_pylib=False
 concurrency=thread
-data_file=${TRAVIS_BUILD_DIR}/.coverage
+#data_file=${TRAVIS_BUILD_DIR}/.coverage
 disable_warnings=
 debug=
 #    callers
