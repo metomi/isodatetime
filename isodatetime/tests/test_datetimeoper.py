@@ -155,7 +155,9 @@ class TestDateTimeOperator(unittest.TestCase):
             isodatetime.datetimeoper.OffsetValueError,
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['P0000-W01-1'])
-        self.assertEqual('P0000-W01-1: bad offset value', str(ctxmgr.exception))
+        self.assertEqual(
+            'P0000-W01-1: bad offset value',
+            str(ctxmgr.exception))
 
     def test_process_time_point_str_calendar(self):
         """DateTimeOperator.process_time_point_str(...)
