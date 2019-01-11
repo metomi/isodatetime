@@ -181,24 +181,17 @@ class TestMain(unittest.TestCase):
     def test_3_bad(self, mock_print):
         """Test calling usage 3, sample bad arguments."""
         argv = sys.argv
-        for args, out in [
-            # Bad total format
-            (['--as-total=a', 'PT1H30M'],
-             'Invalid duration print format,'
-             ' should use one of H, M, S for (hours, minutes, seconds)'),
-            # Bad duration
-            (['--as-total=s', 'PS4'],
-             'Invalid ISO 8601 duration representation: PS4'),
-        ]:
-            mock_print.reset_mock()
-            sys.argv = [''] + args
-            try:
-                with self.assertRaises(SystemExit) as ctxmgr:
-                    isodatetime.main.main()
-                mock_print.assert_not_called()
-                self.assertEqual(out, str(ctxmgr.exception))
-            finally:
-                sys.argv = argv
+        mock_print.reset_mock()
+        sys.argv = ['', '--as-total=s', 'PS4']
+        try:
+            with self.assertRaises(SystemExit) as ctxmgr:
+                isodatetime.main.main()
+            mock_print.assert_not_called()
+            self.assertEqual(
+                'Invalid ISO 8601 duration representation: PS4',
+                str(ctxmgr.exception))
+        finally:
+            sys.argv = argv
 
 
 if __name__ == '__main__':

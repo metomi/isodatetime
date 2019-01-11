@@ -54,12 +54,16 @@ SYNOPSIS
     isodatetime --as-total=s PT1H
 
 DESCRIPTION
-    Parse and print 1. a date time point or 2. a duration.
+    Parse and print 1. a date time point, 2. a duration or 3. a duration
+    in a given unit.
 
     1. With 0 or 1 argument. Print the current or the specified date time
        point with an optional offset.
 
     2. With 2 arguments. Print the duration between the 2 arguments.
+
+    3. With --as-total=UNIT option and a duration argument. Print the
+       duration in the given UNIT.
 
 CALENDAR MODE
     The calendar mode is determined (in order) by:
@@ -177,8 +181,10 @@ def main():
             ["--as-total"],
             {
                 "action": "store",
+                "choices": ['H', 'M', 'S', 'h', 'm', 's'],
                 "dest": "duration_print_format",
                 "help": "Express a duration string in the provided units.",
+                "metavar": "UNIT",
             },
         ],
         [

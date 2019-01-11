@@ -117,6 +117,11 @@ class TestDateTimeOperator(unittest.TestCase):
         self.assertEqual(
             point_str_1,
             datetimeoper.process_time_point_str(point_str, ['PT1H']))
+        # +ve offset, time point like duration
+        point_str_1 = str(seconds2point(1234567890 + 3600))
+        self.assertEqual(
+            point_str_1,
+            datetimeoper.process_time_point_str(point_str, ['P0000-00-00T01']))
         # -ve offset
         point_str_2 = str(seconds2point(1234567890 - 86400))
         self.assertEqual(
@@ -145,6 +150,12 @@ class TestDateTimeOperator(unittest.TestCase):
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['ages'])
         self.assertEqual('ages: bad offset value', str(ctxmgr.exception))
+        # Bad offset string, unsupported time point like duration
+        with self.assertRaises(
+            isodatetime.datetimeoper.OffsetValueError,
+        ) as ctxmgr:
+            datetimeoper.process_time_point_str(point_str, ['P0000-W01-1'])
+        self.assertEqual('P0000-W01-1: bad offset value', str(ctxmgr.exception))
 
     def test_process_time_point_str_calendar(self):
         """DateTimeOperator.process_time_point_str(...)
@@ -232,6 +243,14 @@ class TestDateTimeOperator(unittest.TestCase):
                 point_str_out,
                 datetimeoper.process_time_point_str(
                     point_str_in, print_format=print_format))
+        # Bad parse format
+        datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+            parse_format='%o')
+        with self.assertRaises(ValueError) as ctxmgr:
+            datetimeoper.process_time_point_str('0000')
+        self.assertEqual(
+            "'o' is a bad directive in format '%o'",
+            str(ctxmgr.exception))
 
     def test_format_duration_str_x(self):
         """DateTimeOperator.format_duration_str(...)"""
