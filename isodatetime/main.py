@@ -47,11 +47,18 @@ SYNOPSIS
     # 2.6 Between 2 specific date times
     isodatetime 19700101T000000Z 20380119T031407Z
 
-    # 3.  Convert ISO8601 duration
+    # 3.  Print ISO8601 duration as total amount of a unit
     # 3.1 Into the total number of hours (H), minutes (M) or seconds (S)
     #     it represents, preceed negative durations with a double backslash
     #     (e.g. \\-PT1H)
     isodatetime --as-total=s PT1H
+
+    # 4.  Print a number of time points in a ISO8601 recurrence
+    # 4.1 Print N (defualt max 10) time points from start point
+    isodatetime R/2020/P1Y
+    isodatetime R5/2020/2024
+    # 4.2 Print N (default max 10) time points (in reverse) from end point
+    isodatetime R/P1Y/2020
 
 DESCRIPTION
     Parse and print 1. a date time point, 2. a duration or 3. a duration
@@ -61,9 +68,15 @@ DESCRIPTION
        point with an optional offset.
 
     2. With 2 arguments. Print the duration between the 2 arguments.
+       The --as-total=UNIT option can also be used instead of the normal
+       print format.
 
     3. With --as-total=UNIT option and a duration argument. Print the
        duration in the given UNIT.
+
+    4. With a recurrence as argument, print N time points of the recurrence.
+       The --max=N (default=10) can be used to control the maximum number
+       of time points to print in the result.
 
 CALENDAR MODE
     The calendar mode is determined (in order) by:
@@ -172,7 +185,7 @@ def main():
         [
             ["items"],
             {
-                "help": "Time point or duration string",
+                "help": "Time point, duration or recurrence string",
                 "metavar": "ITEM",
                 "nargs": "*",
             },
@@ -183,7 +196,7 @@ def main():
                 "action": "store",
                 "choices": ['H', 'M', 'S', 'h', 'm', 's'],
                 "dest": "duration_print_format",
-                "help": "Express a duration string in the provided units.",
+                "help": "Print duration as total of the specified unit.",
                 "metavar": "UNIT",
             },
         ],
@@ -194,6 +207,17 @@ def main():
                 "choices": ["360day", "365day", "366day", "gregorian"],
                 "help": "Set the calendar mode.",
                 "metavar": "MODE",
+            },
+        ],
+        [
+            ["--max="],
+            {
+                "action": "store",
+                "default": 10,
+                "dest": "max_results",
+                "help": "Specify maximum number of results.",
+                "metavar": "N",
+                "type": int,
             },
         ],
         [
@@ -264,6 +288,16 @@ def main():
                 args.offsets2,
                 args.print_format,
                 args.duration_print_format)
+        elif args.items and args.items[0].startswith("R"):
+            outs = []
+            for item in date_time_oper.iter_recurrence_str(
+                args.items[0],
+                args.print_format,
+            ):
+                outs.append(item)
+                if len(outs) >= args.max_results:
+                    break
+            out = '\n'.join(outs)
         elif args.items and args.duration_print_format:
             out = date_time_oper.format_duration_str(
                 args.items[0], args.duration_print_format)

@@ -30,8 +30,9 @@ import isodatetime.main
 class TestMain(unittest.TestCase):
     """Test isodatetime.main.main."""
 
+    @staticmethod
     @patch('builtins.print')
-    def test_1_null(self, mock_print):
+    def test_1_null(mock_print):
         """Test calling usage 1, no or now argument."""
         argv = sys.argv
         with patch.object(
@@ -47,8 +48,9 @@ class TestMain(unittest.TestCase):
                 finally:
                     sys.argv = argv
 
+    @staticmethod
     @patch('builtins.print')
-    def test_1_good(self, mock_print):
+    def test_1_good(mock_print):
         """Test calling usage 1, sample good arguments."""
         env_ref = isodatetime.main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
@@ -106,8 +108,9 @@ class TestMain(unittest.TestCase):
             finally:
                 sys.argv = argv
 
+    @staticmethod
     @patch('builtins.print')
-    def test_2_good(self, mock_print):
+    def test_2_good(mock_print):
         """Test calling usage 2, sample good arguments."""
         env_ref = isodatetime.main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
@@ -158,11 +161,10 @@ class TestMain(unittest.TestCase):
             finally:
                 sys.argv = argv
 
+    @staticmethod
     @patch('builtins.print')
-    def test_3_good(self, mock_print):
+    def test_3_good(mock_print):
         """Test calling usage 3, sample good arguments."""
-        env_ref = isodatetime.main.DateTimeOperator.ENV_REF
-        ref = os.environ.get(env_ref)
         argv = sys.argv
         for args, out in [
             # Same
@@ -189,6 +191,51 @@ class TestMain(unittest.TestCase):
             mock_print.assert_not_called()
             self.assertEqual(
                 'Invalid ISO 8601 duration representation: PS4',
+                str(ctxmgr.exception))
+        finally:
+            sys.argv = argv
+
+    @staticmethod
+    @patch('builtins.print')
+    def test_4_good(mock_print):
+        """Test calling usage 4, sample good arguments."""
+        argv = sys.argv
+        for args, out in [
+            # Forward
+            (['-u', 'R/2020/P1Y'],
+             '\n'.join('%d-01-01T00:00:00Z' % i for i in range(2020, 2030))),
+            (['-u', 'R3/2020/P1Y'],
+             '\n'.join('%d-01-01T00:00:00Z' % i for i in range(2020, 2023))),
+            (['-u', '--max=5', 'R/2020/P1Y'],
+             '\n'.join('%d-01-01T00:00:00Z' % i for i in range(2020, 2025))),
+            (['-u', '--max=15', 'R/2020/P1Y'],
+             '\n'.join('%d-01-01T00:00:00Z' % i for i in range(2020, 2035))),
+            (['--print-format=%Y', 'R/2020/P1Y'],
+             '\n'.join('%d' % i for i in range(2020, 2030))),
+            # Reverse
+            (['-u', 'R/P1Y/2020'],
+             '\n'.join('%d-01-01T00:00:00Z' % i
+                       for i in range(2020, 2010, -1))),
+        ]:
+            sys.argv = [''] + args
+            try:
+                isodatetime.main.main()
+                mock_print.assert_called_with(out)
+            finally:
+                sys.argv = argv
+
+    @patch('builtins.print')
+    def test_4_bad(self, mock_print):
+        """Test calling usage 4, sample bad arguments."""
+        argv = sys.argv
+        mock_print.reset_mock()
+        sys.argv = ['', 'R/2020/2025']
+        try:
+            with self.assertRaises(SystemExit) as ctxmgr:
+                isodatetime.main.main()
+            mock_print.assert_not_called()
+            self.assertEqual(
+                'Invalid ISO 8601 recurrence representation: R/2020/2025',
                 str(ctxmgr.exception))
         finally:
             sys.argv = argv

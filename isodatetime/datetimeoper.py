@@ -21,7 +21,7 @@ from datetime import datetime
 import os
 from .data import Calendar, get_timepoint_for_now
 from .dumpers import TimePointDumper
-from .parsers import TimePointParser, DurationParser
+from .parsers import TimePointParser, DurationParser, TimeRecurrenceParser
 
 
 class OffsetValueError(ValueError):
@@ -98,23 +98,20 @@ class DateTimeOperator(object):
         self.time_point_parser = TimePointParser(
             assumed_time_zone=assumed_time_zone)
         self.duration_parser = DurationParser()
+        self.recurrence_parser = TimeRecurrenceParser(
+            self.time_point_parser, self.duration_parser)
 
         if ref_point_str is None:
             self.ref_point_str = os.getenv(self.ENV_REF)
         else:
             self.ref_point_str = ref_point_str
 
-    def date_format(self, print_format, time_point=None):
+    def date_format(self, print_format, time_point):
         """Reformat time_point according to print_format.
 
         time_point -- The time point to format.
-                      Otherwise, use ref date time.
 
         """
-        if time_point is None:
-            time_point = self.date_parse()[0]
-        if print_format is None:
-            return str(time_point)
         if "%" in print_format:
             return self.strftime(time_point, print_format)
         return self.time_point_dumper.dump(time_point, print_format)
@@ -158,7 +155,7 @@ class DateTimeOperator(object):
             time_point.set_time_zone_to_utc()
         return time_point, parse_format
 
-    def date_shift(self, time_point=None, offset=None):
+    def date_shift(self, time_point, offset=None):
         """Return a date string with an offset.
 
         time_point -- A time point or time point string.
@@ -169,8 +166,6 @@ class DateTimeOperator(object):
                   integer, and U is a unit matching a key in self.UNITS.
 
         """
-        if time_point is None:
-            time_point = self.date_parse()[0]
         # Offset
         if offset:
             sign = "+"
@@ -338,3 +333,9 @@ class DateTimeOperator(object):
                 'Invalid duration print format, '
                 'should use one of H, M, S for (hours, minutes, seconds)'
             )
+
+    def iter_recurrence_str(self, recurrence_str, print_format=None):
+        """Parse recurrence string, return time point strings iterator."""
+        recurrence = self.recurrence_parser.parse(recurrence_str)
+        for time_point in recurrence:
+            yield self.strftime(time_point, print_format)
