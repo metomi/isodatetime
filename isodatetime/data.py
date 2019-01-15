@@ -21,7 +21,8 @@
 
 from . import dumpers
 from . import timezone
-from . import util
+
+from functools import lru_cache
 
 
 class Calendar(object):
@@ -1830,7 +1831,7 @@ def _format_remainder(float_time_number):
     return string
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def get_is_leap_year(year):
     """Return if year is a leap year."""
     year_is_leap = False
@@ -1845,7 +1846,7 @@ def get_days_in_year_range(start_year, end_year):
     return _get_days_in_year_range(start_year, end_year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_days_in_year_range(start_year, end_year, _):
     """Return the number of days within this year range (inclusive).
 
@@ -1891,7 +1892,7 @@ def get_days_in_year(year):
     return _get_days_in_year(year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_days_in_year(year, _):
     """Return the number of days in this particular year."""
     if get_is_leap_year(year):
@@ -1904,7 +1905,7 @@ def get_weeks_in_year(year):
     return _get_weeks_in_year(year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_weeks_in_year(year, _):
     """Return the number of calendar weeks in this week date year."""
     cal_year, cal_ord_days = get_ordinal_date_week_date_start(year)
@@ -2100,7 +2101,7 @@ def get_calendar_date_week_date_start(year):
     return _get_calendar_date_week_date_start(year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_calendar_date_week_date_start(year, _):
     """Return the calendar date of the start of (week date) year."""
     ref_year, ref_month, ref_day = (
@@ -2142,7 +2143,7 @@ def get_days_since_1_ad(year):
     return _get_days_since_1_ad(year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_days_since_1_ad(year, _):
     """Return the number of days since Jan 1, 1 A.D. to the year end."""
     if year == 1:
@@ -2157,7 +2158,7 @@ def get_ordinal_date_week_date_start(year):
     return _get_ordinal_date_week_date_start(year, CALENDAR.mode)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _get_ordinal_date_week_date_start(year, _):
     """Return the ordinal week date start for year (year, day-of-year)."""
     cal_year, cal_month, cal_day = get_calendar_date_week_date_start(year)
@@ -2212,7 +2213,7 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
         is_leap_year, month_of_year, day_of_month, CALENDAR.mode, in_reverse)
 
 
-@util.cache_results
+@lru_cache(maxsize=100000)
 def _iter_months_days(is_leap_year, month_of_year, day_of_month, _,
                       in_reverse=False):
     if day_of_month is not None and month_of_year is None:
