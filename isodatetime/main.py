@@ -49,12 +49,15 @@ SYNOPSIS
 
     # 3.  Print ISO8601 duration as total amount of a unit
     # 3.1 Into the total number of hours (H), minutes (M) or seconds (S)
-    #     it represents, preceed negative durations with a double backslash
-    #     (e.g. \\-PT1H)
+    #     it represents. Note: negative durations should be escaped by telling
+    #     the command to stop processing more options with `--` or by adding a
+    #     backslash in front of the duration.
     isodatetime --as-total=s PT1H
+    isodatetime --as-total=s -- -PT1H
+    isodatetime --as-total=s '\-PT1H'
 
     # 4.  Print a number of time points in a ISO8601 recurrence
-    # 4.1 Print N (defualt max 10) time points from start point
+    # 4.1 Print N (default max 10) time points from start point
     isodatetime R/2020/P1Y
     isodatetime R5/2020/2024
     # 4.2 Print N (default max 10) time points (in reverse) from end point

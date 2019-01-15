@@ -92,6 +92,8 @@ class DateTimeOperator(object):
         else:
             assumed_time_zone = None
 
+        if not calendar_mode:
+            calendar_mode = os.getenv(self.ENV_CALENDAR_MODE)
         self.set_calendar_mode(calendar_mode)
 
         self.time_point_dumper = TimePointDumper()
@@ -196,8 +198,8 @@ class DateTimeOperator(object):
         else:
             return (time_point_2 - time_point_1, "")
 
-    @classmethod
-    def date_diff_format(cls, print_format, duration, sign):
+    @staticmethod
+    def date_diff_format(print_format, duration, sign):
         """Format a duration."""
         if print_format:
             delta_lookup = {
@@ -225,15 +227,13 @@ class DateTimeOperator(object):
         """Get current calendar mode."""
         return Calendar.default().mode
 
-    @classmethod
-    def set_calendar_mode(cls, calendar_mode=None):
+    @staticmethod
+    def set_calendar_mode(calendar_mode):
         """Set calendar mode for subsequent operations.
 
         Raise KeyError if calendar_mode is invalid.
 
         """
-        if not calendar_mode:
-            calendar_mode = os.getenv(cls.ENV_CALENDAR_MODE)
         Calendar.default().set_mode(calendar_mode)
 
     def strftime(self, time_point, print_format):
@@ -251,8 +251,8 @@ class DateTimeOperator(object):
         except ValueError:
             return self.get_datetime_strptime(time_point_str, parse_format)
 
-    @classmethod
-    def get_datetime_strftime(cls, time_point, print_format):
+    @staticmethod
+    def get_datetime_strftime(time_point, print_format):
         """Use the datetime library's strftime as a fallback."""
         calendar_date = time_point.copy().to_calendar_date()
         year, month, day = calendar_date.get_calendar_date()

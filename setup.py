@@ -18,17 +18,10 @@
 
 import os
 from setuptools import setup
-# Monkey patching to disable version normalization, as we are using dates with
-# leading zeroes
-# https://github.com/pypa/setuptools/issues/308
-from setuptools.extern.packaging import version
 from isodatetime import __version__
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
 from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
-
-
-version.Version = version.LegacyVersion
 
 
 def read(fname):
