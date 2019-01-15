@@ -26,8 +26,13 @@ matrix:
       env: RUN_COVERAGE=true
 
 before_install:
-  # Coverage dependencies
-  - pip install coverage pytest-cov
+  # Upgrade pip and setuptools as some times the versioning scheme hack fails
+  # in Travis-CI.
+  - pip install --upgrade pip setuptools
+  # Coverage dependencies, coverage for reporting coverage, pytest-cov to
+  # enable PyTest to produce coverage reports, and pytest-env to allow
+  # PyTest to use environment variables in its configuration (e.g. TZ=UTC).
+  - pip install coverage pytest-cov pytest-env pytest-runner
   # Code style dependencies
   - pip install pycodestyle
 before_script:
@@ -36,18 +41,15 @@ script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
     export COVERAGE_FILE="${TRAVIS_BUILD_DIR}/.coverage"
-    coverage run -m isodatetime.tests.test_00
-    coverage run -a -m isodatetime.tests.test_datetimeoper
-    coverage run -a -m isodatetime.tests.test_main
     # NOTE: the way to handle long-living commands in the documentation is
     # travis_wait 40 coverage run -m isodatetime.tests.test_time_point
     # but it does not produce any output, which can be frustrating in case of errors.
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
-    coverage run -a -m isodatetime.tests.test_time_point &
+    coverage run setup.py test &
     TEST_PID="$!"
     minutes=0
-    limit=40
+    limit=50
     while ps -p "${TEST_PID}" >/dev/null 2>&1; do
       echo -n -e " \b" # never leave evidences!
       if ((minutes == limit)); then

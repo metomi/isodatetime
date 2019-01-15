@@ -57,6 +57,8 @@ setup(
     long_description=read('README.md'),
     long_description_content_type="text/markdown",
     platforms='any',
+    setup_requires=['pytest-runner'],
+    tests_require=['coverage', 'pytest', 'pytest-cov', 'pytest-env'],
     install_requires=[],
     python_requires='>=3.4, <3.8',
     classifiers=[
