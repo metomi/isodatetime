@@ -19,12 +19,14 @@
 """This tests the ISO 8601 parsing and data model functionality."""
 
 import datetime
+import pytest
 import random
 import unittest
 
 from isodatetime.data import TimePoint, Duration, get_days_since_1_ad
 
 
+@pytest.mark.slow
 class TestTimePointCompat(unittest.TestCase):
     """Test time point compatibility with "datetime"."""
 

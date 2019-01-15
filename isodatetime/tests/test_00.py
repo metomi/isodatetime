@@ -21,6 +21,7 @@
 import copy
 import datetime
 from itertools import chain
+import pytest
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 
@@ -1051,6 +1052,7 @@ def get_local_time_zone_hours_minutes():
 class TestSuite(unittest.TestCase):
     """Test the functionality of parsers and data model manipulation."""
 
+    @pytest.mark.slow
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
         for start_year in range(-401, 2):

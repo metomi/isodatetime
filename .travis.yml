@@ -46,7 +46,7 @@ script:
     # but it does not produce any output, which can be frustrating in case of errors.
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
-    coverage run setup.py test &
+    coverage run setup.py test --pytest-args='--runslow' &
     TEST_PID="$!"
     minutes=0
     limit=50
