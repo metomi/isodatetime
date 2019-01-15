@@ -54,7 +54,7 @@ SYNOPSIS
     #     backslash in front of the duration.
     isodatetime --as-total=s PT1H
     isodatetime --as-total=s -- -PT1H
-    isodatetime --as-total=s '\-PT1H'
+    isodatetime --as-total=s \\-PT1H
 
     # 4.  Print a number of time points in a ISO8601 recurrence
     # 4.1 Print N (default max 10) time points from start point
