@@ -30,9 +30,8 @@ import isodatetime.main
 class TestMain(unittest.TestCase):
     """Test isodatetime.main.main."""
 
-    @classmethod
     @patch('builtins.print')
-    def test_1_null(cls, mock_print):
+    def test_1_null(self, mock_print):
         """Test calling usage 1, no or now argument."""
         argv = sys.argv
         with patch.object(
@@ -48,9 +47,8 @@ class TestMain(unittest.TestCase):
                 finally:
                     sys.argv = argv
 
-    @classmethod
     @patch('builtins.print')
-    def test_1_good(cls, mock_print):
+    def test_1_good(self, mock_print):
         """Test calling usage 1, sample good arguments."""
         env_ref = isodatetime.main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
@@ -108,9 +106,8 @@ class TestMain(unittest.TestCase):
             finally:
                 sys.argv = argv
 
-    @classmethod
     @patch('builtins.print')
-    def test_2_good(cls, mock_print):
+    def test_2_good(self, mock_print):
         """Test calling usage 2, sample good arguments."""
         env_ref = isodatetime.main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
@@ -161,9 +158,8 @@ class TestMain(unittest.TestCase):
             finally:
                 sys.argv = argv
 
-    @classmethod
     @patch('builtins.print')
-    def test_3_good(cls, mock_print):
+    def test_3_good(self, mock_print):
         """Test calling usage 3, sample good arguments."""
         argv = sys.argv
         for args, out in [
@@ -195,9 +191,8 @@ class TestMain(unittest.TestCase):
         finally:
             sys.argv = argv
 
-    @classmethod
     @patch('builtins.print')
-    def test_4_good(cls, mock_print):
+    def test_4_good(self, mock_print):
         """Test calling usage 4, sample good arguments."""
         argv = sys.argv
         for args, out in [
