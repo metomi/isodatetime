@@ -21,6 +21,7 @@
 import copy
 import datetime
 from itertools import chain
+import pytest
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 
@@ -28,7 +29,6 @@ from isodatetime import data
 from isodatetime import dumpers
 from isodatetime import parsers
 from isodatetime import parser_spec
-from isodatetime import util
 from isodatetime import timezone
 
 
@@ -1051,6 +1051,7 @@ def get_local_time_zone_hours_minutes():
 class TestSuite(unittest.TestCase):
     """Test the functionality of parsers and data model manipulation."""
 
+    @pytest.mark.slow
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
         for start_year in range(-401, 2):
@@ -1581,30 +1582,6 @@ class TestSuite(unittest.TestCase):
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
-
-    def test_util_cache(self):
-        """Test the cache provided in the util file"""
-        # here we change the cache size to simplify testing when cache is full
-        util.MAX_CACHE_SIZE = 2
-
-        class TempClass(object):
-            times_called = 0
-
-            @util.cache_results
-            def sum(self, x, y):
-                self.times_called += 1
-                return x + y
-        temp_class = TempClass()
-        # call it twice, filling the cache
-        self.assertEqual(3, temp_class.sum(1, 2))
-        self.assertEqual(3, temp_class.sum(2, 1))
-        # next two calls are cached
-        self.assertEqual(3, temp_class.sum(1, 2))
-        self.assertEqual(3, temp_class.sum(2, 1))
-        # this call should remove element from cache
-        self.assertEqual(2, temp_class.sum(1, 1))
-        # in total, we have only three calls, as 2 were cached!
-        self.assertEqual(3, temp_class.times_called)
 
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is

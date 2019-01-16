@@ -17,12 +17,30 @@
 # ----------------------------------------------------------------------------
 
 import os
+import sys
 from setuptools import setup
 from isodatetime import __version__
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
 from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
+# to parse pytest command arguments
+# https://docs.pytest.org/en/2.8.7/goodpractices.html#manual-integration
+from setuptools.command.test import test as TestCommand
 
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ""
+
+    def run_tests(self):
+        import shlex
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+        errno = pytest.main(shlex.split(self.pytest_args))
+        sys.exit(errno)
 
 def read(fname):
     """Utility function to read the README file.
@@ -47,7 +65,10 @@ setup(
     version=__version__,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
-    cmdclass={"bdist_rpm": bdist_rpm},
+    cmdclass={
+        "bdist_rpm": bdist_rpm,
+        "pytest": PyTest
+    },
     description=("Python ISO 8601 date time parser" +
                  " and data model/manipulation utilities"),
     license="LGPLv3",
@@ -57,6 +78,8 @@ setup(
     long_description=read('README.md'),
     long_description_content_type="text/markdown",
     platforms='any',
+    setup_requires=['pytest-runner'],
+    tests_require=['coverage', 'pytest', 'pytest-cov', 'pytest-env'],
     install_requires=[],
     python_requires='>=3.4, <3.8',
     classifiers=[
@@ -74,7 +97,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities"
     ],
-    entry_points = {
+    entry_points={
         'console_scripts': ['isodatetime=isodatetime.main:main'],
     },
 )
