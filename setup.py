@@ -42,6 +42,7 @@ class PyTest(TestCommand):
         errno = pytest.main(shlex.split(self.pytest_args))
         sys.exit(errno)
 
+
 def read(fname):
     """Utility function to read the README file.
 
@@ -57,12 +58,24 @@ class bdist_rpm(bdist_rpm_original):
         """Before calling the original run method, let's change the
         distribution name to create an RPM for python-isodatetime."""
         self.distribution.metadata.name = "python-isodatetime"
+        _, _, version = __version__.partition("!")
+        self.distribution.metadata.version = version
         super().run()
+
+
+version = __version__
+
+# From: # https://github.com/google/dotty/pull/20/files
+if (version[1] == "!" and (
+    "bdist_msi" in sys.argv or "bdist_rpm" in sys.argv)):
+    # bdist_msi and bdist_rpm do not support a setuptools epoch version so
+    # we remove it as a work around.
+    _, _, version = version.partition("!")
 
 
 setup(
     name="isodatetime",
-    version=__version__,
+    version=version,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
     cmdclass={
