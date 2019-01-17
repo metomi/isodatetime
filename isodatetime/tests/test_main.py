@@ -24,11 +24,25 @@ import unittest
 from unittest.mock import patch
 
 
+import isodatetime
 import isodatetime.main
 
 
 class TestMain(unittest.TestCase):
     """Test isodatetime.main.main."""
+
+    @patch('builtins.print')
+    def test_1_version(self, mock_print):
+        """Test print version."""
+        argv = sys.argv
+        for args in [['--version'], ['-V']]:
+            sys.argv = [''] + args
+            try:
+                isodatetime.main.main()
+                mock_print.assert_called_with(
+                    isodatetime.__version__.split('!', 1)[1])
+            finally:
+                sys.argv = argv
 
     @patch('builtins.print')
     def test_1_null(self, mock_print):

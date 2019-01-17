@@ -175,6 +175,7 @@ PRINT FORMAT
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import sys
 
+from . import __version__
 from .datetimeoper import DateTimeOperator
 
 
@@ -273,9 +274,21 @@ def main():
                 "help": "Switch on UTC mode.",
             },
         ],
+        [
+            ["--version", "-V"],
+            {
+                "action": "store_true",
+                "default": False,
+                "dest": "version_mode",
+                "help": "Print version and exit.",
+            },
+        ],
     ]:
         arg_parser.add_argument(*o_args, **o_kwargs)
     args = arg_parser.parse_args()
+    if args.version_mode:
+        print(__version__.split('!', 1)[1])
+        return
     date_time_oper = DateTimeOperator(
         parse_format=args.parse_format,
         utc_mode=args.utc_mode,
