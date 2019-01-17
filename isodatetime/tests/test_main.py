@@ -39,8 +39,7 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             try:
                 isodatetime.main.main()
-                mock_print.assert_called_with(
-                    isodatetime.__version__.split('!', 1)[1])
+                mock_print.assert_called_with(isodatetime.__version__)
             finally:
                 sys.argv = argv
 

@@ -287,7 +287,7 @@ def main():
         arg_parser.add_argument(*o_args, **o_kwargs)
     args = arg_parser.parse_args()
     if args.version_mode:
-        print(__version__.split('!', 1)[1])
+        print(__version__)
         return
     date_time_oper = DateTimeOperator(
         parse_format=args.parse_format,
