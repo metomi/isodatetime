@@ -19,17 +19,17 @@
 """This tests the ISO 8601 parsing and data model functionality."""
 
 import copy
+import datetime
 from itertools import chain
-import multiprocessing
+import pytest
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 
-from . import data
-from . import dumpers
-from . import parsers
-from . import parser_spec
-from . import util
-from . import timezone
+from isodatetime import data
+from isodatetime import dumpers
+from isodatetime import parsers
+from isodatetime import parser_spec
+from isodatetime import timezone
 
 
 def get_timeduration_tests():
@@ -1037,7 +1037,6 @@ def get_timerecurrenceparser_tests():
 
 def get_local_time_zone_hours_minutes():
     """Provide an independent method of getting the local time zone."""
-    import datetime
     utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
     # datetime.timedelta represents -21 microseconds as -1 day,
     # +86399 seconds, +999979 microseconds. This is not nice.
@@ -1052,15 +1051,7 @@ def get_local_time_zone_hours_minutes():
 class TestSuite(unittest.TestCase):
     """Test the functionality of parsers and data model manipulation."""
 
-    def assertEqual(self, test, control, info=None):
-        """Override the assertEqual method to provide more information."""
-        superinfo = None
-        if info is not None:
-            superinfo = (
-                "Source %s produced:\n'%s'\nshould be:\n'%s'" %
-                (info, test, control))
-        super(TestSuite, self).assertEqual(test, control, superinfo)
-
+    @pytest.mark.slow
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
         for start_year in range(-401, 2):
@@ -1093,7 +1084,7 @@ class TestSuite(unittest.TestCase):
                 test_data.get_largest_truncated_property_name(),
                 truncated_property_tests[expression]
                 ["largest_truncated_property_name"],
-                info=expression)
+                msg=expression)
 
     def test_smallest_missing_property_name(self):
         """Test the smallest missing property name."""
@@ -1113,7 +1104,7 @@ class TestSuite(unittest.TestCase):
                 test_data.get_smallest_missing_property_name(),
                 truncated_property_tests[expression]
                 ["smallest_missing_property_name"],
-                info=expression)
+                msg=expression)
 
     def test_timeduration(self):
         """Test the duration class methods."""
@@ -1153,12 +1144,6 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(
             str(data.Duration(days=7) + data.Duration(weeks=1)),
             "P14D")
-
-    @staticmethod
-    def test_timepoint():
-        """Test the time point data model (takes a while)."""
-        pool = multiprocessing.Pool(processes=4)
-        pool.map_async(test_timepoint_at_year, range(1801, 2403)).get()
 
     def test_timepoint_plus_float_time_duration_day_of_month_type(self):
         """Test (TimePoint + Duration).day_of_month is an int."""
@@ -1418,7 +1403,6 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_strftime_strptime(self):
         """Test the strftime/strptime for date/time expressions."""
-        import datetime
         parser = parsers.TimePointParser()
         parse_tokens = list(parser_spec.STRFTIME_TRANSLATE_INFO.keys())
         parse_tokens.remove("%z")  # Don't test datetime's tz handling.
@@ -1599,30 +1583,6 @@ class TestSuite(unittest.TestCase):
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
 
-    def test_util_cache(self):
-        """Test the cache provided in the util file"""
-        # here we change the cache size to simplify testing when cache is full
-        util.MAX_CACHE_SIZE = 2
-
-        class TempClass(object):
-            times_called = 0
-
-            @util.cache_results
-            def sum(self, x, y):
-                self.times_called += 1
-                return x + y
-        temp_class = TempClass()
-        # call it twice, filling the cache
-        self.assertEqual(3, temp_class.sum(1, 2))
-        self.assertEqual(3, temp_class.sum(2, 1))
-        # next two calls are cached
-        self.assertEqual(3, temp_class.sum(1, 2))
-        self.assertEqual(3, temp_class.sum(2, 1))
-        # this call should remove element from cache
-        self.assertEqual(2, temp_class.sum(1, 1))
-        # in total, we have only three calls, as 2 were cached!
-        self.assertEqual(3, temp_class.times_called)
-
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is
     # [tz_seconds, expected_hours, expected_minutes]]
@@ -1791,88 +1751,5 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(seconds_added, t.second_of_minute)
 
 
-def assert_equal(data1, data2):
-    """A function-level equivalent of the unittest method."""
-    if data1 != data2:
-        raise AssertionError()
-
-
-def test_timepoint_at_year(test_year):
-    """Test the TimePoint and Calendar data model over a given year."""
-    import datetime
-    import random
-    my_date = datetime.datetime(test_year, 1, 1)
-    stop_date = datetime.datetime(test_year + 1, 1, 1)
-    test_duration_attributes = [
-        ("weeks", 110),
-        ("days", 770),
-        ("hours", 770 * 24),
-        ("minutes", 770 * 24 * 60),
-        ("seconds", 770 * 24 * 60 * 60)
-    ]
-    while my_date <= stop_date:
-        ctrl_data = my_date.isocalendar()
-        test_date = data.TimePoint(
-            year=my_date.year,
-            month_of_year=my_date.month,
-            day_of_month=my_date.day
-        )
-        test_week_date = test_date.to_week_date()
-        test_data = test_week_date.get_week_date()
-        assert_equal(test_data, ctrl_data)
-        ctrl_data = (my_date.year, my_date.month, my_date.day)
-        test_data = test_week_date.get_calendar_date()
-        assert_equal(test_data, ctrl_data)
-        ctrl_data = my_date.toordinal()
-        year, day_of_year = test_date.get_ordinal_date()
-        test_data = day_of_year
-        test_data += data.get_days_since_1_ad(year - 1)
-        assert_equal(test_data, ctrl_data)
-        for attribute, attr_max in test_duration_attributes:
-            kwargs = {attribute: random.randrange(0, attr_max)}
-            ctrl_data = my_date + datetime.timedelta(**kwargs)
-            ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
-            test_data = (
-                test_date + data.Duration(
-                    **kwargs)).get_calendar_date()
-            assert_equal(test_data, ctrl_data)
-            ctrl_data = (my_date - datetime.timedelta(**kwargs))
-            ctrl_data = (ctrl_data.year, ctrl_data.month, ctrl_data.day)
-            test_data = (
-                test_date - data.Duration(
-                    **kwargs)).get_calendar_date()
-            assert_equal(test_data, ctrl_data)
-        kwargs = {}
-        for attribute, attr_max in test_duration_attributes:
-            kwargs[attribute] = random.randrange(0, attr_max)
-        test_date_minus = (
-            test_date - data.Duration(**kwargs))
-        test_data = test_date - test_date_minus
-        ctrl_data = data.Duration(**kwargs)
-        assert_equal(test_data, ctrl_data)
-        test_data = (test_date_minus + (test_date - test_date_minus))
-        ctrl_data = test_date
-        assert_equal(test_data, ctrl_data)
-        test_data = (test_date_minus + data.Duration(**kwargs))
-        ctrl_data = test_date
-        assert_equal(test_data, ctrl_data)
-        ctrl_data = (my_date + datetime.timedelta(minutes=450) +
-                     datetime.timedelta(hours=5) -
-                     datetime.timedelta(seconds=500, weeks=5))
-        ctrl_data = [(ctrl_data.year, ctrl_data.month, ctrl_data.day),
-                     (ctrl_data.hour, ctrl_data.minute, ctrl_data.second)]
-        test_data = (
-            test_date + data.Duration(minutes=450) +
-            data.Duration(hours=5) -
-            data.Duration(weeks=5, seconds=500)
-        )
-        test_data = [test_data.get_calendar_date(),
-                     test_data.get_hour_minute_second()]
-        assert_equal(test_data, ctrl_data)
-        timedelta = datetime.timedelta(days=1)
-        my_date += timedelta
-
-
-if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(
-        unittest.TestLoader().loadTestsFromTestCase(TestSuite))
+if __name__ == '__main__':
+    unittest.main()
