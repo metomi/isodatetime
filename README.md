@@ -5,14 +5,78 @@ isodatetime
 [![codecov](https://codecov.io/gh/metomi/isodatetime/branch/master/graph/badge.svg)](https://codecov.io/gh/metomi/isodatetime)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597555.svg)](https://doi.org/10.5281/zenodo.597555)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fd1147b75474d4d9a0f64bececf3bb5)](https://www.codacy.com/app/metomi/isodatetime?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=metomi/isodatetime&amp;utm_campaign=Badge_Grade)
+[![PYPI Badge](https://img.shields.io/pypi/v/isodatetime.svg)](https://pypi.org/project/isodatetime/)
 
 Python ISO 8601 full-specification parser and data model/manipulation utilities. 
 Intended to be used in a similar way to Python's datetime module.
 
-ISO 8601 Primer
-===============
+## Installation
 
-ISO 8601 is an international standard for writing down date/time information.
+Install from PyPI:
+
+```console
+$ pip install isodatetime
+```
+
+Or build yourself:
+
+```console
+$ git clone https://github.com/metomi/isodatetime.git isodatetime
+$ cd isodatetime
+$ python setup.py install
+```
+
+## Usage
+
+Python API:
+
+<!-- GitHub Python syntax highlighting has issues with datetimes, Ruby works
+     resonably well as a standin. -->
+```ruby
+>>> import isodatetime.parsers as parse
+>>> import isodatetime.dumpers as dump
+
+# Dates and times
+>>> date_time = parse.TimePointParser().parse('2000-01-01T00:00Z')
+>>> date_time.month_of_year
+1
+
+# Durations
+>>> duration = parse.DurationParser().parse('P1YT3H')
+>>> duration.get_days_and_seconds()
+(365.0, 10800.0)
+>>> date_time + duration
+2001-01-01T03:00:00Z
+
+# Recurrences
+>>> recurrence = parse.TimeRecurrenceParser().parse('R/1999/P1Y')
+>>> recurrence.get_next(date_time)
+2001-01-01T00:00:00Z
+
+# Output
+>>> dump.TimePointDumper().strftime(date_time, '%d/%M/%Y %H:%M:%S')
+'01/00/2000 00:00:00'
+
+```
+
+CLI:
+
+```console
+$ isodatetime
+2000-01-01T00:00:00Z
+$ isodatetime 1066
+1066
+$ isodatetime 1066 --offset P1Y
+1067
+$ isodatetime R/2000/P1Y --max 3
+2000-01-01T00:00:00Z
+2001-01-01T00:00:00Z
+2002-01-01T00:00:00Z
+```
+
+## ISO8601
+
+ISO8601 is an international standard for writing down date/time information.
 
 It is the correct, internationally-friendly, computer-sortable way to 
 numerically represent date/time information.
@@ -25,25 +89,23 @@ Reference material:
  * http://www.iso.org/iso/home/standards/iso8601.htm
  * http://en.wikipedia.org/wiki/ISO_8601
 
-This primer covers some commonly used aspects of the standard.
+### Dates and times
 
-## Dates and times
-
-### How do I write the year, month-of-year, and day-of-month down?
+#### How do I write the year, month-of-year, and day-of-month down?
 
 Syntax      | Example   
  ---------- | ----------    
  CCYYMMDD    | 20151231   
  CCYY-MM-DD  | 2015-12-31
 
-### How about writing down the year, week-of-year, and day-of-week?
+#### How about writing down the year, week-of-year, and day-of-week?
 
 Syntax      | Example
  ---------- | ----------
  CCYYWwwD    | 2015W534
  CCYY-Www-D  | 2015-W53-4
 
-### How about writing down the year and day-of-year?
+#### How about writing down the year and day-of-year?
 
 Syntax      | Example
  ---------- | ---------
@@ -51,7 +113,7 @@ Syntax      | Example
  CCYY-DDD    | 2015-365
 
 
-### How do I write just the year?
+#### How do I write just the year?
 Either:
 `CCYY`
 or
@@ -72,7 +134,7 @@ Note: writing just the year where you mean a proper date implies Day 1 of
 Month 1 in that year - `1995` implies `1995-01` => `1995-01-01` =>
 `1995-01-01T00` => `1995-01-01T00:00` => `1995-01-01T00:00:00`.
 
-### How do I write just the year and month-of-year?
+#### How do I write just the year and month-of-year?
 Either:
 `CCYY-MM`
 or
@@ -80,7 +142,7 @@ or
 
 (not allowed: `CCYYMM` or `+XCCYYMM`).
 
-### How do I write dates past the year 9999 and before 0000?
+#### How do I write dates past the year 9999 and before 0000?
 
 Syntax        | Example (2 expanded year digits)
  ------------ | ---------
@@ -91,7 +153,7 @@ Syntax        | Example (2 expanded year digits)
  +XCCYYDDD    | +002015365
  +XCCYY-DDD   | +002015-365
 
-### How do I write down time information by itself?
+#### How do I write down time information by itself?
 
 Syntax             | Example
  ----------------- | -------
@@ -101,7 +163,7 @@ Syntax             | Example
  hh:mm              | 17:45
  hh                 | 08
 
-### How do I write down time information at a date in ISO 8601?
+#### How do I write down time information at a date in ISO 8601?
 
 Write the time after the date, separated with a `T`:
 
@@ -114,21 +176,21 @@ Syntax              | Example
  CCYYDDDThhmmss      | 2015365T063101
  CCYY-DDDThh:mm:ss   | 2015-365T06:31:01
 
-### What about just the hour and minute at a date?
+#### What about just the hour and minute at a date?
 
 Syntax           | Example 
  --------------- | ----------------    
  CCYYWwwDThhmm    | 2015W534T0631
  CCYY-Www-DThh:mm | 2015-W53-4T06:31
 
-### What about just the hour at a date?
+#### What about just the hour at a date?
 
 Syntax           | Example   
  --------------- | -------------   
  CCYYMMDDThh      | 20151231T06
  CCYY-MM-DDThh    | 2015-12-31T06
 
-### What about decimal parts of the hour or minute or second?
+#### What about decimal parts of the hour or minute or second?
 
 Use a comma or period to delimit the decimal part, and don't include any
 smaller units:
@@ -143,7 +205,7 @@ Syntax             | Example
  CCYYMMDDThhmmss.tt | 20151231T063101.25671
 
 
-### How do I specify a time zone?
+#### How do I specify a time zone?
 
 If the time zone is UTC, use "Z" - otherwise, use a numeric representation
 of the hours and minutes difference from UTC.
@@ -165,9 +227,9 @@ Syntax                     | Example
  CCYY-MM-DDThh:mm:ss+hh:mm  | 2015-12-31T19:31:01+13:00
 
 
-## Durations
+### Durations
 
-### How do I write down a certain period of time in X units?
+#### How do I write down a certain period of time in X units?
 
 A "P" followed by the number of units (optionally including a decimal part)
 followed by a designator to mark the units:
@@ -202,9 +264,9 @@ date-time-like duration (`PCCYY-MM-DDThh:mm:ss`) where the numbers given for
 years, months, days, hours, minutes, and seconds are used literally
 (`P1995-00-00T00:10:00` = `P1995YT10M`).
 
-## Recurring date-time series
+### Recurring date-time series
 
-### 1 - Recur with a duration given by the difference between a start date
+#### 1 - Recur with a duration given by the difference between a start date
 and a subsequent date, starting at the start date
 
 Example Syntax           | Example                 | Meaning
@@ -213,7 +275,7 @@ R/CCYY/CCYY              | R/2010/2014             | Repeat every 4 years, start
 R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045      | Repeat every 2 years and 44 days, starting at 2010-01-01
 R5/CCYY-Www-D/CCYY-Www-D | R/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
 
-### 2 - Recur with a given duration, starting at a context date-time
+#### 2 - Recur with a given duration, starting at a context date-time
 
 (You have to supply the context somewhere else)
 
@@ -222,7 +284,7 @@ Example Syntax        | Example          | Meaning
 R/PnMnDTnM            | R/P10M3DT45M     | Repeat every 10 months, 3 days, and 45 minutes from a context start date-time.
 Rn/PnY                | R2/P4Y           | Repeat every 4 years, for a total of 2 times, from a context start date-time.
 
-### 3 - Recur with a given duration starting at a particular date-time
+#### 3 - Recur with a given duration starting at a particular date-time
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------
@@ -233,7 +295,7 @@ Rn/CCYY-MM-DDThh:mm/PTnH   | R2/19900201T06Z/PT12H    | Repeat every 12 hours, f
 Rn/CCYY-Www-D/PnW          | R5/2012-W02-1/P1W        | Repeat weekly, for a total of 5 repetitions, starting at Monday in the second ISO week of 2012
 Rn/CCYYDDDThhmm/PnD        | R1/1996291T0630+0100/P2D | Repeat once at the 291st day of 1996 at 06:30, UTC + 1
 
-### 4 - Recur with a given duration counting back from a particular date-time
+#### 4 - Recur with a given duration counting back from a particular date-time
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ---------------------------------------------------------------
