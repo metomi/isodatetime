@@ -1750,6 +1750,17 @@ class TestSuite(unittest.TestCase):
         t = timepoint + duration
         self.assertEqual(seconds_added, t.second_of_minute)
 
+    def test_timepoint_dump_format(self):
+        """Test the timepoint format dump when values are programmatically
+        set to None"""
+        t = data.TimePoint(year="1984")
+        # commenting out month_of_year here is enough to make the test pass
+        t.month_of_year = None
+        t.day_of_year = None
+        t.week_of_year = None
+        with self.assertRaises(RuntimeError):
+            self.assertEqual("1984-01-01T00:00:00Z", str(t))
+
 
 if __name__ == '__main__':
     unittest.main()
