@@ -149,8 +149,8 @@ class TimePointDumper(object):
             else:
                 current_time_zone = timepoint.get_time_zone()
                 new_time_zone = current_time_zone.copy()
-                new_time_zone.hours = int(custom_time_zone[0])
-                new_time_zone.minutes = int(custom_time_zone[1])
+                new_time_zone.hours = custom_time_zone[0]
+                new_time_zone.minutes = custom_time_zone[1]
                 new_time_zone.unknown = False
                 timepoint.set_time_zone(new_time_zone)
         property_map = {}
@@ -230,4 +230,6 @@ class TimePointDumper(object):
             return 0, 0
         if "time_zone_hour" not in info and "time_zone_minute" not in info:
             return None
-        return info.get("time_zone_hour", 0), info.get("time_zone_minute", 0)
+        hour = int(info.get("time_zone_hour", 0))
+        minute = int(info.get("time_zone_minute", 0))
+        return hour, minute
