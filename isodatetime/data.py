@@ -1720,10 +1720,14 @@ class TimePoint(object):
 
         if self.get_is_calendar_date():
             date_string = year_string + "-MM-DD"
-        if self.get_is_ordinal_date():
+        elif self.get_is_ordinal_date():
             date_string = year_string + "-DDD"
-        if self.get_is_week_date():
+        elif self.get_is_week_date():
             date_string = year_string + "-Www-D"
+        else:
+            raise RuntimeError("TimePoint has inconsistent state, points "
+                               "must conform to calendar, ordinal or week "
+                               "dates.")
         time_string = "Thh"
         if self.minute_of_hour is None:
             time_string += ",ii"
