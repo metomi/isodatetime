@@ -5,6 +5,39 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2.0.0 (Released 2019-01-22)
+
+This is the 12th release of isodatetime.
+
+This release requires Python 3.4 or above.
+
+Note the move of the version string to a semantic scheme to avoid issues with
+packaging utilities.
+
+### Highlights
+
+[#111](https://github.com/metomi/isodatetime/pull/111):
+Python 3.4+ only. Drop support for Python 2.
+
+[#117](https://github.com/metomi/isodatetime/pull/117):
+Improved installation instruction and usage examples.
+
+[#114](https://github.com/metomi/isodatetime/pull/114):
+Added `isodatetime` command line interface.
+
+### Noteworthy Changes
+
+[#112](https://github.com/metomi/isodatetime/pull/112):
+Support RPM build.
+
+[#119](https://github.com/metomi/isodatetime/pull/119):
+Fixed time point dumper time zone inconsistency.
+
+[#118](https://github.com/metomi/isodatetime/pull/118):
+Fixed time point dumper date type inconsistency.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2018.11.0 (Released 2018-11-05)
 
 This is the 11th release of isodatetime.
