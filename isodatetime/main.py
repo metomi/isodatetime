@@ -116,11 +116,6 @@ OFFSET FORMAT
     * `P2DT5.5H` - 2 day, 5.5 hour offset
     * `-P2YT4S` - (negative) 2 year, 4 second offset
 
-    The following deprecated syntax is supported:
-    `OFFSET` in the form `nU` where `U` is the unit (`w` for weeks, `d` for
-    days, `h` for hours, `m` for minutes and `s` for seconds) and `n` is a
-    positive or negative integer.
-
 PARSE FORMAT
     The format for parsing a date time point should be compatible with the
     POSIX strptime template format (see the strptime command help), with the
