@@ -1753,7 +1753,7 @@ class TestSuite(unittest.TestCase):
     def test_timepoint_dump_format(self):
         """Test the timepoint format dump when values are programmatically
         set to None"""
-        t = data.TimePoint(year="1984")
+        t = data.TimePoint(year=1984)
         # commenting out month_of_year here is enough to make the test pass
         t.month_of_year = None
         t.day_of_year = None
