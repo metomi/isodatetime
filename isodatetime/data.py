@@ -24,6 +24,8 @@ from . import timezone
 
 from functools import lru_cache
 
+from typing import Union
+
 
 class Calendar(object):
 
@@ -146,175 +148,6 @@ class BadInputError(ValueError):
         return format_string.format(*format_args)
 
 
-class TimeRecurrence(object):
-
-    """Represent a recurring duration."""
-
-    __slots__ = ("repetitions", "start_point", "duration", "end_point",
-                 "min_point", "max_point", "format_number")
-
-    def __init__(self, repetitions=None, start_point=None,
-                 duration=None, end_point=None, min_point=None,
-                 max_point=None):
-        inputs = (
-            (repetitions, "repetitions", None, int),
-            (start_point, "start_point", None, TimePoint),
-            (duration, "duration", None, Duration),
-            (end_point, "end_point", None, TimePoint),
-            (min_point, "min_point", None, TimePoint),
-            (max_point, "max_point", None, TimePoint)
-        )
-        _type_checker(*inputs)
-        self.repetitions = repetitions
-        self.start_point = start_point
-        self.duration = duration
-        self.end_point = end_point
-        self.min_point = min_point
-        self.max_point = max_point
-        self.format_number = None
-        if self.duration is None:
-            # First form.
-            self.format_number = 1
-            start_year, start_days = self.start_point.get_ordinal_date()
-            start_seconds = self.start_point.get_second_of_day()
-            self.end_point.set_time_zone(self.start_point.time_zone)
-            end_year, end_days = self.end_point.get_ordinal_date()
-            end_seconds = self.end_point.get_second_of_day()
-            diff_days = end_days - start_days
-            if end_year > start_year:
-                diff_days += get_days_in_year_range(start_year, end_year - 1)
-            diff_seconds = end_seconds - start_seconds
-            if diff_seconds < 0:
-                diff_days -= 1
-                diff_seconds += CALENDAR.SECONDS_IN_DAY
-            if diff_seconds >= CALENDAR.SECONDS_IN_DAY:
-                diff_days += 1
-                diff_seconds -= CALENDAR.SECONDS_IN_DAY
-            if self.repetitions == 1:
-                self.duration = Duration(years=0)
-            else:
-                diff_days_float = diff_days / float(
-                    self.repetitions - 1)
-                diff_seconds_float = diff_seconds / float(
-                    self.repetitions - 1)
-                diff_days = int(diff_days_float)
-                diff_seconds_float += (
-                    diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
-                self.duration = Duration(
-                    days=diff_days, seconds=diff_seconds_float)
-        elif self.end_point is None:
-            # Third form.
-            self.format_number = 3
-            if self.repetitions is not None:
-                self.end_point = (
-                    self.start_point + self.duration * (self.repetitions - 1))
-        elif self.start_point is None:
-            # Fourth form.
-            self.format_number = 4
-            if self.repetitions is not None:
-                self.start_point = (
-                    self.end_point - self.duration * (self.repetitions - 1))
-        else:
-            raise BadInputError(
-                BadInputError.RECURRENCE, [i[:2] for i in inputs])
-
-    def get_is_valid(self, timepoint):
-        """Return whether the timepoint is valid for this recurrence."""
-        if not self._get_is_in_bounds(timepoint):
-            return False
-        for iter_timepoint in self.__iter__():
-            if iter_timepoint == timepoint:
-                return True
-            if self.start_point is None and iter_timepoint < timepoint:
-                return False
-            if self.end_point is None and iter_timepoint > timepoint:
-                return False
-        return False
-
-    def get_next(self, timepoint):
-        """Return the next timepoint after this timepoint, or None."""
-        if self.repetitions == 1 or timepoint is None:
-            return None
-        next_timepoint = timepoint + self.duration
-        if self._get_is_in_bounds(next_timepoint):
-            return next_timepoint
-        if self.format_number == 1 and next_timepoint > self.end_point:
-            diff = next_timepoint - self.end_point
-            if (2 * diff < self.duration and
-                    self._get_is_in_bounds(self.end_point)):
-                return self.end_point
-        return None
-
-    def get_prev(self, timepoint):
-        """Return the previous timepoint before this timepoint, or None."""
-        if self.repetitions == 1 or timepoint is None:
-            return None
-        prev_timepoint = timepoint - self.duration
-        if self._get_is_in_bounds(prev_timepoint):
-            return prev_timepoint
-        return None
-
-    def __getitem__(self, index):
-        if index < 0 or not isinstance(index, int):
-            raise IndexError(
-                "Unsupported index for TimeRecurrence")
-        for i, point in enumerate(self.__iter__()):
-            if index == i:
-                return point
-        raise IndexError(
-            "Invalid index for TimeRecurrence")
-
-    def _get_is_in_bounds(self, timepoint):
-        """Return whether the timepoint is within this recurrence series."""
-        if timepoint is None:
-            return False
-        if self.start_point is not None and timepoint < self.start_point:
-            return False
-        if self.min_point is not None and timepoint < self.min_point:
-            return False
-        if self.max_point is not None and timepoint > self.max_point:
-            return False
-        if self.end_point is not None and timepoint > self.end_point:
-            return False
-        return True
-
-    def __iter__(self):
-        if self.start_point is None:
-            point = self.end_point
-            in_reverse = True
-        else:
-            point = self.start_point
-            in_reverse = False
-
-        if self.repetitions == 1 or not self.duration:
-            if self._get_is_in_bounds(point):
-                yield point
-            point = None
-
-        while point is not None:
-            if self._get_is_in_bounds(point):
-                yield point
-            else:
-                break
-            if in_reverse:
-                point = self.get_prev(point)
-            else:
-                point = self.get_next(point)
-
-    def __str__(self):
-        if self.repetitions is None:
-            prefix = "R/"
-        else:
-            prefix = "R" + str(self.repetitions) + "/"
-        if self.format_number == 1:
-            return prefix + str(self.start_point) + "/" + str(self.end_point)
-        elif self.format_number == 3:
-            return prefix + str(self.start_point) + "/" + str(self.duration)
-        elif self.format_number == 4:
-            return prefix + str(self.duration) + "/" + str(self.end_point)
-        return "R/?/?"
-
-
 class Duration(object):
 
     """Represent a duration or period of time.
@@ -344,17 +177,15 @@ class Duration(object):
 
     __slots__ = DATA_ATTRIBUTES
 
-    def __init__(self, years=0, months=0, weeks=0, days=0,
-                 hours=0.0, minutes=0.0, seconds=0.0, standardize=False):
-        _type_checker(
-            (years, "years", int, float, None),
-            (months, "months", int, float, None),
-            (weeks, "weeks", int, float, None),
-            (days, "days", int, float, None),
-            (hours, "hours", int, float, None),
-            (minutes, "minutes", int, float, None),
-            (seconds, "seconds", int, float, None)
-        )
+    def __init__(self,
+                 years: Union[int, float, None] = 0,
+                 months: Union[int, float, None] = 0,
+                 weeks: Union[int, float, None] = 0,
+                 days: Union[int, float, None] = 0,
+                 hours: Union[int, float, None] = 0.0,
+                 minutes: Union[int, float, None] = 0.0,
+                 seconds: Union[int, float, None] = 0.0,
+                 standardize: bool = False):
         self.years = years
         self.months = months
         self.weeks = None
@@ -741,30 +572,30 @@ class TimePoint(object):
 
     __slots__ = DATA_ATTRIBUTES
 
-    def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
-                 week_of_year=None, day_of_year=None, day_of_month=None,
-                 day_of_week=None, hour_of_day=None, hour_of_day_decimal=None,
-                 minute_of_hour=None, minute_of_hour_decimal=None,
-                 second_of_minute=None, second_of_minute_decimal=None,
-                 time_zone_hour=None, time_zone_minute=None,
-                 dump_format=None, truncated=False,
-                 truncated_dump_format=None, truncated_property=None,
-                 is_empty_instance=False):
+    def __init__(self,
+                 expanded_year_digits: int = 0,
+                 year: Union[int, None] = None,
+                 month_of_year: Union[int, None] = None,
+                 week_of_year: Union[int, None] = None,
+                 day_of_year: Union[int, None] = None,
+                 day_of_month: Union[int, None] = None,
+                 day_of_week: Union[int, None] = None,
+                 hour_of_day: Union[int, float, None] = None,
+                 hour_of_day_decimal: Union[float, None] = None,
+                 minute_of_hour: Union[int, float, None] = None,
+                 minute_of_hour_decimal: Union[float, None] = None,
+                 second_of_minute: Union[int, float, None] = None,
+                 second_of_minute_decimal: Union[float, None] = None,
+                 time_zone_hour: Union[int, None] = None,
+                 time_zone_minute: Union[int, None] = None,
+                 dump_format: Union[str, None] = None,
+                 truncated: bool = False,
+                 truncated_dump_format: Union[str, None] = None,
+                 truncated_property: Union[str, None] = None,
+                 is_empty_instance: bool = False):
         if is_empty_instance:
             # This has been created for a copy - set properties later.
             return
-        if (dump_format is not None and not
-                isinstance(dump_format, str)):
-            raise BadInputError(
-                BadInputError.TYPE,
-                "dump_format", repr(dump_format), type(dump_format))
-        if (truncated_dump_format is not None and not
-                isinstance(truncated_dump_format, str)):
-            raise BadInputError(
-                BadInputError.TYPE,
-                "truncated_dump_format", repr(truncated_dump_format),
-                type(truncated_dump_format)
-            )
         if (truncated_property is not None and
                 truncated_property not in ["year_of_decade",
                                            "year_of_century"]):
@@ -772,43 +603,18 @@ class TimePoint(object):
                 BadInputError.VALUES, "truncated_property",
                 repr(truncated_property),
                 "'year_of_decade' or 'year_of_century'")
-        _type_checker(
-            (expanded_year_digits, "expanded_year_digits", int),
-            (year, "year", None, int),
-            (month_of_year, "month_of_year", None, int),
-            (week_of_year, "week_of_year", None, int),
-            (day_of_year, "day_of_year", None, int),
-            (day_of_month, "day_of_month", None, int),
-            (day_of_week, "day_of_week", None, int),
-            (hour_of_day, "hour_of_day", None, int, float),
-            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
-            (minute_of_hour, "minute_of_hour", None, int, float),
-            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
-            (second_of_minute, "second_of_minute", None, int, float),
-            (second_of_minute_decimal, "second_of_minute_decimal", None,
-             float),
-            (time_zone_hour, "time_zone_hour", None, int),
-            (time_zone_minute, "time_zone_minute", None, int)
-        )
         self.dump_format = dump_format
-        self.expanded_year_digits = _int_caster(expanded_year_digits,
-                                                "expanded_year_digits")
+        self.expanded_year_digits = expanded_year_digits
         self.truncated = truncated
         self.truncated_dump_format = truncated_dump_format
         self.truncated_property = truncated_property
-        self.year = _int_caster(year, "year", allow_none=True)
-        self.month_of_year = _int_caster(month_of_year, "year",
-                                         allow_none=True)
-        self.day_of_year = _int_caster(day_of_year, "day_of_year",
-                                       allow_none=True)
-        self.day_of_month = _int_caster(day_of_month, "day_of_month",
-                                        allow_none=True)
-        self.day_of_week = _int_caster(day_of_week, "day_of_week",
-                                       allow_none=True)
-        self.week_of_year = _int_caster(week_of_year, "week_of_year",
-                                        allow_none=True)
-        self.hour_of_day = _int_caster(hour_of_day, "hour_of_day",
-                                       allow_none=True)
+        self.year = year
+        self.month_of_year = month_of_year
+        self.day_of_year = day_of_year
+        self.day_of_month = day_of_month
+        self.day_of_week = day_of_week
+        self.week_of_year = week_of_year
+        self.hour_of_day = hour_of_day
         if hour_of_day_decimal is not None:
             if self.hour_of_day is None:
                 raise BadInputError(
@@ -828,29 +634,24 @@ class TimePoint(object):
                 raise BadInputError(
                     BadInputError.MISSING, "minute_of_hour_decimal",
                     "minute_of_hour")
-            self.minute_of_hour = _int_caster(
-                minute_of_hour, "minute_of_hour")
+            self.minute_of_hour = minute_of_hour
             self.minute_of_hour += float(minute_of_hour_decimal)
             if second_of_minute is not None:
                 raise BadInputError(
                     BadInputError.CONFLICT, "second_of_minute",
                     "minute_of_hour_decimal")
         else:
-            self.minute_of_hour = _int_caster(
-                minute_of_hour, "minute_of_hour", allow_none=True)
+            self.minute_of_hour = minute_of_hour
         if second_of_minute_decimal is not None:
             if second_of_minute is None:
                 raise BadInputError(
                     BadInputError.MISSING,
                     "second_of_minute_decimal",
                     "second_of_minute")
-            self.second_of_minute = _int_caster(second_of_minute,
-                                                "second_of_minute")
+            self.second_of_minute = second_of_minute
             self.second_of_minute += float(second_of_minute_decimal)
         else:
-            self.second_of_minute = _int_caster(second_of_minute,
-                                                "second_of_minute",
-                                                allow_none=True)
+            self.second_of_minute = second_of_minute
         if not self.truncated:
             if self.hour_of_day is None:
                 self.hour_of_day = 0
@@ -864,12 +665,10 @@ class TimePoint(object):
         has_unknown_tz = True
         if time_zone_hour is not None:
             has_unknown_tz = False
-            self.time_zone.hours = _int_caster(time_zone_hour,
-                                               "time_zone_hour")
+            self.time_zone.hours = time_zone_hour
         if time_zone_minute is not None:
             has_unknown_tz = False
-            self.time_zone.minutes = _int_caster(time_zone_minute,
-                                                 "time_zone_minute")
+            self.time_zone.minutes = time_zone_minute
         self.time_zone.unknown = self.truncated and has_unknown_tz
         if not self.truncated:
             # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
@@ -1827,6 +1626,178 @@ class TimePoint(object):
     __repr__ = __str__
 
 
+class TimeRecurrence(object):
+
+    """Represent a recurring duration."""
+
+    __slots__ = ("repetitions", "start_point", "duration", "end_point",
+                 "min_point", "max_point", "format_number")
+
+    def __init__(self,
+                 repetitions: Union[int, None] = None,
+                 start_point: Union[TimePoint, None] = None,
+                 duration: Union[Duration, None] = None,
+                 end_point: Union[Duration, None] = None,
+                 min_point: Union[TimePoint, None] = None,
+                 max_point: Union[TimePoint, None] = None):
+        self.repetitions = repetitions
+        self.start_point = start_point
+        self.duration = duration
+        self.end_point = end_point
+        self.min_point = min_point
+        self.max_point = max_point
+        self.format_number = None
+        if self.duration is None:
+            # First form.
+            self.format_number = 1
+            start_year, start_days = self.start_point.get_ordinal_date()
+            start_seconds = self.start_point.get_second_of_day()
+            self.end_point.set_time_zone(self.start_point.time_zone)
+            end_year, end_days = self.end_point.get_ordinal_date()
+            end_seconds = self.end_point.get_second_of_day()
+            diff_days = end_days - start_days
+            if end_year > start_year:
+                diff_days += get_days_in_year_range(start_year, end_year - 1)
+            diff_seconds = end_seconds - start_seconds
+            if diff_seconds < 0:
+                diff_days -= 1
+                diff_seconds += CALENDAR.SECONDS_IN_DAY
+            if diff_seconds >= CALENDAR.SECONDS_IN_DAY:
+                diff_days += 1
+                diff_seconds -= CALENDAR.SECONDS_IN_DAY
+            if self.repetitions == 1:
+                self.duration = Duration(years=0)
+            else:
+                diff_days_float = diff_days / float(
+                    self.repetitions - 1)
+                diff_seconds_float = diff_seconds / float(
+                    self.repetitions - 1)
+                diff_days = int(diff_days_float)
+                diff_seconds_float += (
+                    diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
+                self.duration = Duration(
+                    days=diff_days, seconds=diff_seconds_float)
+        elif self.end_point is None:
+            # Third form.
+            self.format_number = 3
+            if self.repetitions is not None:
+                self.end_point = (
+                    self.start_point + self.duration * (self.repetitions - 1))
+        elif self.start_point is None:
+            # Fourth form.
+            self.format_number = 4
+            if self.repetitions is not None:
+                self.start_point = (
+                    self.end_point - self.duration * (self.repetitions - 1))
+        else:
+            inputs = (
+                (repetitions, "repetitions"),
+                (start_point, "start_point"),
+                (duration, "duration"),
+                (end_point, "end_point"),
+                (min_point, "min_point"),
+                (max_point, "max_point")
+            )
+            raise BadInputError(
+                BadInputError.RECURRENCE, inputs)
+
+    def get_is_valid(self, timepoint):
+        """Return whether the timepoint is valid for this recurrence."""
+        if not self._get_is_in_bounds(timepoint):
+            return False
+        for iter_timepoint in self.__iter__():
+            if iter_timepoint == timepoint:
+                return True
+            if self.start_point is None and iter_timepoint < timepoint:
+                return False
+            if self.end_point is None and iter_timepoint > timepoint:
+                return False
+        return False
+
+    def get_next(self, timepoint):
+        """Return the next timepoint after this timepoint, or None."""
+        if self.repetitions == 1 or timepoint is None:
+            return None
+        next_timepoint = timepoint + self.duration
+        if self._get_is_in_bounds(next_timepoint):
+            return next_timepoint
+        if self.format_number == 1 and next_timepoint > self.end_point:
+            diff = next_timepoint - self.end_point
+            if (2 * diff < self.duration and
+                    self._get_is_in_bounds(self.end_point)):
+                return self.end_point
+        return None
+
+    def get_prev(self, timepoint):
+        """Return the previous timepoint before this timepoint, or None."""
+        if self.repetitions == 1 or timepoint is None:
+            return None
+        prev_timepoint = timepoint - self.duration
+        if self._get_is_in_bounds(prev_timepoint):
+            return prev_timepoint
+        return None
+
+    def __getitem__(self, index):
+        if index < 0 or not isinstance(index, int):
+            raise IndexError(
+                "Unsupported index for TimeRecurrence")
+        for i, point in enumerate(self.__iter__()):
+            if index == i:
+                return point
+        raise IndexError(
+            "Invalid index for TimeRecurrence")
+
+    def _get_is_in_bounds(self, timepoint):
+        """Return whether the timepoint is within this recurrence series."""
+        if timepoint is None:
+            return False
+        if self.start_point is not None and timepoint < self.start_point:
+            return False
+        if self.min_point is not None and timepoint < self.min_point:
+            return False
+        if self.max_point is not None and timepoint > self.max_point:
+            return False
+        if self.end_point is not None and timepoint > self.end_point:
+            return False
+        return True
+
+    def __iter__(self):
+        if self.start_point is None:
+            point = self.end_point
+            in_reverse = True
+        else:
+            point = self.start_point
+            in_reverse = False
+
+        if self.repetitions == 1 or not self.duration:
+            if self._get_is_in_bounds(point):
+                yield point
+            point = None
+
+        while point is not None:
+            if self._get_is_in_bounds(point):
+                yield point
+            else:
+                break
+            if in_reverse:
+                point = self.get_prev(point)
+            else:
+                point = self.get_next(point)
+
+    def __str__(self):
+        if self.repetitions is None:
+            prefix = "R/"
+        else:
+            prefix = "R" + str(self.repetitions) + "/"
+        if self.format_number == 1:
+            return prefix + str(self.start_point) + "/" + str(self.end_point)
+        elif self.format_number == 3:
+            return prefix + str(self.start_point) + "/" + str(self.duration)
+        elif self.format_number == 4:
+            return prefix + str(self.duration) + "/" + str(self.end_point)
+        return "R/?/?"
+
+
 def _format_remainder(float_time_number):
     """Format a floating point remainder of a time unit."""
     string = "," + ("%f" % float_time_number)[2:].rstrip("0")
@@ -2257,46 +2228,6 @@ def _iter_months_days(is_leap_year, month_of_year, day_of_month, _,
                 for day in day_range:
                     results.append((month_num, day))
     return results
-
-
-def _int_caster(number, name="number", allow_none=False):
-    if allow_none and number is None:
-        return None
-    try:
-        int_number = int(number)
-        float_number = float(number)
-    except (TypeError, ValueError) as num_exc:
-        raise BadInputError(
-            BadInputError.INT_CAST, name, number, num_exc)
-    if float(int_number) != float_number:
-        raise BadInputError(
-            BadInputError.INT_REMAINDER, name, number)
-    return int_number
-
-
-def _type_checker(*objects):
-    for type_info in objects:
-        value, name = type_info[:2]
-        allowed_types = list(type_info[2:])
-        none_is_allowed = False
-        if None in allowed_types:
-            if value is None:
-                break
-            none_is_allowed = True
-            allowed_types.remove(None)
-            allowed_types.append(type(None))
-        if allowed_types and isinstance(value, allowed_types[0]):
-            break
-        if int in allowed_types and float not in allowed_types:
-            value = _int_caster(value, name=name, allow_none=none_is_allowed)
-        if any(isinstance(value, type_) for type_ in allowed_types):
-            break
-        values_string = ""
-        if allowed_types:
-            values_string = " should be: "
-            values_string += " or ".join(str(v) for v in allowed_types)
-        raise BadInputError(
-            BadInputError.TYPE, name, repr(value), values_string)
 
 
 PARSE_PROPERTY_TRANSLATORS = {
