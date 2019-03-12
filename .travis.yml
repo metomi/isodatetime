@@ -35,6 +35,8 @@ before_install:
   - pip install coverage pytest-cov pytest-env pytest-runner
   # Code style dependencies
   - pip install pycodestyle
+  # Python 3.4 needs typing, as it was released with Python 3.5
+  - pip install typing
 before_script:
   - pycodestyle -v isodatetime
 script:
