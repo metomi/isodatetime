@@ -15,7 +15,28 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ----------------------------------------------------------------------------
+"""Test isodatetime.parsers."""
 
-[pytest]
-addopts = -v -s -ra --color=auto --doctest-glob='*.md'
-# Some tests fail when running in a different time zone (e.g. Pacific/Auckland)
+import pytest
+
+from isodatetime.parsers import TimePointParser
+
+
+def test_invalid_components():
+    parser = TimePointParser()
+    for date, invalid in {
+        '2000-01-01T00:00:60': ['second_of_minute=60'],
+        '2000-01-01T00:60:00': ['minute_of_hour=60'],
+        '2000-01-01T60:00:00': ['hour_of_day=60'],
+        '2000-01-32T00:00:00': ['day_of_month=32'],
+        '2000-13-00T00:00:00': ['month_of_year=13'],
+        '2000-13-32T60:60:60': ['month_of_year=13',
+                                'day_of_month=32',
+                                'hour_of_day=60',
+                                'minute_of_hour=60',
+                                'second_of_minute=60']
+    }.items():
+        with pytest.raises(ValueError) as exc:
+            parser.parse(date)
+        for item in invalid:
+            assert item in str(exc)
