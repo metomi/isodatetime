@@ -10,8 +10,7 @@ python:
   - 3.6
   - 3.7-dev
 env:
-  - RUN_COVERAGE=false
-  - RUN_COVERAGE=true
+  - TZ=UTC
 
 matrix:
   fast_finish: true
