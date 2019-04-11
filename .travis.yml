@@ -8,8 +8,7 @@ python:
   - 2.6
   - 2.7
 env:
-  - RUN_COVERAGE=false
-  - RUN_COVERAGE=true
+  - TZ=UTC
 
 matrix:
   fast_finish: true
