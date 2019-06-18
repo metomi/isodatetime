@@ -340,7 +340,7 @@ class TimePointParser(object):
 
     def strptime(self, strptime_data_string, strptime_format_string,
                  dump_format=None):
-        """Implement equivalent of Python 2's datetime.datetime.strptime.
+        """Implement equivalent of Python's datetime.datetime.strptime.
 
         Return an isodatetime.data.TimePoint representing
         strptime_data_string based on the format given in

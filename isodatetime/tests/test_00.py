@@ -1458,6 +1458,7 @@ class TestSuite(unittest.TestCase):
             minute_of_hour=ctrl_date.minute,
             second_of_minute=ctrl_date.second
         )
+        test_date.set_time_zone_to_utc()
         for test_date in [test_date, test_date.copy().to_week_date(),
                           test_date.copy().to_ordinal_date()]:
             ctrl_data = ctrl_date.strftime(strftime_string)
@@ -1474,6 +1475,8 @@ class TestSuite(unittest.TestCase):
                     ctrl_data = datetime.datetime.strptime(
                         ctrl_dump, strptime_string)
                 test_data = parser.strptime(test_dump, strptime_string)
+                if any(s in strptime_string for s in ('%s', '%z')):
+                    test_data.set_time_zone_to_utc()
 
                 ctrl_data = (
                     ctrl_data.year, ctrl_data.month, ctrl_data.day,

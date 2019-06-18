@@ -31,7 +31,7 @@ import isodatetime.datetimeoper
 class TestDateTimeOperator(unittest.TestCase):
     """Test isodatetime.datetimeoper.TestDateTimeOperator functionalities."""
 
-    @patch('isodatetime.datetimeoper.get_timepoint_for_now')
+    @patch('isodatetime.datetimeoper.now2point')
     def test_process_time_point_str_now_0(self, mock_now_func):
         """DateTimeOperator.process_time_point_str()"""
         # 2009-02-13T23:31:30Z
@@ -43,7 +43,7 @@ class TestDateTimeOperator(unittest.TestCase):
             str(mock_now),
             datetimeoper.process_time_point_str(datetimeoper.STR_NOW))
 
-    @patch('isodatetime.datetimeoper.get_timepoint_for_now')
+    @patch('isodatetime.datetimeoper.now2point')
     def test_process_time_point_str_ref_0(self, mock_now_func):
         """DateTimeOperator.process_time_point_str('ref')
 
@@ -175,12 +175,21 @@ class TestDateTimeOperator(unittest.TestCase):
             # 360day
             ('360day', '20130301', ['-P1D'], '20130230'),
             ('360day', '20130230', ['P1D'], '20130301'),
+            # 360_day
+            ('360_day', '20130301', ['-P1D'], '20130230'),
+            ('360_day', '20130230', ['P1D'], '20130301'),
             # 365day
             ('365day', '20130301', ['-P1D'], '20130228'),
             ('365day', '20130228', ['P1D'], '20130301'),
+            # 365_day
+            ('365_day', '20130301', ['-P1D'], '20130228'),
+            ('365_day', '20130228', ['P1D'], '20130301'),
             # 366day
             ('366day', '20130301', ['-P1D'], '20130229'),
             ('366day', '20130229', ['P1D'], '20130301'),
+            # 366_day
+            ('366_day', '20130301', ['-P1D'], '20130229'),
+            ('366_day', '20130229', ['P1D'], '20130301'),
         ]:
             # Calendar mode, is unfortunately, a global variable,
             # so needs to reset value on return.

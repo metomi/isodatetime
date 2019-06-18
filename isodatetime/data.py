@@ -40,19 +40,25 @@ class Calendar(object):
     LEAP_YEAR_FACTOR_TRUTHS = [(4, True), (100, False), (400, True)]
 
     MODE_360 = "360day"
+    MODE_360_DAY = "360_day"
     MODE_365 = "365day"
+    MODE_365_DAY = "365_day"
     MODE_366 = "366day"
+    MODE_366_DAY = "366_day"
     MODE_GREGORIAN = "gregorian"
+    DAYS_IN_MONTHS_360 = 12 * (30,)
+    DAYS_IN_MONTHS_365 = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    DAYS_IN_MONTHS_366 = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
     # {mode: (days_in_months, days_in_months_leap), ...}
     MODES = {
-        MODE_360: (12 * [30], None),
-        MODE_365: ([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], None),
-        MODE_366: ([31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], None),
-        MODE_GREGORIAN: (
-            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-        ),
+        MODE_360: (DAYS_IN_MONTHS_360, None),
+        MODE_360_DAY: (DAYS_IN_MONTHS_360, None),
+        MODE_365: (DAYS_IN_MONTHS_365, None),
+        MODE_365_DAY: (DAYS_IN_MONTHS_365, None),
+        MODE_366: (DAYS_IN_MONTHS_366, None),
+        MODE_366_DAY: (DAYS_IN_MONTHS_366, None),
+        MODE_GREGORIAN: (DAYS_IN_MONTHS_365, DAYS_IN_MONTHS_366),
     }
 
     WEEK_DAY_START_REFERENCE = {"calendar": (2000, 1, 3),
@@ -2206,6 +2212,7 @@ def get_timepoint_from_seconds_since_unix_epoch(num_seconds):
     """
     reference_timepoint = TimePoint(
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
+    reference_timepoint.set_time_zone_to_local()
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 

@@ -19,7 +19,12 @@
 
 from datetime import datetime
 import os
-from .data import Calendar, get_timepoint_for_now
+import time
+
+from .data import (
+    Calendar,
+    get_timepoint_for_now as now2point,
+    get_timepoint_from_seconds_since_unix_epoch as seconds2point)
 from .dumpers import TimePointDumper
 from .parsers import TimePointParser, DurationParser, TimeRecurrenceParser
 
@@ -131,7 +136,7 @@ class DateTimeOperator(object):
         if time_point_str == self.STR_REF:
             time_point_str = self.ref_point_str
         if time_point_str is None or time_point_str == self.STR_NOW:
-            time_point = get_timepoint_for_now()
+            time_point = now2point()
             time_point.set_time_zone_to_local()
             if self.utc_mode or time_point.get_time_zone_utc():  # is in UTC
                 parse_format = self.CURRENT_TIME_DUMP_FORMAT_Z
@@ -267,8 +272,14 @@ class DateTimeOperator(object):
 
     def get_datetime_strptime(self, time_point_str, parse_format):
         """Use the datetime library's strptime as a fallback."""
-        date_time = datetime.strptime(time_point_str, parse_format)
-        return self.time_point_parser.parse(date_time.isoformat())
+        point = seconds2point(
+            time.mktime(time.strptime(time_point_str, parse_format)))
+        # FIXME: Neither time.strptime nor datetime.datetime.strptime
+        # returns the value of the %Z (time zone) field, so we ignore that for
+        # now except explicit UTC/GMT in the string.
+        if any(s in time_point_str for s in ('UTC', 'GMT')):
+            point.set_time_zone_to_utc()
+        return point
 
     def process_time_point_str(
         self,
