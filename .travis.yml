@@ -4,25 +4,19 @@
 ---
 language: python
 
-python:
-  - 3.4
-  - 3.5
-  - 3.6
-  - 3.7-dev
-env:
-  - TZ=UTC
-
 matrix:
   fast_finish: true
-  exclude:
+  include:
     - python: 3.4
-      env: RUN_COVERAGE=true
+      env: RUN_COVERAGE=false
     - python: 3.5
-      env: RUN_COVERAGE=true
+      env: RUN_COVERAGE=false
     - python: 3.6
       env: RUN_COVERAGE=false
     - python: 3.7-dev
       env: RUN_COVERAGE=true
+    - python: 3.7-dev
+      env: RUN_COVERAGE=false TZ=UTC
 
 before_install:
   # Upgrade pip and setuptools as some times the versioning scheme hack fails
