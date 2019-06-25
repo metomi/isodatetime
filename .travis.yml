@@ -2,6 +2,7 @@
 # See https://travis-ci.org/ for more info.
 
 ---
+dist: xenial
 language: python
 
 matrix:
@@ -13,10 +14,12 @@ matrix:
       env: RUN_COVERAGE=false
     - python: 3.6
       env: RUN_COVERAGE=false
-    - python: 3.7-dev
+    - python: 3.7
       env: RUN_COVERAGE=true
-    - python: 3.7-dev
+    - python: 3.7
       env: RUN_COVERAGE=false TZ=UTC
+    - python: 3.8-dev
+      env: RUN_COVERAGE=false
 
 before_install:
   # Upgrade pip and setuptools as some times the versioning scheme hack fails
