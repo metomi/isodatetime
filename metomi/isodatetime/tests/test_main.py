@@ -24,8 +24,8 @@ import unittest
 from unittest.mock import patch
 
 
-import isodatetime
-import isodatetime.main
+import metomi.isodatetime
+import metomi.isodatetime.main
 
 
 class TestMain(unittest.TestCase):

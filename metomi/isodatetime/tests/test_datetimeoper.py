@@ -23,9 +23,9 @@ import unittest
 from unittest.mock import patch
 
 
-from isodatetime.data import (
+from metomi.isodatetime.data import (
     get_timepoint_from_seconds_since_unix_epoch as seconds2point)
-import isodatetime.datetimeoper
+import metomi.isodatetime.datetimeoper
 
 
 class TestDateTimeOperator(unittest.TestCase):

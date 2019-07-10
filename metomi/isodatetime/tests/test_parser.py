@@ -19,7 +19,7 @@
 
 import pytest
 
-from isodatetime.parsers import TimePointParser
+from metomi.isodatetime.parsers import TimePointParser
 
 
 def test_invalid_components():

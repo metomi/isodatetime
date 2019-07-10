@@ -25,11 +25,11 @@ import pytest
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 
-from isodatetime import data
-from isodatetime import dumpers
-from isodatetime import parsers
-from isodatetime import parser_spec
-from isodatetime import timezone
+from metomi.isodatetime import data
+from metomi.isodatetime import dumpers
+from metomi.isodatetime import parsers
+from metomi.isodatetime import parser_spec
+from metomi.isodatetime import timezone
 
 
 def get_timeduration_tests():
