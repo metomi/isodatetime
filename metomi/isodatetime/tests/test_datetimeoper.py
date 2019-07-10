@@ -25,25 +25,25 @@ from unittest.mock import patch
 
 from metomi.isodatetime.data import (
     get_timepoint_from_seconds_since_unix_epoch as seconds2point)
-import metomi.isodatetime.datetimeoper
+import metomi.isodatetime.datetimeoper as idt_dtoper
 
 
 class TestDateTimeOperator(unittest.TestCase):
     """Test isodatetime.datetimeoper.TestDateTimeOperator functionalities."""
 
-    @patch('isodatetime.datetimeoper.now2point')
+    @patch('metomi.isodatetime.datetimeoper.now2point')
     def test_process_time_point_str_now_0(self, mock_now_func):
         """DateTimeOperator.process_time_point_str()"""
         # 2009-02-13T23:31:30Z
         mock_now = seconds2point(1234567890)
         mock_now_func.return_value = mock_now
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+        datetimeoper = idt_dtoper.DateTimeOperator()
         self.assertEqual(str(mock_now), datetimeoper.process_time_point_str())
         self.assertEqual(
             str(mock_now),
             datetimeoper.process_time_point_str(datetimeoper.STR_NOW))
 
-    @patch('isodatetime.datetimeoper.now2point')
+    @patch('metomi.isodatetime.datetimeoper.now2point')
     def test_process_time_point_str_ref_0(self, mock_now_func):
         """DateTimeOperator.process_time_point_str('ref')
 
@@ -52,7 +52,7 @@ class TestDateTimeOperator(unittest.TestCase):
         # 2009-02-13T23:31:30Z
         mock_now = seconds2point(1234567890)
         mock_now_func.return_value = mock_now
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+        datetimeoper = idt_dtoper.DateTimeOperator()
         # Ensure that the ISODATETIMEREF environment variable is not set
         # Or the test may not work.
         environ = os.environ.copy()
@@ -70,7 +70,7 @@ class TestDateTimeOperator(unittest.TestCase):
         """
         # 2009-02-13T23:31:30Z
         ref_point_str = str(seconds2point(1234567890))
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+        datetimeoper = idt_dtoper.DateTimeOperator(
             ref_point_str=ref_point_str)
         self.assertEqual(
             ref_point_str,
@@ -86,10 +86,10 @@ class TestDateTimeOperator(unittest.TestCase):
         # Set ISODATETIMEREF.
         # Or the test may not work.
         environ = os.environ.copy()
-        environ[isodatetime.datetimeoper.DateTimeOperator.ENV_REF] = (
+        environ[idt_dtoper.DateTimeOperator.ENV_REF] = (
             ref_point_str)
         with patch.dict(os.environ, environ):
-            datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+            datetimeoper = idt_dtoper.DateTimeOperator()
             self.assertEqual(
                 ref_point_str,
                 datetimeoper.process_time_point_str(datetimeoper.STR_REF))
@@ -101,7 +101,7 @@ class TestDateTimeOperator(unittest.TestCase):
         """
         # 2009-02-13T23:31:30Z
         point_str = str(seconds2point(1234567890))
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+        datetimeoper = idt_dtoper.DateTimeOperator()
         # Unix time
         self.assertEqual(
             '2019-01-11T10:40:15Z',
@@ -146,13 +146,13 @@ class TestDateTimeOperator(unittest.TestCase):
             datetimeoper.process_time_point_str, 'teatime')
         # Bad offset string
         with self.assertRaises(
-            isodatetime.datetimeoper.OffsetValueError,
+            idt_dtoper.OffsetValueError,
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['ages'])
         self.assertEqual('ages: bad offset value', str(ctxmgr.exception))
         # Bad offset string, unsupported time point like duration
         with self.assertRaises(
-            isodatetime.datetimeoper.OffsetValueError,
+            idt_dtoper.OffsetValueError,
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['P0000-W01-1'])
         self.assertEqual(
@@ -166,10 +166,10 @@ class TestDateTimeOperator(unittest.TestCase):
         """
         self.assertEqual(
             'gregorian',
-            isodatetime.datetimeoper.DateTimeOperator.get_calendar_mode())
+            idt_dtoper.DateTimeOperator.get_calendar_mode())
         self.assertRaises(
             KeyError,
-            isodatetime.datetimeoper.DateTimeOperator.set_calendar_mode,
+            idt_dtoper.DateTimeOperator.set_calendar_mode,
             'milkywaygalactic')
         for cal, str_in, offsets, str_out in [
             # 360day
@@ -194,32 +194,32 @@ class TestDateTimeOperator(unittest.TestCase):
             # Calendar mode, is unfortunately, a global variable,
             # so needs to reset value on return.
             calendar_mode = (
-                isodatetime.datetimeoper.DateTimeOperator.get_calendar_mode())
+                idt_dtoper.DateTimeOperator.get_calendar_mode())
             # Calendar mode by constructor.
             try:
-                datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+                datetimeoper = idt_dtoper.DateTimeOperator(
                     calendar_mode=cal)
                 self.assertEqual(
                     str_out,
                     datetimeoper.process_time_point_str(str_in, offsets))
             finally:
-                isodatetime.datetimeoper.DateTimeOperator.set_calendar_mode(
+                idt_dtoper.DateTimeOperator.set_calendar_mode(
                     calendar_mode)
             # Calendar mode by environment variable
             try:
                 environ = os.environ.copy()
                 key = (
-                    isodatetime.datetimeoper.DateTimeOperator.ENV_CALENDAR_MODE
+                    idt_dtoper.DateTimeOperator.ENV_CALENDAR_MODE
                 )
                 environ[key] = cal
                 with patch.dict(os.environ, environ, clear=True):
-                    datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+                    datetimeoper = idt_dtoper.DateTimeOperator()
                     self.assertEqual(
                         str_out,
                         datetimeoper.process_time_point_str(
                             str_in, offsets))
             finally:
-                isodatetime.datetimeoper.DateTimeOperator.set_calendar_mode(
+                idt_dtoper.DateTimeOperator.set_calendar_mode(
                     calendar_mode)
 
     def test_process_time_point_str_format(self):
@@ -247,7 +247,7 @@ class TestDateTimeOperator(unittest.TestCase):
             (None, '%F', '2014-02-01T04:05:06', '2014-02-01'),
 
         ]:
-            datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+            datetimeoper = idt_dtoper.DateTimeOperator(
                 utc_mode=True,
                 parse_format=parse_format)
             self.assertEqual(
@@ -255,7 +255,7 @@ class TestDateTimeOperator(unittest.TestCase):
                 datetimeoper.process_time_point_str(
                     point_str_in, print_format=print_format))
         # Bad parse format
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+        datetimeoper = idt_dtoper.DateTimeOperator(
             parse_format='%o')
         with self.assertRaises(ValueError) as ctxmgr:
             datetimeoper.process_time_point_str('0000')
@@ -265,7 +265,7 @@ class TestDateTimeOperator(unittest.TestCase):
 
     def test_format_duration_str_x(self):
         """DateTimeOperator.format_duration_str(...)"""
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator()
+        datetimeoper = idt_dtoper.DateTimeOperator()
         # Good ones
         for print_format, duration_str_in, duration_out in [
             ('s', 'PT1M', 60.0),
@@ -290,7 +290,7 @@ class TestDateTimeOperator(unittest.TestCase):
 
     def test_diff_time_point_strs(self):
         """DateTimeOperator.diff_time_point_strs(...)"""
-        datetimeoper = isodatetime.datetimeoper.DateTimeOperator(
+        datetimeoper = idt_dtoper.DateTimeOperator(
             ref_point_str='20150106')
         for (
             time_point_str1,

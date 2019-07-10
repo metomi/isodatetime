@@ -18,7 +18,6 @@
 
 import os
 import sys
-from setuptools import setup
 from metomi.isodatetime import __version__
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
@@ -82,7 +81,7 @@ setup(
     long_description_content_type="text/markdown",
     platforms='any',
     setup_requires=['pytest-runner'],
-    tests_require=['coverage', 'pytest', 'pytest-cov', 'pytest-env'],
+    tests_require=['coverage', 'pytest>=5', 'pytest-cov', 'pytest-env'],
     install_requires=[],
     python_requires='>=3.4, <3.8',
     classifiers=[

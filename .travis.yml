@@ -32,7 +32,7 @@ before_install:
   # Code style dependencies
   - pip install pycodestyle
 before_script:
-  - pycodestyle -v isodatetime
+  - pycodestyle -v metomi/isodatetime
 script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"

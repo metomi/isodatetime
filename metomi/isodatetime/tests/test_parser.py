@@ -38,5 +38,6 @@ def test_invalid_components():
     }.items():
         with pytest.raises(ValueError) as exc:
             parser.parse(date)
+        # import pdb; pdb.set_trace()
         for item in invalid:
-            assert item in str(exc)
+            assert item in str(exc.value)

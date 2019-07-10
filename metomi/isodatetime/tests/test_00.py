@@ -1598,7 +1598,7 @@ class TestSuite(unittest.TestCase):
         [-12600, -3, 30]  # america/st_johns, -03:30
     ]
 
-    @patch('isodatetime.timezone.time')
+    @patch('metomi.isodatetime.timezone.time')
     def test_get_local_time_zone_no_dst(self, mock_time):
         """Test that the hour/minute returned is correct.
 
@@ -1630,7 +1630,7 @@ class TestSuite(unittest.TestCase):
         [-12600, -9000, -2, 30]  # america/st_johns, -03:30 and -02:30
     ]
 
-    @patch('isodatetime.timezone.time')
+    @patch('metomi.isodatetime.timezone.time')
     def test_get_local_time_zone_with_dst(self, mock_time):
         """Test that the hour/minute returned is correct
 
@@ -1687,7 +1687,7 @@ class TestSuite(unittest.TestCase):
         [-12600, timezone.TimeZoneFormatMode.reduced, "-0330"]
     ]
 
-    @patch('isodatetime.timezone.time')
+    @patch('metomi.isodatetime.timezone.time')
     def test_get_local_time_zone_format(self, mock_time):
         """Test that the UTC offset string format is correct
 
