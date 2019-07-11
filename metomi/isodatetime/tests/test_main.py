@@ -24,7 +24,7 @@ import unittest
 from unittest.mock import patch
 
 
-import metomi.isodatetime as isodatetime
+import metomi.isodatetime
 import metomi.isodatetime.main as isodatetime_main
 
 
@@ -39,7 +39,9 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             try:
                 isodatetime_main.main()
-                mock_print.assert_called_with(isodatetime.__version__)
+                mock_print.assert_called_with(
+                    metomi.isodatetime.__version__
+                )
             finally:
                 sys.argv = argv
 
