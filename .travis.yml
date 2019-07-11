@@ -8,8 +8,6 @@ language: python
 matrix:
   fast_finish: true
   include:
-    - python: 3.4
-      env: RUN_COVERAGE=false
     - python: 3.5
       env: RUN_COVERAGE=false
     - python: 3.6
@@ -32,7 +30,7 @@ before_install:
   # Code style dependencies
   - pip install pycodestyle
 before_script:
-  - pycodestyle -v isodatetime
+  - pycodestyle -v metomi/isodatetime
 script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"

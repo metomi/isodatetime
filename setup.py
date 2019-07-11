@@ -18,14 +18,14 @@
 
 import os
 import sys
-from setuptools import setup
-from isodatetime import __version__
+from metomi.isodatetime import __version__
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
 from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
 # to parse pytest command arguments
 # https://docs.pytest.org/en/2.8.7/goodpractices.html#manual-integration
 from setuptools.command.test import test as TestCommand
+from setuptools import setup, find_namespace_packages
 
 
 class PyTest(TestCommand):
@@ -63,7 +63,7 @@ class bdist_rpm(bdist_rpm_original):
 
 
 setup(
-    name="isodatetime",
+    name="metomi-isodatetime",
     version='1!' + __version__,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
@@ -76,12 +76,12 @@ setup(
     license="LGPLv3",
     keywords="isodatetime datetime iso8601 date time parser",
     url="https://github.com/metomi/isodatetime",
-    packages=['isodatetime'],
+    packages=find_namespace_packages(include=['metomi.*']),
     long_description=read('README.md'),
     long_description_content_type="text/markdown",
     platforms='any',
     setup_requires=['pytest-runner'],
-    tests_require=['coverage', 'pytest', 'pytest-cov', 'pytest-env'],
+    tests_require=['coverage', 'pytest>=5', 'pytest-cov', 'pytest-env'],
     install_requires=[],
     python_requires='>=3.4, <3.8',
     classifiers=[

@@ -24,7 +24,7 @@ import random
 import unittest
 import concurrent.futures
 
-from isodatetime.data import TimePoint, Duration, get_days_since_1_ad
+from metomi.isodatetime.data import TimePoint, Duration, get_days_since_1_ad
 
 
 def daterange(start_date, end_date):

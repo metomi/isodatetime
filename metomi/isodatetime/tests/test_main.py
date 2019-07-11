@@ -24,8 +24,8 @@ import unittest
 from unittest.mock import patch
 
 
-import isodatetime
-import isodatetime.main
+import metomi.isodatetime
+import metomi.isodatetime.main as isodatetime_main
 
 
 class TestMain(unittest.TestCase):
@@ -38,8 +38,10 @@ class TestMain(unittest.TestCase):
         for args in [['--version'], ['-V']]:
             sys.argv = [''] + args
             try:
-                isodatetime.main.main()
-                mock_print.assert_called_with(isodatetime.__version__)
+                isodatetime_main.main()
+                mock_print.assert_called_with(
+                    metomi.isodatetime.__version__
+                )
             finally:
                 sys.argv = argv
 
@@ -48,14 +50,14 @@ class TestMain(unittest.TestCase):
         """Test calling usage 1, no or now argument."""
         argv = sys.argv
         with patch.object(
-            isodatetime.main.DateTimeOperator,
+            isodatetime_main.DateTimeOperator,
             'process_time_point_str',
             return_value='20190101T1234Z'
         ):
             for args in [[''], ['now']]:
                 sys.argv = args
                 try:
-                    isodatetime.main.main()
+                    isodatetime_main.main()
                     mock_print.assert_called_with('20190101T1234Z')
                 finally:
                     sys.argv = argv
@@ -63,7 +65,7 @@ class TestMain(unittest.TestCase):
     @patch('builtins.print')
     def test_1_good(self, mock_print):
         """Test calling usage 1, sample good arguments."""
-        env_ref = isodatetime.main.DateTimeOperator.ENV_REF
+        env_ref = isodatetime_main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
         argv = sys.argv
         for args, out in [
@@ -90,7 +92,7 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             os.environ[env_ref] = '20201225T0000Z'
             try:
-                isodatetime.main.main()
+                isodatetime_main.main()
                 mock_print.assert_called_with(out)
             finally:
                 sys.argv = argv
@@ -113,7 +115,7 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             try:
                 with self.assertRaises(SystemExit) as ctxmgr:
-                    isodatetime.main.main()
+                    isodatetime_main.main()
                 mock_print.assert_not_called()
                 self.assertEqual(out, str(ctxmgr.exception))
             finally:
@@ -122,7 +124,7 @@ class TestMain(unittest.TestCase):
     @patch('builtins.print')
     def test_2_good(self, mock_print):
         """Test calling usage 2, sample good arguments."""
-        env_ref = isodatetime.main.DateTimeOperator.ENV_REF
+        env_ref = isodatetime_main.DateTimeOperator.ENV_REF
         ref = os.environ.get(env_ref)
         argv = sys.argv
         for args, out in [
@@ -140,7 +142,7 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             os.environ[env_ref] = '20201225T0000Z'
             try:
-                isodatetime.main.main()
+                isodatetime_main.main()
                 mock_print.assert_called_with(out)
             finally:
                 sys.argv = argv
@@ -165,7 +167,7 @@ class TestMain(unittest.TestCase):
             sys.argv = [''] + args
             try:
                 with self.assertRaises(SystemExit) as ctxmgr:
-                    isodatetime.main.main()
+                    isodatetime_main.main()
                 mock_print.assert_not_called()
                 self.assertEqual(out, str(ctxmgr.exception))
             finally:
@@ -183,7 +185,7 @@ class TestMain(unittest.TestCase):
         ]:
             sys.argv = [''] + args
             try:
-                isodatetime.main.main()
+                isodatetime_main.main()
                 mock_print.assert_called_with(out)
             finally:
                 sys.argv = argv
@@ -196,7 +198,7 @@ class TestMain(unittest.TestCase):
         sys.argv = ['', '--as-total=s', 'PS4']
         try:
             with self.assertRaises(SystemExit) as ctxmgr:
-                isodatetime.main.main()
+                isodatetime_main.main()
             mock_print.assert_not_called()
             self.assertEqual(
                 'Invalid ISO 8601 duration representation: PS4',
@@ -227,7 +229,7 @@ class TestMain(unittest.TestCase):
         ]:
             sys.argv = [''] + args
             try:
-                isodatetime.main.main()
+                isodatetime_main.main()
                 mock_print.assert_called_with(out)
             finally:
                 sys.argv = argv
@@ -240,7 +242,7 @@ class TestMain(unittest.TestCase):
         sys.argv = ['', 'R/2020/2025']
         try:
             with self.assertRaises(SystemExit) as ctxmgr:
-                isodatetime.main.main()
+                isodatetime_main.main()
             mock_print.assert_not_called()
             self.assertEqual(
                 'Invalid ISO 8601 recurrence representation: R/2020/2025',
