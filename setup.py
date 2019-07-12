@@ -63,7 +63,7 @@ class bdist_rpm(bdist_rpm_original):
 
 
 setup(
-    name="metomi-isodatetime",
+    name="isodatetime",
     version='1!' + __version__,
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
