@@ -37,7 +37,7 @@ except FileNotFoundError:
 
 def get_version(module, path):
     """Return the __version__ attr from a module sourced by FS path."""
-    spec = spec_from_file_location(module, path)
+    spec = spec_from_file_location(module, str(path))
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.__version__
