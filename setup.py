@@ -29,15 +29,12 @@ from setuptools import setup, find_namespace_packages
 import sys
 
 
-try:
-    os.chdir(os.path.dirname(__file__))
-except FileNotFoundError:
-    pass
+DIST_DIR = Path(__file__).resolve().parent
 
 
 def get_version(module, path):
     """Return the __version__ attr from a module sourced by FS path."""
-    spec = spec_from_file_location(module, str(path))
+    spec = spec_from_file_location(module, path)
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.__version__
@@ -45,7 +42,7 @@ def get_version(module, path):
 
 __version__ = get_version(
     'metomi.isodatetime',
-    Path('metomi/isodatetime/__init__.py')
+    str(Path(DIST_DIR, 'metomi/isodatetime/__init__.py'))
 )
 
 
@@ -89,7 +86,7 @@ setup(
     keywords="isodatetime datetime iso8601 date time parser",
     url="https://github.com/metomi/isodatetime",
     packages=find_namespace_packages(include=['metomi.*']),
-    long_description=open('README.md', 'r').read(),
+    long_description=open(str(Path(DIST_DIR, 'README.md')), 'r').read(),
     long_description_content_type="text/markdown",
     platforms='any',
     setup_requires=['pytest-runner'],
