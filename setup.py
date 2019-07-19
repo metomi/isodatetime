@@ -16,9 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ----------------------------------------------------------------------------
 
+from importlib.util import spec_from_file_location, module_from_spec
 import os
-import sys
-from metomi.isodatetime import __version__
+from pathlib import Path
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
 from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
@@ -26,6 +26,24 @@ from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
 # https://docs.pytest.org/en/2.8.7/goodpractices.html#manual-integration
 from setuptools.command.test import test as TestCommand
 from setuptools import setup, find_namespace_packages
+import sys
+
+
+DIST_DIR = Path(__file__).resolve().parent
+
+
+def get_version(module, path):
+    """Return the __version__ attr from a module sourced by FS path."""
+    spec = spec_from_file_location(module, path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.__version__
+
+
+__version__ = get_version(
+    'metomi.isodatetime',
+    str(Path(DIST_DIR, 'metomi/isodatetime/__init__.py'))
+)
 
 
 class PyTest(TestCommand):
@@ -41,15 +59,6 @@ class PyTest(TestCommand):
         import pytest
         errno = pytest.main(shlex.split(self.pytest_args))
         sys.exit(errno)
-
-
-def read(fname):
-    """Utility function to read the README file.
-
-    Used for the long_description. It's nice, because now 1) we have a top
-    level README file and 2) it's easier to type in the README file than to
-    put a raw string in below ..."""
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
 class bdist_rpm(bdist_rpm_original):
@@ -77,7 +86,7 @@ setup(
     keywords="isodatetime datetime iso8601 date time parser",
     url="https://github.com/metomi/isodatetime",
     packages=find_namespace_packages(include=['metomi.*']),
-    long_description=read('README.md'),
+    long_description=open(str(Path(DIST_DIR, 'README.md')), 'r').read(),
     long_description_content_type="text/markdown",
     platforms='any',
     setup_requires=['pytest-runner'],
