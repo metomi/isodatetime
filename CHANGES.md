@@ -5,6 +5,30 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2.0.1 (Released 2019-07-23)
+
+This is the 13th release of isodatetime.
+
+This release requires Python 3.5 or above.
+
+Note the major change in namespace from `isodatetime` to `metomi.isodatime`.
+
+### Noteworthy Changes
+
+[#122](https://github.com/metomi/isodatetime/pull/122):
+CLI take mixed required and optional arguments (Python 3.7+ only).
+
+[#127](https://github.com/metomi/isodatetime/pull/127):
+Raise a useful `ValueError` if time point is invalid.
+
+[#130](https://github.com/metomi/isodatetime/pull/130)
+Support the CF compatible calendar mode strings `360_day`, `365_day` & `366_day`
+
+[#132](https://github.com/metomi/isodatetime/pull/132)
+Change namespace of `isodatetime` to `metomi.isodatetime`
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2.0.0 (Released 2019-01-22)
 
 This is the 12th release of isodatetime.
