@@ -7,7 +7,8 @@ isodatetime
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fd1147b75474d4d9a0f64bececf3bb5)](https://www.codacy.com/app/metomi/isodatetime?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=metomi/isodatetime&amp;utm_campaign=Badge_Grade)
 [![PYPI Badge](https://img.shields.io/pypi/v/isodatetime.svg)](https://pypi.org/project/isodatetime/)
 
-Python ISO 8601 full-specification parser and data model/manipulation utilities. 
+Python [ISO8601 (2004)](https://www.iso.org/standard/40874.html)
+full-specification parser and data model/manipulation utilities.
 Intended to be used in a similar way to Python's datetime module.
 
 ## Installation
@@ -76,7 +77,8 @@ $ isodatetime R/2000/P1Y --max 3
 
 ## ISO8601
 
-ISO8601 is an international standard for writing down date/time information.
+[ISO8601 (2004)](https://www.iso.org/standard/40874.html)
+is an international standard for writing down date/time information.
 
 It is the correct, internationally-friendly, computer-sortable way to 
 numerically represent date/time information.
