@@ -17,7 +17,6 @@
 # ----------------------------------------------------------------------------
 
 from importlib.util import spec_from_file_location, module_from_spec
-import os
 from pathlib import Path
 # overriding setuptools command
 # https://stackoverflow.com/a/51294311
