@@ -109,6 +109,6 @@ setup(
         "Topic :: Utilities"
     ],
     entry_points={
-        'console_scripts': ['isodatetime=isodatetime.main:main'],
+        'console_scripts': ['isodatetime=metomi.isodatetime.main:main'],
     },
 )
