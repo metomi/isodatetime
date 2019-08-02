@@ -32,7 +32,7 @@ $ python setup.py install
 Python API:
 
 <!-- GitHub Python syntax highlighting has issues with datetimes, Ruby works
-     resonably well as a standin. -->
+     reasonably well as a stand-in. -->
 ```ruby
 >>> import metomi.isodatetime.parsers as parse
 >>> import metomi.isodatetime.dumpers as dump

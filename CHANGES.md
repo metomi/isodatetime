@@ -73,7 +73,7 @@ various fixes.
 
 [#106](https://github.com/metomi/isodatetime/pull/106),
 [#108](https://github.com/metomi/isodatetime/pull/108):
-Fix ordinal date and week additon.
+Fix ordinal date and week addition.
 
 [#103](https://github.com/metomi/isodatetime/pull/103):
 Fix `TimePoint` dumper behaviour after the `TimePoint` object has been copied.
