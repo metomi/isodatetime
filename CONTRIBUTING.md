@@ -32,6 +32,7 @@ below:
 * Lois Huggett (Met Office, UK)
 * Bruno P. Kinoshita (NIWA, NZ)
 * Tim Pillinger (Met Office, UK)
+* Uwe L. Korn (DE)
 
 
 (All contributors are identifiable with email addresses in the version control
