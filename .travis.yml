@@ -18,8 +18,21 @@ matrix:
       env: RUN_COVERAGE=false TZ=UTC
     - python: 3.8-dev
       env: RUN_COVERAGE=false
+    - os: osx
+      osx_image: xcode9.4
+      # install python via homebrew, travis cannot do this atm
+      language: generic
+      addons:
+        homebrew:
+          update: true
+          packages: python3
+      # use a virtualenv for consistency with normal travis python installation
+      before_install:
+        - pip3 install virtualenv
+        - virtualenv -p python3 ~/venv
+        - source ~/venv/bin/activate
 
-before_install:
+install:
   # Upgrade pip and setuptools as some times the versioning scheme hack fails
   # in Travis-CI.
   - pip install --upgrade pip setuptools
@@ -29,8 +42,10 @@ before_install:
   - pip install coverage pytest-cov pytest-env pytest-runner
   # Code style dependencies
   - pip install pycodestyle
+
 before_script:
   - pycodestyle -v metomi/isodatetime
+
 script:
   - |
     export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
@@ -53,6 +68,7 @@ script:
       sleep 60
     done
     wait "${TEST_PID}"
+
 after_success:
   - coverage xml --ignore-errors
   # Report metrics, such as coverage
