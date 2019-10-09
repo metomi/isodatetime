@@ -30,6 +30,8 @@ from metomi.isodatetime import dumpers
 from metomi.isodatetime import parsers
 from metomi.isodatetime import parser_spec
 from metomi.isodatetime import timezone
+from metomi.isodatetime.exceptions import (
+    ISO8601SyntaxError, TimePointDumperBoundsError)
 
 
 def get_timeduration_tests():
@@ -235,7 +237,7 @@ def get_timepoint_dumper_tests():
 
 def get_timepointdumper_failure_tests():
     """Yield tests that raise exceptions for custom time point dumps."""
-    bounds_error = dumpers.TimePointDumperBoundsError
+    bounds_error = TimePointDumperBoundsError
     return [
         (
             {"year": 10000, "month_of_year": 1, "day_of_month": 4,
@@ -1076,7 +1078,7 @@ class TestSuite(unittest.TestCase):
         for expression in truncated_property_tests.keys():
             try:
                 test_data = parser.parse(expression)
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
 
@@ -1096,7 +1098,7 @@ class TestSuite(unittest.TestCase):
         for expression in truncated_property_tests.keys():
             try:
                 test_data = parser.parse(expression)
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
 
@@ -1124,7 +1126,7 @@ class TestSuite(unittest.TestCase):
         for expression, ctrl_result in get_timedurationparser_tests():
             try:
                 test_result = str(parser.parse(expression))
-            except parsers.ISO8601SyntaxError:
+            except ISO8601SyntaxError:
                 raise ValueError(
                     "DurationParser test failed to parse '%s'" %
                     expression
@@ -1245,7 +1247,7 @@ class TestSuite(unittest.TestCase):
             ctrl_timepoint = data.TimePoint(**timepoint_kwargs)
             try:
                 test_timepoint = parser.parse(str(ctrl_timepoint))
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError(
                     "Parsing failed for the dump of {0}: {1}".format(
                         expression, syn_exc))
@@ -1272,8 +1274,8 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_dumper_bounds_error_message(self):
         """Test the exception text contains the information expected"""
-        the_error = dumpers.TimePointDumperBoundsError("TimePoint1", "year",
-                                                       10, 20)
+        the_error = TimePointDumperBoundsError("TimePoint1", "year",
+                                               10, 20)
         the_string = the_error.__str__()
         self.assertTrue("TimePoint1" in the_string,
                         "Failed to find TimePoint1 in {}".format(the_string))
@@ -1325,7 +1327,7 @@ class TestSuite(unittest.TestCase):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_data = str(parser.parse(expression))
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
             ctrl_data = str(data.TimePoint(**timepoint_kwargs))
@@ -1344,7 +1346,7 @@ class TestSuite(unittest.TestCase):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_timepoint = parser.parse(expression)
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
             test_data = (test_timepoint.time_zone.hours,
@@ -1373,7 +1375,7 @@ class TestSuite(unittest.TestCase):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_timepoint = parser.parse(expression)
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
             test_data = (test_timepoint.time_zone.hours,
@@ -1392,7 +1394,7 @@ class TestSuite(unittest.TestCase):
             timepoint_kwargs = copy.deepcopy(timepoint_kwargs)
             try:
                 test_timepoint = parser.parse(expression)
-            except parsers.ISO8601SyntaxError as syn_exc:
+            except ISO8601SyntaxError as syn_exc:
                 raise ValueError("Parsing failed for {0}: {1}".format(
                     expression, syn_exc))
             test_data = (test_timepoint.time_zone.hours,
@@ -1507,7 +1509,7 @@ class TestSuite(unittest.TestCase):
             for expression, ctrl_results in tests:
                 try:
                     test_recurrence = parser.parse(expression)
-                except parsers.ISO8601SyntaxError:
+                except ISO8601SyntaxError:
                     raise ValueError(
                         "TimeRecurrenceParser test failed to parse '%s'" %
                         expression
@@ -1527,7 +1529,7 @@ class TestSuite(unittest.TestCase):
         for expression, ctrl_results in get_timerecurrence_expansion_tests():
             try:
                 test_recurrence = parser.parse(expression)
-            except parsers.ISO8601SyntaxError:
+            except ISO8601SyntaxError:
                 raise ValueError(
                     "TimeRecurrenceParser test failed to parse '%s'" %
                     expression
@@ -1563,7 +1565,7 @@ class TestSuite(unittest.TestCase):
         for expression, results in get_timerecurrence_membership_tests():
             try:
                 test_recurrence = parser.parse(expression)
-            except parsers.ISO8601SyntaxError:
+            except ISO8601SyntaxError:
                 raise ValueError(
                     "TimeRecurrenceParser test failed to parse '%s'" %
                     expression
@@ -1581,7 +1583,7 @@ class TestSuite(unittest.TestCase):
         for expression, test_info in get_timerecurrenceparser_tests():
             try:
                 test_data = str(parser.parse(expression))
-            except parsers.ISO8601SyntaxError:
+            except ISO8601SyntaxError:
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)

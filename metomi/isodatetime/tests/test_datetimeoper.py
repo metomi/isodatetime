@@ -26,6 +26,7 @@ from unittest.mock import patch
 from metomi.isodatetime.data import (
     get_timepoint_from_seconds_since_unix_epoch as seconds2point)
 import metomi.isodatetime.datetimeoper as idt_dtoper
+from metomi.isodatetime.exceptions import OffsetValueError
 
 
 class TestDateTimeOperator(unittest.TestCase):
@@ -146,13 +147,13 @@ class TestDateTimeOperator(unittest.TestCase):
             datetimeoper.process_time_point_str, 'teatime')
         # Bad offset string
         with self.assertRaises(
-            idt_dtoper.OffsetValueError,
+            OffsetValueError,
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['ages'])
         self.assertEqual('ages: bad offset value', str(ctxmgr.exception))
         # Bad offset string, unsupported time point like duration
         with self.assertRaises(
-            idt_dtoper.OffsetValueError,
+            OffsetValueError,
         ) as ctxmgr:
             datetimeoper.process_time_point_str(point_str, ['P0000-W01-1'])
         self.assertEqual(

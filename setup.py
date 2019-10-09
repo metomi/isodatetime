@@ -69,6 +69,7 @@ class bdist_rpm(bdist_rpm_original):
         self.distribution.metadata.version = __version__
         super().run()
 
+
 # Only include pytest-runner in setup_requires if we're invoking tests
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
     setup_requires = ['pytest-runner']

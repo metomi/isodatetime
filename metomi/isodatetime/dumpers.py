@@ -23,16 +23,8 @@ import re
 from . import parser_spec
 
 from functools import lru_cache
-
-
-class TimePointDumperBoundsError(ValueError):
-
-    """An error raised when a TimePoint can't be dumped within bounds."""
-
-    MESSAGE = "Cannot dump TimePoint {0}: {1} not in bounds {2} to {3}."
-
-    def __str__(self):
-        return self.MESSAGE.format(*self.args)
+from metomi.isodatetime.exceptions import (
+    ISO8601SyntaxError, TimePointDumperBoundsError)
 
 
 class TimePointDumper(object):
@@ -223,7 +215,7 @@ class TimePointDumper(object):
         try:
             info = self._timepoint_parser.get_time_zone_info(
                 time_zone_string)[1]
-        except parsers.ISO8601SyntaxError:
+        except ISO8601SyntaxError:
             return None
         info = self._timepoint_parser.process_time_zone_info(info)
         if info.get('time_zone_utc'):

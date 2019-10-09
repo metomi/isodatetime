@@ -20,7 +20,7 @@
 
 import re
 from . import timezone
-
+from metomi.isodatetime.exceptions import StrftimeSyntaxError
 
 DATE_EXPRESSIONS = {
     "basic": {
@@ -272,16 +272,6 @@ STRPTIME_EXCLUSIVE_GROUP_INFO = {
     "%F": ("%Y", "%y", "%m", "%d"),
     "%s": tuple(i for i in STRFTIME_TRANSLATE_INFO if i != "%s")
 }
-
-
-class StrftimeSyntaxError(ValueError):
-
-    """An error denoting invalid or unsupported strftime/strptime syntax."""
-
-    BAD_STRFTIME_INPUT = "Invalid strftime/strptime representation: {0}"
-
-    def __str__(self):
-        return self.BAD_STRFTIME_INPUT.format(*self.args)
 
 
 def get_date_translate_info(num_expanded_year_digits=2):
