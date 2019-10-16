@@ -23,6 +23,7 @@ from . import dumpers
 from . import timezone
 
 from functools import lru_cache
+from metomi.isodatetime.exceptions import BadInputError
 
 
 class Calendar(object):
@@ -131,25 +132,6 @@ TIMEPOINT_DUMPER_MAP = {
     0: dumpers.TimePointDumper(num_expanded_year_digits=0),
     2: dumpers.TimePointDumper(num_expanded_year_digits=2)
 }
-
-
-class BadInputError(ValueError):
-
-    """An error raised when constructor inputs are invalid."""
-
-    CONFLICT = "Conflicting input: {0} but have {1}"
-    INT_CAST = "Invalid input for {0}: {1}: {2}"
-    INT_REMAINDER = "Non-integer like number for {0}: {1}"
-    MISSING = "Missing input: {0} needs {1}"
-    OUT_OF_BOUNDS = "Invalid input (out of bounds): {0}: {1}"
-    RECURRENCE = "Invalid recurrence info: {0}"
-    TYPE = "Invalid type for {0}: {1}{2}"
-    VALUES = "Invalid input for {0}: {1}: allowed: {2}"
-
-    def __str__(self):
-        format_string = self.args[0]
-        format_args = self.args[1:]
-        return format_string.format(*format_args)
 
 
 class TimeRecurrence(object):

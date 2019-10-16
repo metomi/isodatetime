@@ -33,6 +33,7 @@ below:
 * Bruno P. Kinoshita (NIWA, NZ)
 * Tim Pillinger (Met Office, UK)
 * Uwe L. Korn (DE)
+* Mel Hall (Met Office, UK)
 
 
 (All contributors are identifiable with email addresses in the version control

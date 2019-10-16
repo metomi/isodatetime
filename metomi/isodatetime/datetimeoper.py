@@ -27,14 +27,7 @@ from .data import (
     get_timepoint_from_seconds_since_unix_epoch as seconds2point)
 from .dumpers import TimePointDumper
 from .parsers import TimePointParser, DurationParser, TimeRecurrenceParser
-
-
-class OffsetValueError(ValueError):
-
-    """Bad offset value."""
-
-    def __str__(self):
-        return "%s: bad offset value" % self.args[0]
+from metomi.isodatetime.exceptions import OffsetValueError
 
 
 class DateTimeOperator(object):

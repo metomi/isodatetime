@@ -24,26 +24,8 @@ import sre_constants
 from . import data
 from . import parser_spec
 from . import timezone
-
-
-class ISO8601SyntaxError(ValueError):
-
-    """An error denoting invalid input syntax."""
-
-    BAD_TIME_INPUT = "Invalid ISO 8601 {0} representation: {1}"
-
-    def __str__(self):
-        return self.BAD_TIME_INPUT.format(*self.args)
-
-
-class StrptimeConversionError(ValueError):
-
-    """An error denoting bad conversion from a strftime/strptime format."""
-
-    BAD_CONVERSION = "Bad conversion for strftime/strptime input '{0}': '{1}'"
-
-    def __str__(self):
-        return self.BAD_CONVERSION.format(*self.args)
+from metomi.isodatetime.exceptions import (
+    ISO8601SyntaxError, StrptimeConversionError)
 
 
 class TimeRecurrenceParser(object):
