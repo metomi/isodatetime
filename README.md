@@ -16,7 +16,7 @@ Intended to be used in a similar way to Python's datetime module.
 Install from PyPI:
 
 ```console
-$ pip install isodatetime
+$ pip install metomi-isodatetime
 ```
 
 Or build yourself:
