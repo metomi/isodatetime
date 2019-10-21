@@ -34,8 +34,8 @@ Python API:
 <!-- GitHub Python syntax highlighting has issues with datetimes, Ruby works
      reasonably well as a stand-in. -->
 ```ruby
->>> import metomi.isodatetime.parsers as parse
->>> import metomi.isodatetime.dumpers as dump
+>>> import isodatetime.parsers as parse
+>>> import isodatetime.dumpers as dump
 
 # Dates and times
 >>> date_time = parse.TimePointParser().parse('2000-01-01T00:00Z')
