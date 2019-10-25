@@ -19,10 +19,12 @@
 
 
 import os
+from subprocess import PIPE, Popen  # nosec
 import sys
 import unittest
 from unittest.mock import patch
 
+import pytest
 
 import metomi.isodatetime
 import metomi.isodatetime.main as isodatetime_main
@@ -249,6 +251,22 @@ class TestMain(unittest.TestCase):
                 str(ctxmgr.exception))
         finally:
             sys.argv = argv
+
+
+@pytest.mark.parametrize(
+    'stdin,args,stdout', [
+        ('2000', [], '2000'),
+        ('2000\n2001', ['--as-total', 'h'], '8784.0')
+    ]
+)
+def test_pipe(stdin, args, stdout):
+    """Test piping args into the command via stdin."""
+    assert Popen(
+        ['isodatetime', '-'] + args,
+        stdout=PIPE, stdin=PIPE
+    ).communicate(  # nosec
+        stdin.encode()
+    )[0].decode().strip() == stdout
 
 
 if __name__ == '__main__':
