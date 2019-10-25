@@ -19,7 +19,7 @@
 
 
 import os
-from subprocess import PIPE, Popen, DEVNULL
+from subprocess import PIPE, Popen  # nosec
 import sys
 import unittest
 from unittest.mock import patch
@@ -264,7 +264,7 @@ def test_pipe(stdin, args, stdout):
     assert Popen(
         ['isodatetime', '-'] + args,
         stdout=PIPE, stdin=PIPE
-    ).communicate(
+    ).communicate(  # nosec
         stdin.encode()
     )[0].decode().strip() == stdout
 
