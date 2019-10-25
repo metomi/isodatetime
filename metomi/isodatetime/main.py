@@ -174,8 +174,7 @@ from . import __version__
 from .datetimeoper import DateTimeOperator
 
 
-def main():
-    """Implement "isodatetime" command."""
+def parse_args():
     arg_parser = ArgumentParser(
         prog='isodatetime',
         formatter_class=RawDescriptionHelpFormatter,
@@ -184,7 +183,10 @@ def main():
         [
             ["items"],
             {
-                "help": "Time point, duration or recurrence string",
+                "help": (
+                    "Time point, duration or recurrence string."
+                    " To read from stdin use '-'."
+                ),
                 "metavar": "ITEM",
                 "nargs": "*",
             },
@@ -284,6 +286,12 @@ def main():
         args = arg_parser.parse_intermixed_args()
     else:
         args = arg_parser.parse_args()
+    return args
+
+
+def main():
+    """Implement "isodatetime" command."""
+    args = parse_args()
     if args.version_mode:
         print(__version__)
         return
@@ -292,6 +300,9 @@ def main():
         utc_mode=args.utc_mode,
         calendar_mode=args.calendar,
         ref_point_str=args.ref_point_str)
+
+    if list(args.items) == ['-']:
+        args.items = sys.stdin.read().splitlines()
 
     try:
         if len(args.items) >= 2:
