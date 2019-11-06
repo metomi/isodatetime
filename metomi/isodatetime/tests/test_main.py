@@ -79,6 +79,9 @@ class TestMain(unittest.TestCase):
             # With offsets
             (['-s', 'P1D', '20191231T00Z'], '20200101T00Z'),
             (['-s', 'P1D', '--offset=PT1H', '20191231T00Z'], '20200101T01Z'),
+            #Negative duration
+            (['-s', 'P1D', '--offset=-PT1H', '20191231T00Z'], '20191231T23Z'),
+            (['-s', 'P1D', '--offset', '\\-PT1H', '20191231T00Z'], '20191231T23Z'),
             # Print format
             (['-f', 'CCYY', '20191231T00Z'], '2019'),
             (['--format', 'CCYY', '20191231T00Z'], '2019'),
@@ -139,6 +142,8 @@ class TestMain(unittest.TestCase):
             # Negative duration
             (['20191225', '20181225'], '-P365D'),
             (['--offset1=-PT6H', '--offset2=-PT6H', '20191225', '20181225'],
+             '-P365D'),
+            (['--offset1', '\\-PT6H', '--offset2' ,'\\-PT6H', '20191225', '20181225'],
              '-P365D'),
         ]:
             sys.argv = [''] + args
