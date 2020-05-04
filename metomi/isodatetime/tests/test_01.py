@@ -52,28 +52,40 @@ def get_timeduration_tests():
 def get_duration_subtract_tests():
     """Yield tests for subtracting a duration from a timepoint."""
     return [
-        (
-            {"year": 2010, "day_of_year": 65,
-             # "month_of_year": 3, "day_of_month": 6,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "P6Y",
-            {"year": 2004,  # "day_of_year": 65,
-             "month_of_year": 3, "day_of_month": 5,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0}
-        ),
-        (
-            {"year": 2010, "week_of_year": 10, "day_of_week": 3,
-             # "month_of_year": 3, "day_of_month": 10,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "P6Y",
-            {"year": 2004,  # "week_of_year": 10, "day_of_week": 3,
-             "month_of_year": 3, "day_of_month": 3,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0}
-        ),
+        {
+            "start": {
+                "year": 2010, "day_of_year": 65,
+                # "month_of_year": 3, "day_of_month": 6,
+                "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
+                "time_zone_hour": 0, "time_zone_minute": 0
+            },
+            "duration": {
+                "years": 6
+            },
+            "result": {
+                "year": 2004,  # "day_of_year": 65,
+                "month_of_year": 3, "day_of_month": 5,
+                "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
+                "time_zone_hour": 0, "time_zone_minute": 0
+            }
+        },
+        {
+            "start": {
+                "year": 2010, "week_of_year": 10, "day_of_week": 3,
+                # "month_of_year": 3, "day_of_month": 10,
+                "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
+                "time_zone_hour": 0, "time_zone_minute": 0
+            },
+            "duration": {
+                "years": 6
+            },
+            "result": {
+                "year": 2004,  # "week_of_year": 10, "day_of_week": 3,
+                "month_of_year": 3, "day_of_month": 3,
+                "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
+                "time_zone_hour": 0, "time_zone_minute": 0
+            }
+        },
     ]
 
 
@@ -325,12 +337,10 @@ class TestDataModel(unittest.TestCase):
 
     def test_duration_subtract(self):
         """Test subtracting a duration from a timepoint."""
-        parser = parsers.DurationParser()
-        for my_timepoint, my_duration, my_result in (
-                get_duration_subtract_tests()):
-            start_point = data.TimePoint(**my_timepoint)
-            test_duration = parser.parse(my_duration)
-            end_point = data.TimePoint(**my_result)
+        for test in get_duration_subtract_tests():
+            start_point = data.TimePoint(**test["start"])
+            test_duration = data.Duration(**test["duration"])
+            end_point = data.TimePoint(**test["result"])
             test_subtract = (start_point - test_duration).to_calendar_date()
             self.assertEqual(str(test_subtract), str(end_point),
                              "%s - %s" % (start_point, test_duration))
