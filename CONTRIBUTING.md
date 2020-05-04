@@ -34,6 +34,7 @@ below:
 * Tim Pillinger (Met Office, UK)
 * Uwe L. Korn (DE)
 * Mel Hall (Met Office, UK)
+* Ronnie Dutta (Met Office, UK)
 
 
 (All contributors are identifiable with email addresses in the version control
