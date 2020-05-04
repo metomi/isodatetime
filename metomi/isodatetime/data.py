@@ -730,6 +730,10 @@ class TimePoint(object):
         distinguish between the two ways of truncating the year.
     is_empty_instance - if True, do not set any properties yet. These
         should be set as part of a copy operation.
+    is_duration - for datetime-like durations syntax. If True the datetime
+        will not be checked to make sure values are within bounds, and if the
+        values of month_of_year, day_of_month etc are not supplied they will be
+        assumed to be 0 instead of 1.
     """
 
     DATA_ATTRIBUTES = [
@@ -750,7 +754,7 @@ class TimePoint(object):
                  time_zone_hour=None, time_zone_minute=None,
                  dump_format=None, truncated=False,
                  truncated_dump_format=None, truncated_property=None,
-                 is_empty_instance=False):
+                 is_empty_instance=False, is_duration=False):
         if is_empty_instance:
             # This has been created for a copy - set properties later.
             return
@@ -896,16 +900,18 @@ class TimePoint(object):
             raise BadInputError(BadInputError.CONFLICT,
                                 "day_of_year",
                                 "[week_of_year or day_of_week]")
-        if not self.truncated:
-            # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
-            if (self.month_of_year is None and self.week_of_year is None and
-                    self.day_of_year is None):
-                self.month_of_year = 1
-            if self.month_of_year is not None and self.day_of_month is None:
-                self.day_of_month = 1
-            if self.week_of_year is not None and self.day_of_week is None:
-                self.day_of_week = 1
-        self.check_bounds()
+        if not is_duration:
+            if not self.truncated:
+                # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
+                if (self.month_of_year is None and self.week_of_year is None
+                        and self.day_of_year is None):
+                    self.month_of_year = 1
+                if (self.month_of_year is not None and
+                        self.day_of_month is None):
+                    self.day_of_month = 1
+                if self.week_of_year is not None and self.day_of_week is None:
+                    self.day_of_week = 1
+            self.check_bounds()
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""

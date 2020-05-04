@@ -215,7 +215,7 @@ class TimePointParser(object):
         return expression
 
     def parse(self, timepoint_string, dump_format=None, dump_as_parsed=False,
-              validate=True):
+              is_duration=False):
         """Parse a user-supplied timepoint string.
 
         Args:
@@ -227,13 +227,11 @@ class TimePointParser(object):
             dump_as_parsed (bool, optional):
                 If True the dump format used will be picked based on the
                 parsed expression.
-            validate (bool, optional):
-                If True the datetime will be "ticked over", if this results in
-                a change a ValueError will be raised.
-                Note that `validate` is incompatible with `allow_truncated`.
-
-        Raises:
-            ValueError: If validation fails.
+            is_duration (bool, optional):
+                If True the datetime will not be checked to make sure values
+                are within bounds, and if the values of month_of_year,
+                day_of_month etc are not supplied they will be assumed to be 0
+                instead of 1.
 
         Returns:
             TimePoint
@@ -243,25 +241,12 @@ class TimePointParser(object):
         if dump_as_parsed:
             dump_format = parsed_expr
         time_point = self._create_timepoint_from_info(
-            date_info, time_info, dump_format=dump_format,
-            truncated_dump_format=dump_format)
-
-        if validate and not self.allow_truncated:
-            changed_fields = time_point.tick_over(check_changes=True)
-            if changed_fields:
-                raise ValueError(
-                    'Invalid date-time components: ' +
-                    ', '.join((
-                        '%s=%s' % (key, before)
-                        for key, (before, after) in changed_fields.items()
-                        if before > after
-                    ))
-                )
-
+            date_info, time_info, is_duration=is_duration,
+            dump_format=dump_format, truncated_dump_format=dump_format)
         return time_point
 
     def _create_timepoint_from_info(self, date_info, time_info,
-                                    dump_format=None,
+                                    is_duration=False, dump_format=None,
                                     truncated_dump_format=None):
         info = {}
         truncated_property = None
@@ -326,7 +311,7 @@ class TimePointParser(object):
             info.update({"dump_format": dump_format})
         if truncated_dump_format is not None:
             info.update({"truncated_dump_format": truncated_dump_format})
-        return data.TimePoint(**info)
+        return data.TimePoint(**info, is_duration=is_duration)
 
     def strptime(self, strptime_data_string, strptime_format_string,
                  dump_format=None):
@@ -595,8 +580,7 @@ class DurationParser(object):
                 timepoint = parse_timepoint_expression(
                     expression[1:],
                     # this is a duration but we are parsing it as a timepoint
-                    # so don't validate.
-                    validate=False,
+                    is_duration=True,
                     allow_truncated=False,
                     assumed_time_zone=(0, 0)
                 )
@@ -620,7 +604,8 @@ class DurationParser(object):
         raise ISO8601SyntaxError("duration", expression)
 
 
-def parse_timepoint_expression(timepoint_expression, validate=True, **kwargs):
+def parse_timepoint_expression(timepoint_expression, is_duration=False,
+                               **kwargs):
     """Return a data model that represents timepoint_expression."""
     parser = TimePointParser(**kwargs)
-    return parser.parse(timepoint_expression, validate=validate)
+    return parser.parse(timepoint_expression, is_duration=is_duration)
