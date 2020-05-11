@@ -647,10 +647,10 @@ class TimePoint(object):
 
     An ISO 8601 date/time instant can be represented in three
     separate ways:
-    Calendar date: calendar year, calendar month,
+    - Calendar date: calendar year, calendar month,
     calendar day of the month
-    Ordinal date: calendar year, calendar day of the year
-    Week date: calendar (week) year, calendar week,
+    - Ordinal date: calendar year, calendar day of the year
+    - Week date: calendar (week) year, calendar week,
     calendar day of the week (note: week years are not identical to
     calendar years).
 
@@ -669,6 +669,7 @@ class TimePoint(object):
     representation is ambiguous without it.
 
     Keyword arguments (usually default to None if not provided):
+
     expanded_year_digits (default 0) - an agreed-upon number of extra
     digits to represent the year, beyond the default of 4. For example,
     a value of 2 would suggest representing the year 2000 as 002000.
@@ -684,10 +685,12 @@ class TimePoint(object):
     day_of_year - an integer between 1 and 365/366 (depending on the
     year), if using the ordinal date representation.
     day_of_month - an integer between 1 and 28/29/30/31 (depending on
-    the month), if using the calendar date representation.
+    the month and year), if using the calendar date representation.
     day_of_week - an integer between 1 and 7, if using the week date
     representation.
-    hour_of_day - an integer between 1 and 24.
+    hour_of_day - an integer between 0 and 24 (note: 24 represents midnight at
+    the end of the day, which is equivalent to 00/midnight the next day. If
+    24 is given, minute_of_hour must be 0)
     hour_of_day_decimal - a float between 0 and 1, if using decimal
     accuracy for hours. Note that you should not provide lower units
     such as minute_of_hour or second_of_minute when using this.
@@ -802,7 +805,10 @@ class TimePoint(object):
                 raise BadInputError(
                     BadInputError.MISSING, "hour_of_day_decimal",
                     "hour_of_day")
-            self.hour_of_day += float(hour_of_day_decimal)
+            hour_of_day_decimal = float(hour_of_day_decimal)
+            _bounds_checker(hour_of_day_decimal, "hour_of_day_decimal",
+                            min=0, upper=1)
+            self.hour_of_day += hour_of_day_decimal
             if minute_of_hour is not None:
                 raise BadInputError(
                     BadInputError.CONFLICT, "minute_of_hour",
@@ -818,7 +824,10 @@ class TimePoint(object):
                     "minute_of_hour")
             self.minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour")
-            self.minute_of_hour += float(minute_of_hour_decimal)
+            minute_of_hour_decimal = float(minute_of_hour_decimal)
+            _bounds_checker(minute_of_hour_decimal, "minute_of_hour_decimal",
+                            min=0, upper=1)
+            self.minute_of_hour += minute_of_hour_decimal
             if second_of_minute is not None:
                 raise BadInputError(
                     BadInputError.CONFLICT, "second_of_minute",
@@ -834,7 +843,10 @@ class TimePoint(object):
                     "second_of_minute")
             self.second_of_minute = _int_caster(second_of_minute,
                                                 "second_of_minute")
-            self.second_of_minute += float(second_of_minute_decimal)
+            second_of_minute_decimal = float(second_of_minute_decimal)
+            _bounds_checker(second_of_minute_decimal,
+                            "second_of_minute_decimal", min=0, upper=1)
+            self.second_of_minute += second_of_minute_decimal
         else:
             self.second_of_minute = _int_caster(second_of_minute,
                                                 "second_of_minute",
@@ -868,6 +880,7 @@ class TimePoint(object):
                 self.day_of_month = 1
             if self.week_of_year is not None and self.day_of_week is None:
                 self.day_of_week = 1
+        self.check_bounds()
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""
@@ -1683,6 +1696,47 @@ class TimePoint(object):
                                 self.day_of_month = day
                                 return
 
+    def check_bounds(self):
+        """Check all values are within correct bounds."""
+        _bounds_checker(self.month_of_year, "month_of_year",
+                        min=1, max=CALENDAR.MONTHS_IN_YEAR)
+        if self.month_of_year is not None:
+            _bounds_checker(self.day_of_month, "day_of_month",
+                            min=1,
+                            max=get_days_in_month(self.year,
+                                                  self.month_of_year))
+        else:
+            _bounds_checker(self.day_of_month, "day_of_month",
+                            min=1, max=max(CALENDAR.DAYS_IN_MONTHS))
+        _bounds_checker(self.week_of_year, "week_of_year",
+                        min=1, max=get_weeks_in_year(self.year))
+        _bounds_checker(self.day_of_week, "day_of_week",
+                        min=1, max=CALENDAR.DAYS_IN_WEEK)
+        _bounds_checker(self.day_of_year, "day_of_year",
+                        min=1, max=get_days_in_year(self.year))
+        _bounds_checker(self.hour_of_day, "hour_of_day",
+                        min=0, max=CALENDAR.HOURS_IN_DAY)
+        if self.hour_of_day == CALENDAR.HOURS_IN_DAY:
+            _bounds_checker(self.minute_of_hour, "minute_of_hour",
+                            min=0, max=0)
+            _bounds_checker(self.second_of_minute, "second_of_minute",
+                            min=0, max=0)
+        else:
+            _bounds_checker(self.minute_of_hour, "minute_of_hour",
+                            min=0, upper=CALENDAR.MINUTES_IN_HOUR)
+            _bounds_checker(self.second_of_minute, "second_of_minute",
+                            min=0, upper=CALENDAR.SECONDS_IN_MINUTE)
+        if self.time_zone.unknown is False:
+            # Time zone hour can be unlimited actually
+            # Unlimited? What about 3 digits?
+            if self.time_zone.hours <= 0:
+                min_tz_minute = 1 - CALENDAR.MINUTES_IN_HOUR
+            else:
+                min_tz_minute = 0
+            _bounds_checker(self.time_zone.minutes, "time zone minute",
+                            min=min_tz_minute,
+                            upper=CALENDAR.MINUTES_IN_HOUR)
+
     def __str__(self, override_custom_dump_format=False,
                 strftime_format=None):
         if self.expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
@@ -1900,6 +1954,15 @@ def _get_days_in_year_range(start_year, end_year, _):
 def get_days_in_year(year):
     """Return the number of days in this particular year."""
     return _get_days_in_year(year, CALENDAR.mode)
+
+
+def get_days_in_month(year, month_of_year):
+    """Return the number of days in the month of this particular year"""
+    month_index = month_of_year - 1
+    if get_is_leap_year(year):
+        return CALENDAR.DAYS_IN_MONTHS_LEAP[month_index]
+    else:
+        return CALENDAR.DAYS_IN_MONTHS[month_index]
 
 
 @lru_cache(maxsize=100000)
@@ -2304,6 +2367,25 @@ def _type_checker(*objects):
             values_string += " or ".join(str(v) for v in allowed_types)
         raise BadInputError(
             BadInputError.TYPE, name, repr(value), values_string)
+
+
+def _bounds_checker(value, name, min, max=None, upper=None):
+    """
+    Helper function for checking the value of a property is within
+    bounds
+
+    Args:
+        value [None, number]
+        name [string] - Name of value
+        min [number] - Minimum value, inclusive
+        max (optional) [number] - Maximum value, inclusive
+        upper (optional) [number] - Upper limit of value, not inclusive
+    """
+    if (value is not None and
+            (value < min or
+             (max is not None and value > max) or
+             (upper is not None and value >= upper))):
+        raise BadInputError(BadInputError.OUT_OF_BOUNDS, name, value)
 
 
 PARSE_PROPERTY_TRANSLATORS = {
