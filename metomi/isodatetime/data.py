@@ -1676,7 +1676,7 @@ class TimePoint(object):
                     self.month_of_year = month
                     self.day_of_month = day
                     break
-            else:
+            else:  # no break
                 start_year = self.year
                 month = None
                 day = None
@@ -1750,8 +1750,8 @@ class TimePoint(object):
             _bounds_checker(self.second_of_minute, "second_of_minute",
                             min=0, upper=CALENDAR.SECONDS_IN_MINUTE)
         if self.time_zone.unknown is False:
-            # Time zone hour can be unlimited actually
-            # Unlimited? What about 3 digits?
+            _bounds_checker(self.time_zone.hours, "time zone hours",
+                            min=0-99, max=99)
             if self.time_zone.hours <= 0:
                 min_tz_minute = 1 - CALENDAR.MINUTES_IN_HOUR
             else:
