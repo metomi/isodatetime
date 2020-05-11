@@ -1408,6 +1408,7 @@ class TestSuite(unittest.TestCase):
         parser = parsers.TimePointParser()
         parse_tokens = list(parser_spec.STRFTIME_TRANSLATE_INFO.keys())
         parse_tokens.remove("%z")  # Don't test datetime's tz handling.
+        parse_tokens.remove("%j")  # Can't have day_of_year as well as month
         format_string = ""
         for i, token in enumerate(parse_tokens):
             format_string += token

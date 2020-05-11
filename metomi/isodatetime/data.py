@@ -879,6 +879,21 @@ class TimePoint(object):
             self.time_zone.minutes = _int_caster(time_zone_minute,
                                                  "time_zone_minute")
         self.time_zone.unknown = self.truncated and has_unknown_tz
+
+        specified_month = self.month_of_year or self.day_of_month
+        specified_week = self.week_of_year or self.day_of_week
+        if specified_month is not None and specified_week is not None:
+            raise BadInputError(BadInputError.CONFLICT,
+                                "[week_of_year or day_of_week]",
+                                "[month_of_year or day_of_month]")
+        if specified_month is not None and self.day_of_year is not None:
+            raise BadInputError(BadInputError.CONFLICT,
+                                "day_of_year",
+                                "[month_of_year or day_of_month]")
+        if specified_week is not None and self.day_of_year is not None:
+            raise BadInputError(BadInputError.CONFLICT,
+                                "day_of_year",
+                                "[week_of_year or day_of_week]")
         if not self.truncated:
             # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
             if (self.month_of_year is None and self.week_of_year is None and
