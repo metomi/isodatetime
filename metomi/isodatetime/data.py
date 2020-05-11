@@ -37,6 +37,7 @@ class Calendar(object):
     DAYS_IN_MONTHS = None  # This is set up in the set_* methods.
     DAYS_IN_MONTHS_LEAP = None  # This is set up in the set_* methods
     ROUGH_DAYS_IN_MONTH = 30  # Used for duration conversion, nowhere else.
+    MAX_WEEKS_IN_YEAR = 53  # In ISO week year, used for truncated dates
 
     LEAP_YEAR_FACTOR_TRUTHS = [(4, True), (100, False), (400, True)]
 
@@ -112,6 +113,7 @@ class Calendar(object):
         self.DAYS_IN_YEAR = sum(self.DAYS_IN_MONTHS)
         self.ROUGH_DAYS_IN_YEAR = self.DAYS_IN_YEAR
         self.DAYS_IN_YEAR_LEAP = sum(self.DAYS_IN_MONTHS_LEAP)
+        self.MAX_DAYS_IN_MONTH = max(self.DAYS_IN_MONTHS)
         self.HOURS_IN_YEAR = self.DAYS_IN_YEAR * self.HOURS_IN_DAY
         self.MINUTES_IN_YEAR = self.DAYS_IN_YEAR * self.MINUTES_IN_DAY
         self.SECONDS_IN_YEAR = self.DAYS_IN_YEAR * self.SECONDS_IN_DAY
@@ -1724,19 +1726,29 @@ class TimePoint(object):
         _bounds_checker(self.month_of_year, "month_of_year",
                         min=1, max=CALENDAR.MONTHS_IN_YEAR)
         if self.month_of_year is not None:
-            _bounds_checker(self.day_of_month, "day_of_month",
-                            min=1,
-                            max=get_days_in_month(self.year,
-                                                  self.month_of_year))
+            if self.year is not None:
+                max_days_in_month = get_days_in_month(self.month_of_year,
+                                                      self.year)
+            else:
+                max_days_in_month = get_days_in_month(self.month_of_year,
+                                                      year="leap")
         else:
-            _bounds_checker(self.day_of_month, "day_of_month",
-                            min=1, max=max(CALENDAR.DAYS_IN_MONTHS))
-        _bounds_checker(self.week_of_year, "week_of_year",
-                        min=1, max=get_weeks_in_year(self.year))
+            max_days_in_month = CALENDAR.MAX_DAYS_IN_MONTH
+        _bounds_checker(self.day_of_month, "day_of_month",
+                        min=1, max=max_days_in_month)
+        if self.year is not None:
+            _bounds_checker(self.week_of_year, "week_of_year",
+                            min=1, max=get_weeks_in_year(self.year))
+            _bounds_checker(self.day_of_year, "day_of_year",
+                            min=1, max=get_days_in_year(self.year))
+        else:
+            _bounds_checker(self.week_of_year, "week_of_year",
+                            min=1, max=CALENDAR.MAX_WEEKS_IN_YEAR)
+            _bounds_checker(self.day_of_year, "day_of_year",
+                            min=1, max=CALENDAR.DAYS_IN_YEAR_LEAP)
         _bounds_checker(self.day_of_week, "day_of_week",
                         min=1, max=CALENDAR.DAYS_IN_WEEK)
-        _bounds_checker(self.day_of_year, "day_of_year",
-                        min=1, max=get_days_in_year(self.year))
+
         _bounds_checker(self.hour_of_day, "hour_of_day",
                         min=0, max=CALENDAR.HOURS_IN_DAY)
         if self.hour_of_day == CALENDAR.HOURS_IN_DAY:
@@ -1979,21 +1991,28 @@ def get_days_in_year(year):
     return _get_days_in_year(year, CALENDAR.mode)
 
 
-def get_days_in_month(year, month_of_year):
-    """Return the number of days in the month of this particular year"""
-    month_index = month_of_year - 1
-    if get_is_leap_year(year):
-        return CALENDAR.DAYS_IN_MONTHS_LEAP[month_index]
-    else:
-        return CALENDAR.DAYS_IN_MONTHS[month_index]
-
-
 @lru_cache(maxsize=100000)
 def _get_days_in_year(year, _):
     """Return the number of days in this particular year."""
     if get_is_leap_year(year):
         return CALENDAR.DAYS_IN_YEAR_LEAP
     return CALENDAR.DAYS_IN_YEAR
+
+
+def get_days_in_month(month_of_year, year="leap"):
+    """Return the number of days in the month of this particular year.
+    Year can also be "leap", or None for non-leap."""
+    return _get_days_in_month(month_of_year, year, CALENDAR.mode)
+
+
+@lru_cache(maxsize=100000)
+def _get_days_in_month(month_of_year, year, _):
+    """Return the number of days in the month of this particular year.
+    Year can also be "leap", or None for non-leap."""
+    month_index = month_of_year - 1
+    if year is not None and (year is "leap" or get_is_leap_year(year)):
+        return CALENDAR.DAYS_IN_MONTHS_LEAP[month_index]
+    return CALENDAR.DAYS_IN_MONTHS[month_index]
 
 
 def get_weeks_in_year(year):
