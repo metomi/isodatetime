@@ -31,7 +31,7 @@ from metomi.isodatetime import parsers
 from metomi.isodatetime import parser_spec
 from metomi.isodatetime import timezone
 from metomi.isodatetime.exceptions import (
-    ISO8601SyntaxError, TimePointDumperBoundsError)
+    ISO8601SyntaxError, TimePointDumperBoundsError, BadInputError)
 
 
 def get_timeduration_tests():
@@ -1039,6 +1039,73 @@ def get_timerecurrenceparser_tests():
                                "end_point": end_point}
 
 
+def get_timepoint_bounds_tests():
+    """Yield tests for checking out of bounds TimePoints."""
+    return {
+        "in_bounds": [
+            {"year": 2020, "month_of_year": 2, "day_of_month": 29},
+            {"truncated": True, "month_of_year": 2, "day_of_month": 29},
+            {"year": 2020, "week_of_year": 53},
+            {"truncated": True, "week_of_year": 53},
+            {"year": 2020, "day_of_year": 366},
+            {"truncated": True, "day_of_year": 366},
+
+            {"year": 2019, "hour_of_day": 24},
+            {"year": 2019, "time_zone_hour": 99},
+            {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -1},
+            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": -1},
+            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": 1},
+        ],
+        "out_of_bounds": [
+            {"year": 2019, "month_of_year": 0},
+            {"year": 2019, "month_of_year": 13},
+            {"year": 2019, "month_of_year": 1, "day_of_month": 0},
+            {"year": 2019, "month_of_year": 1, "day_of_month": 32},
+            {"year": 2019, "month_of_year": 2, "day_of_month": 29},
+            {"truncated": True, "month_of_year": 1, "day_of_month": 32},
+
+            {"year": 2019, "week_of_year": 0},
+            {"year": 2019, "week_of_year": 53},
+            {"year": 2019, "week_of_year": 1, "day_of_week": 0},
+            {"year": 2019, "week_of_year": 1, "day_of_week": 8},
+
+            {"year": 2019, "day_of_year": 0},
+            {"year": 2019, "day_of_year": 366},
+
+            {"year": 2019, "hour_of_day": -1},
+            {"year": 2019, "hour_of_day": 25},
+            {"year": 2019, "hour_of_day": 10, "hour_of_day_decimal": -0.1},
+            {"year": 2019, "hour_of_day": 10, "hour_of_day_decimal": 1},
+            {"year": 2019, "hour_of_day": 24, "hour_of_day_decimal": 0.1},
+
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": -1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 60},
+            {"year": 2019, "hour_of_day": 24, "minute_of_hour": 1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "minute_of_hour_decimal": -0.1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "minute_of_hour_decimal": 1},
+
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "second_of_minute": -1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "second_of_minute": 60},
+            {"year": 2019, "hour_of_day": 24, "minute_of_hour": 1,
+             "second_of_minute": 1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "second_of_minute": 1, "second_of_minute_decimal": -0.1},
+            {"year": 2019, "hour_of_day": 10, "minute_of_hour": 1,
+             "second_of_minute": 1, "second_of_minute_decimal": 1},
+
+            {"year": 2019, "time_zone_hour": -100},
+            {"year": 2019, "time_zone_hour": 100},
+            {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -60},
+            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": -1},
+            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": 60}
+        ]
+    }
+
+
 def get_local_time_zone_hours_minutes():
     """Provide an independent method of getting the local time zone."""
     utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
@@ -1768,6 +1835,16 @@ class TestSuite(unittest.TestCase):
         t.week_of_year = None
         with self.assertRaises(RuntimeError):
             self.assertEqual("1984-01-01T00:00:00Z", str(t))
+
+    def test_timepoint_bounds(self):
+        """Test out of bounds TimePoints"""
+        tests = get_timepoint_bounds_tests()
+        for kwargs in tests["in_bounds"]:
+            timepoint = data.TimePoint(**kwargs)
+        for kwargs in tests["out_of_bounds"]:
+            with self.assertRaises(BadInputError) as cm:
+                timepoint = data.TimePoint(**kwargs)
+            assert "out of bounds" in str(cm.exception)
 
 
 if __name__ == '__main__':
