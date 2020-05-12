@@ -901,16 +901,17 @@ class TimePoint(object):
                                 "day_of_year",
                                 "[week_of_year or day_of_week]")
         if not is_duration:
-            if not self.truncated:
-                # Reduced precision date - e.g. 1970 - assume Jan 1, etc.
-                if (self.month_of_year is None and self.week_of_year is None
-                        and self.day_of_year is None):
-                    self.month_of_year = 1
-                if (self.month_of_year is not None and
-                        self.day_of_month is None):
-                    self.day_of_month = 1
-                if self.week_of_year is not None and self.day_of_week is None:
-                    self.day_of_week = 1
+            if not self.truncated and self.day_of_year is None:
+                if specified_week is None:
+                    if self.month_of_year is None:
+                        self.month_of_year = 1
+                    if self.day_of_month is None:
+                        self.day_of_month = 1
+                else:
+                    if self.week_of_year is None:
+                        self.week_of_year = 1
+                    if self.day_of_week is None:
+                        self.day_of_week = 1
             self.check_bounds()
 
     def get_is_calendar_date(self):
