@@ -821,7 +821,7 @@ class TimePoint(object):
                     "hour_of_day")
             hour_of_day_decimal = float(hour_of_day_decimal)
             _bounds_checker(hour_of_day_decimal, "hour_of_day_decimal",
-                            min=0, upper=1)
+                            min_val=0, upper_val=1)
             self.hour_of_day += hour_of_day_decimal
             if minute_of_hour is not None:
                 raise BadInputError(
@@ -840,7 +840,7 @@ class TimePoint(object):
                 minute_of_hour, "minute_of_hour")
             minute_of_hour_decimal = float(minute_of_hour_decimal)
             _bounds_checker(minute_of_hour_decimal, "minute_of_hour_decimal",
-                            min=0, upper=1)
+                            min_val=0, upper_val=1)
             self.minute_of_hour += minute_of_hour_decimal
             if second_of_minute is not None:
                 raise BadInputError(
@@ -859,7 +859,7 @@ class TimePoint(object):
                                                 "second_of_minute")
             second_of_minute_decimal = float(second_of_minute_decimal)
             _bounds_checker(second_of_minute_decimal,
-                            "second_of_minute_decimal", min=0, upper=1)
+                            "second_of_minute_decimal", min_val=0, upper_val=1)
             self.second_of_minute += second_of_minute_decimal
         else:
             self.second_of_minute = _int_caster(second_of_minute,
@@ -1731,7 +1731,7 @@ class TimePoint(object):
     def check_bounds(self):
         """Check all values are within correct bounds."""
         _bounds_checker(self.month_of_year, "month_of_year",
-                        min=1, max=CALENDAR.MONTHS_IN_YEAR)
+                        min_val=1, max_val=CALENDAR.MONTHS_IN_YEAR)
         if self.month_of_year is not None:
             if self.year is not None:
                 max_days_in_month = get_days_in_month(self.month_of_year,
@@ -1742,42 +1742,42 @@ class TimePoint(object):
         else:
             max_days_in_month = CALENDAR.MAX_DAYS_IN_MONTH
         _bounds_checker(self.day_of_month, "day_of_month",
-                        min=1, max=max_days_in_month)
+                        min_val=1, max_val=max_days_in_month)
         if self.year is not None:
             _bounds_checker(self.week_of_year, "week_of_year",
-                            min=1, max=get_weeks_in_year(self.year))
+                            min_val=1, max_val=get_weeks_in_year(self.year))
             _bounds_checker(self.day_of_year, "day_of_year",
-                            min=1, max=get_days_in_year(self.year))
+                            min_val=1, max_val=get_days_in_year(self.year))
         else:
             _bounds_checker(self.week_of_year, "week_of_year",
-                            min=1, max=CALENDAR.MAX_WEEKS_IN_YEAR)
+                            min_val=1, max_val=CALENDAR.MAX_WEEKS_IN_YEAR)
             _bounds_checker(self.day_of_year, "day_of_year",
-                            min=1, max=CALENDAR.DAYS_IN_YEAR_LEAP)
+                            min_val=1, max_val=CALENDAR.DAYS_IN_YEAR_LEAP)
         _bounds_checker(self.day_of_week, "day_of_week",
-                        min=1, max=CALENDAR.DAYS_IN_WEEK)
+                        min_val=1, max_val=CALENDAR.DAYS_IN_WEEK)
 
         _bounds_checker(self.hour_of_day, "hour_of_day",
-                        min=0, max=CALENDAR.HOURS_IN_DAY)
+                        min_val=0, max_val=CALENDAR.HOURS_IN_DAY)
         if self.hour_of_day == CALENDAR.HOURS_IN_DAY:
             _bounds_checker(self.minute_of_hour, "minute_of_hour",
-                            min=0, max=0)
+                            min_val=0, max_val=0)
             _bounds_checker(self.second_of_minute, "second_of_minute",
-                            min=0, max=0)
+                            min_val=0, max_val=0)
         else:
             _bounds_checker(self.minute_of_hour, "minute_of_hour",
-                            min=0, upper=CALENDAR.MINUTES_IN_HOUR)
+                            min_val=0, upper_val=CALENDAR.MINUTES_IN_HOUR)
             _bounds_checker(self.second_of_minute, "second_of_minute",
-                            min=0, upper=CALENDAR.SECONDS_IN_MINUTE)
+                            min_val=0, upper_val=CALENDAR.SECONDS_IN_MINUTE)
         if self.time_zone.unknown is False:
             _bounds_checker(self.time_zone.hours, "time zone hours",
-                            min=0-99, max=99)
+                            min_val=0-99, max_val=99)
             if self.time_zone.hours <= 0:
                 min_tz_minute = 1 - CALENDAR.MINUTES_IN_HOUR
             else:
                 min_tz_minute = 0
             _bounds_checker(self.time_zone.minutes, "time zone minute",
-                            min=min_tz_minute,
-                            upper=CALENDAR.MINUTES_IN_HOUR)
+                            min_val=min_tz_minute,
+                            upper_val=CALENDAR.MINUTES_IN_HOUR)
 
     def __str__(self, override_custom_dump_format=False,
                 strftime_format=None):
@@ -2418,7 +2418,7 @@ def _type_checker(*objects):
             BadInputError.TYPE, name, repr(value), values_string)
 
 
-def _bounds_checker(value, name, min, max=None, upper=None):
+def _bounds_checker(value, name, min_val, max_val=None, upper_val=None):
     """
     Helper function for checking the value of a property is within
     bounds
@@ -2426,14 +2426,14 @@ def _bounds_checker(value, name, min, max=None, upper=None):
     Args:
         value [None, number]
         name [string] - Name of value
-        min [number] - Minimum value, inclusive
-        max (optional) [number] - Maximum value, inclusive
-        upper (optional) [number] - Upper limit of value, not inclusive
+        min_val [number] - Minimum value, inclusive
+        max_val (optional) [number] - Maximum value, inclusive
+        upper_val (optional) [number] - Upper limit of value, not inclusive
     """
     if (value is not None and
-            (value < min or
-             (max is not None and value > max) or
-             (upper is not None and value >= upper))):
+            (value < min_val or
+             (max_val is not None and value > max_val) or
+             (upper_val is not None and value >= upper_val))):
         raise BadInputError(BadInputError.OUT_OF_BOUNDS, name, value)
 
 

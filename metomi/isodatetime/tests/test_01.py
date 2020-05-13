@@ -382,7 +382,7 @@ class TestDataModel(unittest.TestCase):
         """Test out of bounds TimePoints"""
         tests = get_timepoint_bounds_tests()
         for kwargs in tests["in_bounds"]:
-            timepoint = data.TimePoint(**kwargs)
+            data.TimePoint(**kwargs)
         for kwargs in tests["out_of_bounds"]:
             with self.assertRaises(BadInputError) as cm:
                 data.TimePoint(**kwargs)
