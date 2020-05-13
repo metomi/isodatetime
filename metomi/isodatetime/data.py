@@ -136,7 +136,18 @@ TIMEPOINT_DUMPER_MAP = {
 
 class TimeRecurrence(object):
 
-    """Represent a recurring duration."""
+    # TODO: Need arg descriptions in docstring!
+    """Represent a recurring duration.
+
+    Keyword arguments:
+
+    repetitions
+    start_point
+    duration
+    end_point
+    min_point
+    max_point
+    """
 
     __slots__ = ("repetitions", "start_point", "duration", "end_point",
                  "min_point", "max_point", "format_number")
@@ -308,23 +319,23 @@ class Duration(object):
     """Represent a duration or period of time.
 
     Keyword arguments:
+
     years (default 0): number of calendar years in the duration (an
-    inexact unit)
+        inexact unit)
     months (default 0): number of calendar months in the duration (also
-    an inexact unit)
+        an inexact unit)
     weeks (default 0): number of weeks in the duration - cannot be
-    used in conjunction with other units (use multiples of 7 days
-    instead)
+        used in conjunction with other units (use multiples of 7 days
+        instead)
     days (default 0): number of days in the duration
     hours (default 0): number of hours in the duration
     minutes (default 0): number of minutes in the duration
     seconds (default 0): number of seconds in the duration
     standardize (default False): boolean that, if True, switches on
-    adjusting the attributes so that small units have minimal values.
-    For example, 3664.4 seconds would become 1 hour, 1 minute, and 4.4
-    seconds. Attributes will not adjust for units that are inexact
-    (months and years).
-
+        adjusting the attributes so that small units have minimal values.
+        For example, 3664.4 seconds would become 1 hour, 1 minute, and 4.4
+        seconds. Attributes will not adjust for units that are inexact
+        (months and years).
     """
 
     DATA_ATTRIBUTES = [
@@ -606,13 +617,13 @@ class TimeZone(Duration):
     """Represent a time zone offset from UTC.
 
     Keyword arguments:
-    hours, minutes: integers (default 0) denoting the hour and minute
-    component of the offset from UTC. These may be positive, zero, or
-    negative, as required. Note that a negative UTC offset should have
-    both hours and minutes as zero or negative integers.
-    unknown: a boolean that represents an unknown TimeZone. Some
-    operations and comparisons may fail when this is True.
 
+    hours, minutes: integers (default 0) denoting the hour and minute
+        component of the offset from UTC. These may be positive, zero, or
+        negative, as required. Note that a negative UTC offset should have
+        both hours and minutes as zero or negative integers.
+    unknown: a boolean that represents an unknown TimeZone. Some
+        operations and comparisons may fail when this is True.
     """
 
     __slots__ = ['unknown'] + Duration.__slots__
@@ -645,14 +656,11 @@ class TimePoint(object):
 
     """Represent an instant in time.
 
-    An ISO 8601 date/time instant can be represented in three
-    separate ways:
-    - Calendar date: calendar year, calendar month,
-    calendar day of the month
+    An ISO 8601 date/time instant can be represented in three separate ways:
+    - Calendar date: calendar year, calendar month, calendar day of the month
     - Ordinal date: calendar year, calendar day of the year
-    - Week date: calendar (week) year, calendar week,
-    calendar day of the week (note: week years are not identical to
-    calendar years).
+    - Week date: calendar (week) year, calendar week, calendar day of the week
+      (note: week years are not identical to calendar years).
 
     This class maintains a date/time instant in the original
     representation with which it was invoked - so it may be in any of
@@ -671,55 +679,55 @@ class TimePoint(object):
     Keyword arguments (usually default to None if not provided):
 
     expanded_year_digits (default 0) - an agreed-upon number of extra
-    digits to represent the year, beyond the default of 4. For example,
-    a value of 2 would suggest representing the year 2000 as 002000.
+        digits to represent the year, beyond the default of 4. For example,
+        a value of 2 would suggest representing the year 2000 as 002000.
     year - a positive or negative integer. Note that ISO 8601 implies
-    using non-zero expanded_year_digits when using negative integers.
-    Remember we are using the proleptic Gregorian calendar, with a year
-    zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
-    should be represented as -1.
+        using non-zero expanded_year_digits when using negative integers.
+        Remember we are using the proleptic Gregorian calendar, with a year
+        zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
+        should be represented as -1.
     month_of_year - an integer between 1 and 12 inclusive, if using the
-    calendar date representation.
+        calendar date representation.
     week_of_year - an integer between 1 and 52/53 (depending on the
-    year), if using the week date representation.
+        year), if using the week date representation.
     day_of_year - an integer between 1 and 365/366 (depending on the
-    year), if using the ordinal date representation.
+        year), if using the ordinal date representation.
     day_of_month - an integer between 1 and 28/29/30/31 (depending on
-    the month and year), if using the calendar date representation.
+        the month and year), if using the calendar date representation.
     day_of_week - an integer between 1 and 7, if using the week date
-    representation.
+        representation.
     hour_of_day - an integer between 0 and 24 (note: 24 represents midnight at
-    the end of the day, which is equivalent to 00/midnight the next day. If
-    24 is given, minute_of_hour must be 0)
+        the end of the day, which is equivalent to 00/midnight the next day. If
+        24 is given, minute_of_hour must be 0)
     hour_of_day_decimal - a float between 0 and 1, if using decimal
-    accuracy for hours. Note that you should not provide lower units
-    such as minute_of_hour or second_of_minute when using this.
+        accuracy for hours. Note that you should not provide lower units
+        such as minute_of_hour or second_of_minute when using this.
     minute_of_hour - an integer between 0 and 59.
     minute_of_hour_decimal - a float between 0 and 1, if using decimal
-    accuracy for minutes. Note that you should not provide lower units
-    such as second_of_minute when using this.
+        accuracy for minutes. Note that you should not provide lower units
+        such as second_of_minute when using this.
     second_of_minute - an integer between 0 and 59 (note: no support
-    for leap seconds at 60 yet)
+        for leap seconds at 60 yet)
     second_of_minute_decimal - a float between 0 and 1, if using decimal
-    accuracy for seconds.
+        accuracy for seconds.
     time_zone_hour - (default 0) an integer denoting the hour time zone
-    offset from UTC. Note that unless this is a truncated
-    representation, 0 will be assumed if this is not provided.
+        offset from UTC. Note that unless this is a truncated
+        representation, 0 will be assumed if this is not provided.
     time_zone_minute - (default 0) an integer between 0 and 59 denoting
-    the minute component of the time zone offset from UTC.
+        the minute component of the time zone offset from UTC.
     dump_format - a custom format string to control the stringification
-    of the timepoint. See isodatetime.parser_spec for more details.
+        of the timepoint. See isodatetime.parser_spec for more details.
     truncated - (default False) a boolean denoting whether the
-    date/time instant has purposefully incomplete information
-    (ISO 8601:2000 truncation).
+        date/time instant has purposefully incomplete information
+        (ISO 8601:2000 truncation).
     truncated_dump_format - a custom format string to control the
-    stringification of the timepoint if it is truncated. See
-    isodatetime.parser_spec for more details.
+        stringification of the timepoint if it is truncated. See
+        isodatetime.parser_spec for more details.
     truncated_property - a string that can either be "year_of_decade"
-    or "year_of_century". This is used for truncated representations to
-    distinguish between the two ways of truncating the year.
+        or "year_of_century". This is used for truncated representations to
+        distinguish between the two ways of truncating the year.
     is_empty_instance - if True, do not set any properties yet. These
-    should be set as part of a copy operation.
+        should be set as part of a copy operation.
     """
 
     DATA_ATTRIBUTES = [
