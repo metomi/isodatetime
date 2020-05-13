@@ -1106,6 +1106,22 @@ def get_timepoint_bounds_tests():
     }
 
 
+def get_timepoint_conflicting_input_tests():
+    """Yield tests for checking TimePoints initialized with incompatible
+    inputs."""
+    return [
+        {"year": 2020, "day_of_year": 1, "month_of_year": 1},
+        {"year": 2020, "day_of_year": 1, "day_of_month": 1},
+        {"year": 2020, "day_of_year": 6, "week_of_year": 2},
+        {"year": 2020, "day_of_year": 1, "day_of_week": 3},
+
+        {"year": 2020, "month_of_year": 2, "week_of_year": 5},
+        {"year": 2020, "month_of_year": 2, "day_of_week": 6},
+        {"year": 2020, "day_of_month": 6, "week_of_year": 2},
+        {"year": 2020, "day_of_month": 1, "day_of_week": 3}
+    ]
+
+
 def get_local_time_zone_hours_minutes():
     """Provide an independent method of getting the local time zone."""
     utc_offset = datetime.datetime.now() - datetime.datetime.utcnow()
@@ -1843,8 +1859,16 @@ class TestSuite(unittest.TestCase):
             timepoint = data.TimePoint(**kwargs)
         for kwargs in tests["out_of_bounds"]:
             with self.assertRaises(BadInputError) as cm:
-                timepoint = data.TimePoint(**kwargs)
+                data.TimePoint(**kwargs)
             assert "out of bounds" in str(cm.exception)
+
+    def test_timepoint_conflicting_inputs(self):
+        """Test TimePoints initialized with incompatible inputs"""
+        tests = get_timepoint_conflicting_input_tests()
+        for kwargs in tests:
+            with self.assertRaises(BadInputError) as cm:
+                data.TimePoint(**kwargs)
+            assert "Conflicting input" in str(cm.exception)
 
 
 if __name__ == '__main__':
