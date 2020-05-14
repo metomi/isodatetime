@@ -34,31 +34,6 @@ from metomi.isodatetime.exceptions import (
     ISO8601SyntaxError, TimePointDumperBoundsError)
 
 
-def get_timeduration_tests():
-    """Yield tests for the duration class."""
-    tests = {
-        "get_days_and_seconds": [
-            ([], {"hours": 25}, (1, 3600)),
-            ([], {"seconds": 59}, (0, 59)),
-            ([], {"minutes": 10}, (0, 600)),
-            ([], {"days": 5, "minutes": 2}, (5, 120)),
-            ([], {"hours": 2, "minutes": 5, "seconds": 11.5}, (0, 7511.5)),
-            ([], {"hours": 23, "minutes": 1446}, (1, 83160))
-        ],
-        "get_seconds": [
-            ([], {"hours": 25}, 90000),
-            ([], {"seconds": 59}, 59),
-            ([], {"minutes": 10}, 600),
-            ([], {"days": 5, "minutes": 2}, 432120),
-            ([], {"hours": 2, "minutes": 5, "seconds": 11.5}, 7511.5),
-            ([], {"hours": 23, "minutes": 1446}, 169560)
-        ]
-    }
-    for method, method_tests in tests.items():
-        for method_args, test_props, ctrl_results in method_tests:
-            yield test_props, method, method_args, ctrl_results
-
-
 def get_timedurationparser_tests():
     """Yield tests for the duration parser."""
     test_expressions = {
@@ -86,7 +61,9 @@ def get_timedurationparser_tests():
         "P100W": {"weeks": 100},
         "P0004-03-02T01": {"years": 4, "months": 3, "days": 2,
                            "hours": 1},
+        "P0004": {"years": 4},
         "P0004-03-00": {"years": 4, "months": 3},
+        "P0004-00-78": {"years": 4, "days": 78},
         "P0004-078": {"years": 4, "days": 78},
         "P0004-078T10,5": {"years": 4, "days": 78, "hours": 10.5},
         "P00000020T133702": {"days": 20, "hours": 13, "minutes": 37,
@@ -704,133 +681,6 @@ def get_truncated_property_tests():
     return test_timepoints
 
 
-def get_timepoint_subtract_tests():
-    """Yield tests for subtracting one timepoint from another."""
-    return [
-        (
-            {"year": 44, "month_of_year": 1, "day_of_month": 4,
-             "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 41, "month_of_year": 12, "day_of_month": 2,
-             "hour_of_day": 4, "minute_of_hour": 23, "second_of_minute": 1,
-             "time_zone_hour": 3, "time_zone_minute": 20},
-            "P763DT3H58M1S"
-        ),
-        (
-            {"year": 41, "month_of_year": 12, "day_of_month": 2,
-             "hour_of_day": 4, "minute_of_hour": 23, "second_of_minute": 1,
-             "time_zone_hour": 3, "time_zone_minute": 20},
-            {"year": 44, "month_of_year": 1, "day_of_month": 4,
-             "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "-P763DT3H58M1S"
-        ),
-        (
-            {"year": 1991, "month_of_year": 6, "day_of_month": 3,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 1991, "month_of_year": 5, "day_of_month": 4,
-             "hour_of_day": 5, "time_zone_hour": 0, "time_zone_minute": 0},
-            "P29DT19H"
-        ),
-        (
-            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
-             "hour_of_day": 20, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
-             "hour_of_day": 19, "time_zone_hour": 0, "time_zone_minute": 0},
-            "PT1H"
-        ),
-
-        (
-            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
-             "hour_of_day": 19, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 1969, "month_of_year": 7, "day_of_month": 20,
-             "hour_of_day": 20, "time_zone_hour": 0, "time_zone_minute": 0},
-            "-PT1H"
-        ),
-        (
-            {"year": 1991, "month_of_year": 5, "day_of_month": 4,
-             "hour_of_day": 5, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 1991, "month_of_year": 6, "day_of_month": 3,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            "-P29DT19H"
-        ),
-        (
-            {"year": 2014, "month_of_year": 1, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 2013, "month_of_year": 12, "day_of_month": 31,
-             "hour_of_day": 23, "time_zone_hour": 0, "time_zone_minute": 0},
-            "PT1H"
-        ),
-        (
-            {"year": 2013, "month_of_year": 12, "day_of_month": 31,
-             "hour_of_day": 23, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 2014, "month_of_year": 1, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            "-PT1H"
-        ),
-        (
-            {"year": 2014, "month_of_year": 1, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 2013, "month_of_year": 12, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            "P31D"
-        ),
-        (
-            {"year": 2013, "month_of_year": 12, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 2014, "month_of_year": 1, "day_of_month": 1,
-             "hour_of_day": 0, "time_zone_hour": 0, "time_zone_minute": 0},
-            "-P31D"
-        ),
-        (
-            {"year": 44, "month_of_year": 1, "day_of_month": 4,
-             "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            {"year": 41, "month_of_year": 12, "day_of_month": 2,
-             "hour_of_day": 13, "minute_of_hour": 23, "second_of_minute": 1,
-             "time_zone_hour": 3, "time_zone_minute": 20},
-            "P762DT18H58M1S"
-        ),
-        (
-            {"year": 41, "month_of_year": 12, "day_of_month": 2,
-             "hour_of_day": 13, "minute_of_hour": 23, "second_of_minute": 1,
-             "time_zone_hour": 3, "time_zone_minute": 20},
-            {"year": 44, "month_of_year": 1, "day_of_month": 4,
-             "hour_of_day": 5, "minute_of_hour": 1, "second_of_minute": 2,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "-P762DT18H58M1S"
-        ),
-    ]
-
-
-def get_duration_subtract_tests():
-    """Yield tests for subtracting a duration from a timepoint."""
-    return [
-        (
-            {"year": 2010, "day_of_year": 65,
-             # "month_of_year": 3, "day_of_month": 6,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "P6Y",
-            {"year": 2004,  # "day_of_year": 65,
-             "month_of_year": 3, "day_of_month": 5,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0}
-        ),
-        (
-            {"year": 2010, "week_of_year": 10, "day_of_week": 3,
-             # "month_of_year": 3, "day_of_month": 10,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0},
-            "P6Y",
-            {"year": 2004,  # "week_of_year": 10, "day_of_week": 3,
-             "month_of_year": 3, "day_of_month": 3,
-             "hour_of_day": 12, "minute_of_hour": 0, "second_of_minute": 0,
-             "time_zone_hour": 0, "time_zone_minute": 0}
-        ),
-    ]
-
-
 def get_timerecurrence_expansion_tests():
     """Return test expansion expressions for data.TimeRecurrence."""
     return [
@@ -1053,21 +903,6 @@ def get_local_time_zone_hours_minutes():
 class TestSuite(unittest.TestCase):
     """Test the functionality of parsers and data model manipulation."""
 
-    @pytest.mark.slow
-    def test_days_in_year_range(self):
-        """Test the summing-over-days-in-year-range shortcut code."""
-        for start_year in range(-401, 2):
-            for end_year in range(start_year, 2):
-                test_days = data.get_days_in_year_range(
-                    start_year, end_year)
-                control_days = 0
-                for year in range(start_year, end_year + 1):
-                    control_days += data.get_days_in_year(year)
-                self.assertEqual(
-                    control_days, test_days, "days in %s to %s" % (
-                        start_year, end_year)
-                )
-
     def test_largest_truncated_property_name(self):
         """Test the largest truncated property name."""
 
@@ -1108,18 +943,6 @@ class TestSuite(unittest.TestCase):
                 ["smallest_missing_property_name"],
                 msg=expression)
 
-    def test_timeduration(self):
-        """Test the duration class methods."""
-        for test_props, method, method_args, ctrl_results in (
-                get_timeduration_tests()):
-            duration = data.Duration(**test_props)
-            duration_method = getattr(duration, method)
-            test_results = duration_method(*method_args)
-            self.assertEqual(
-                test_results, ctrl_results,
-                "%s -> %s(%s)" % (test_props, method, method_args)
-            )
-
     def test_timeduration_parser(self):
         """Test the duration parsing."""
         parser = parsers.DurationParser()
@@ -1140,39 +963,6 @@ class TestSuite(unittest.TestCase):
             test_expression = str(duration)
             self.assertEqual(test_expression, ctrl_expression,
                              str(test_props))
-
-    def test_timeduration_add_week(self):
-        """Test the duration not in weeks add duration in weeks."""
-        self.assertEqual(
-            str(data.Duration(days=7) + data.Duration(weeks=1)),
-            "P14D")
-
-    def test_timepoint_plus_float_time_duration_day_of_month_type(self):
-        """Test (TimePoint + Duration).day_of_month is an int."""
-        time_point = data.TimePoint(year=2000) + data.Duration(seconds=1.0)
-        self.assertEqual(type(time_point.day_of_month), int)
-
-    def test_timepoint_subtract(self):
-        """Test subtracting one time point from another."""
-        for test_props1, test_props2, ctrl_string in (
-                get_timepoint_subtract_tests()):
-            point1 = data.TimePoint(**test_props1)
-            point2 = data.TimePoint(**test_props2)
-            test_string = str(point1 - point2)
-            self.assertEqual(test_string, ctrl_string,
-                             "%s - %s" % (point1, point2))
-
-    def test_duration_subtract(self):
-        """Test subtracting a duration from a timepoint."""
-        parser = parsers.DurationParser()
-        for my_timepoint, my_duration, my_result in (
-                get_duration_subtract_tests()):
-            start_point = data.TimePoint(**my_timepoint)
-            test_duration = parser.parse(my_duration)
-            end_point = data.TimePoint(**my_result)
-            test_subtract = (start_point - test_duration).to_calendar_date()
-            self.assertEqual(str(test_subtract), str(end_point),
-                             "%s - %s" % (start_point, test_duration))
 
     def test_timepoint_time_zone(self):
         """Test the time zone handling of timepoint instances."""
@@ -1408,6 +1198,7 @@ class TestSuite(unittest.TestCase):
         parser = parsers.TimePointParser()
         parse_tokens = list(parser_spec.STRFTIME_TRANSLATE_INFO.keys())
         parse_tokens.remove("%z")  # Don't test datetime's tz handling.
+        parse_tokens.remove("%j")  # Can't have day_of_year as well as month
         format_string = ""
         for i, token in enumerate(parse_tokens):
             format_string += token
@@ -1709,52 +1500,6 @@ class TestSuite(unittest.TestCase):
             tz_format = timezone.get_local_time_zone_format(tz_format_mode)
             self.assertEqual(expected_format, tz_format)
 
-    def test_duration_to_weeks(self):
-        """Test that the duration does not lose precision when converted
-        from days"""
-        duration_in_days = data.Duration(days=365)
-        duration_in_days.to_weeks()
-        duration_in_weeks = data.Duration(weeks=52)
-        self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
-
-    def test_duration_floordiv(self):
-        """Test the existing dunder floordir, which will be removed when we
-        move to Python 3"""
-        duration = data.Duration(years=4, months=4, days=4, hours=4,
-                                 minutes=4, seconds=4)
-        duration //= 2
-        self.assertEqual(2, duration.years)
-        self.assertEqual(2, duration.months)
-        self.assertEqual(2, duration.days)
-        self.assertEqual(2, duration.hours)
-        self.assertEqual(2, duration.minutes)
-        self.assertEqual(2, duration.seconds)
-
-    def test_duration_in_weeks_floordiv(self):
-        """Test the existing dunder floordir, which will be removed when we
-        move to Python 3"""
-        duration = data.Duration(weeks=4)
-        duration //= 2
-        self.assertEqual(2, duration.weeks)
-
-    def test_timepoint_add_duration(self):
-        """Test adding a duration to a timepoint"""
-        seconds_added = 5
-        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                   hour_of_day=1, minute_of_hour=1)
-        duration = data.Duration(seconds=seconds_added)
-        t = timepoint + duration
-        self.assertEqual(seconds_added, t.second_of_minute)
-
-    def test_timepoint_add_duration_without_minute(self):
-        """Test adding a duration to a timepoint"""
-        seconds_added = 5
-        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                   hour_of_day=1)
-        duration = data.Duration(seconds=seconds_added)
-        t = timepoint + duration
-        self.assertEqual(seconds_added, t.second_of_minute)
-
     def test_timepoint_dump_format(self):
         """Test the timepoint format dump when values are programmatically
         set to None"""
@@ -1765,6 +1510,7 @@ class TestSuite(unittest.TestCase):
         t.week_of_year = None
         with self.assertRaises(RuntimeError):
             self.assertEqual("1984-01-01T00:00:00Z", str(t))
+        # QUESTION: What was this test meant to do exactly?
 
 
 if __name__ == '__main__':
