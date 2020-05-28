@@ -97,7 +97,7 @@ setup(
     setup_requires=setup_requires,
     tests_require=['coverage', 'pytest>=5', 'pytest-cov', 'pytest-env'],
     install_requires=[],
-    python_requires='>=3.5, <3.9',
+    python_requires='>=3.5',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
