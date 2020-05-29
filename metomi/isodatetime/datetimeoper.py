@@ -82,7 +82,6 @@ class DateTimeOperator(object):
                          If not specified, operations use current date time.
 
         """
-        self.parse_formats = self.PARSE_FORMATS
         self.custom_parse_format = parse_format
         self.utc_mode = utc_mode
         if self.utc_mode:
@@ -140,7 +139,7 @@ class DateTimeOperator(object):
             time_point = self.strptime(time_point_str, parse_format)
         else:
             time_point = None
-            for parse_format in self.parse_formats:
+            for parse_format in self.PARSE_FORMATS:
                 try:
                     time_point = self.strptime(time_point_str, parse_format)
                     break
@@ -266,12 +265,12 @@ class DateTimeOperator(object):
     def get_datetime_strptime(self, time_point_str, parse_format):
         """Use the datetime library's strptime as a fallback."""
         point = seconds2point(
-            time.mktime(time.strptime(time_point_str, parse_format)))
-        # FIXME: Neither time.strptime nor datetime.datetime.strptime
-        # returns the value of the %Z (time zone) field, so we ignore that for
-        # now except explicit UTC/GMT in the string.
-        if any(s in time_point_str for s in ('UTC', 'GMT')):
-            point.set_time_zone_to_utc()
+            time.mktime(time.strptime(time_point_str, parse_format)),
+            utc=True)
+        # NOTE: Neither time.strptime nor datetime.datetime.strptime can
+        # cope with %Z (time zone) that isn't 'UTC' or 'GMT'. There is no
+        # way to differentiate between an unrecognised zone (e.g. CET) and
+        # a bad time_point_str
         return point
 
     def process_time_point_str(
