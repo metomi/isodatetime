@@ -1195,32 +1195,60 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_strftime_strptime(self):
         """Test the strftime/strptime for date/time expressions."""
-        parser = parsers.TimePointParser()
-        parse_tokens = list(parser_spec.STRFTIME_TRANSLATE_INFO.keys())
-        parse_tokens.remove("%z")  # Don't test datetime's tz handling.
-        parse_tokens.remove("%j")  # Can't have day_of_year as well as month
-        format_string = ""
-        for i, token in enumerate(parse_tokens):
-            format_string += token
-            if i % 2 == 0:
-                format_string += " "
-            if i % 3 == 0:
-                format_string += ":"
-            if i % 5 == 0:
-                format_string += "?foobar"
-            if i % 7 == 0:
-                format_string += "++("
-        strftime_string = format_string
-        strptime_strings = [format_string]
-        for key in parser_spec.STRPTIME_EXCLUSIVE_GROUP_INFO.keys():
-            strptime_strings[-1] = strptime_strings[-1].replace(key, "")
-        strptime_strings.append(format_string)
-        for values in parser_spec.STRPTIME_EXCLUSIVE_GROUP_INFO.values():
-            for value in values:
-                strptime_strings[-1] = strptime_strings[-1].replace(value, "")
-        ctrl_date = datetime.datetime(2002, 3, 1, 12, 30, 2)
+        parser = parsers.TimePointParser(assumed_time_zone=(0, 0))
+        strftime_string = "%d :?foobar++(%F%H %j:%m %M?foobar :%S++(%X %Y:"
+        strptime_strings = [
+            "%d :?foo++(%H :%m %M?foo :%S++( %Y:",
+            "%j :?foo %H++( %M?foo :%S++( %Y:",
+            "?foo%s :++("
+        ]
+        ctrl_date = datetime.datetime(2002, 3, 1, 12, 30, 2,
+                                      tzinfo=datetime.timezone.utc)
+        test_date = data.TimePoint(
+            year=ctrl_date.year,
+            month_of_year=ctrl_date.month,
+            day_of_month=ctrl_date.day,
+            hour_of_day=ctrl_date.hour,
+            minute_of_hour=ctrl_date.minute,
+            second_of_minute=ctrl_date.second
+        )
+        test_date.set_time_zone_to_utc()
 
-        # Test %z dumping.
+        for test_date in [test_date, test_date.copy().to_week_date(),
+                          test_date.copy().to_ordinal_date()]:
+            # Test strftime (dumping):
+            ctrl_data = ctrl_date.strftime(strftime_string)
+            test_data = test_date.strftime(strftime_string)
+            self.assertEqual(test_data, ctrl_data, strftime_string)
+
+            # Test strptime (parsing):
+            for strptime_string in strptime_strings:
+                # %s not really supported by datetime
+                if "%s" in strptime_string:
+                    unix_time = ctrl_date.timestamp()
+                    # The `%` below is the string format operator (not modulo)
+                    ctrl_dump = strptime_string % int(unix_time)
+                    ctrl_data = ctrl_date
+                else:
+                    ctrl_dump = ctrl_date.strftime(strptime_string)
+                    ctrl_data = datetime.datetime.strptime(
+                        ctrl_dump, strptime_string)
+                test_dump = test_date.strftime(strptime_string)
+                test_data = parser.strptime(test_dump, strptime_string)
+                test_data.set_time_zone_to_utc()
+
+                self.assertEqual(test_dump, ctrl_dump, strptime_string)
+
+                ctrl_data = (
+                    ctrl_data.year, ctrl_data.month, ctrl_data.day,
+                    ctrl_data.hour, ctrl_data.minute, ctrl_data.second
+                )
+                test_data = tuple(list(test_data.get_calendar_date()) +
+                                  list(test_data.get_hour_minute_second()))
+                self.assertEqual(test_data, ctrl_data,
+                                 test_dump + "\n" + strptime_string)
+
+        # Test %z strftime (dumping):
         for sign in [1, -1]:
             for hour in range(0, 24):
                 for minute in range(0, 59):
@@ -1242,49 +1270,6 @@ class TestSuite(unittest.TestCase):
                     self.assertEqual(test_date.strftime("%z"),
                                      ctrl_string,
                                      "%z for " + str(test_date))
-
-        test_date = data.TimePoint(
-            year=ctrl_date.year,
-            month_of_year=ctrl_date.month,
-            day_of_month=ctrl_date.day,
-            hour_of_day=ctrl_date.hour,
-            minute_of_hour=ctrl_date.minute,
-            second_of_minute=ctrl_date.second
-        )
-        test_date.set_time_zone_to_utc()
-        for test_date in [test_date, test_date.copy().to_week_date(),
-                          test_date.copy().to_ordinal_date()]:
-            ctrl_data = ctrl_date.strftime(strftime_string)
-            test_data = test_date.strftime(strftime_string)
-            self.assertEqual(test_data, ctrl_data, strftime_string)
-            for strptime_string in strptime_strings:
-                ctrl_dump = ctrl_date.strftime(strptime_string)
-                test_dump = test_date.strftime(strptime_string)
-                self.assertEqual(test_dump, ctrl_dump, strptime_string)
-                if "%s" in strptime_string:
-                    # The datetime library can't handle this for strptime!
-                    ctrl_data = ctrl_date
-                else:
-                    ctrl_data = datetime.datetime.strptime(
-                        ctrl_dump, strptime_string)
-                test_data = parser.strptime(test_dump, strptime_string)
-                if any(s in strptime_string for s in ('%s', '%z')):
-                    test_data.set_time_zone_to_utc()
-
-                ctrl_data = (
-                    ctrl_data.year, ctrl_data.month, ctrl_data.day,
-                    ctrl_data.hour, ctrl_data.minute, ctrl_data.second
-                )
-                test_data = tuple(list(test_data.get_calendar_date()) +
-                                  list(test_data.get_hour_minute_second()))
-                if "%y" in strptime_string:
-                    # %y is the decadal year (00 to 99) within a century.
-                    # The datetime library, for some reason, sets a default
-                    # century of '2000' - so nuke this extra information.
-                    ctrl_data = tuple([ctrl_data[0] % 100] +
-                                      list(ctrl_data[1:]))
-                self.assertEqual(test_data, ctrl_data, test_dump + "\n" +
-                                 strptime_string)
 
     def test_timerecurrence_alt_calendars(self):
         """Test recurring date/time series for alternate calendars."""
