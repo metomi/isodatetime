@@ -13,10 +13,12 @@ matrix:
     - python: 3.6
       env: RUN_COVERAGE=false
     - python: 3.7
+      env: RUN_COVERAGE=false
+    - python: 3.8
       env: RUN_COVERAGE=true
-    - python: 3.7
-      env: RUN_COVERAGE=false TZ=UTC
-    - python: 3.8-dev
+    - python: 3.8
+      env: RUN_COVERAGE=false TZ=XXX-05:30 # Test in +05:30 time zone
+    - python: 3.9-dev
       env: RUN_COVERAGE=false
     - os: osx
       env: RUN_COVERAGE=false
