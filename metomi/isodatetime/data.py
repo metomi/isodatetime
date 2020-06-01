@@ -2297,16 +2297,24 @@ def get_timepoint_for_now():
     return get_timepoint_from_seconds_since_unix_epoch(time.time())
 
 
-def get_timepoint_from_seconds_since_unix_epoch(num_seconds):
+def get_timepoint_from_seconds_since_unix_epoch(num_seconds, utc=False):
     """Return a TimePoint at a date/time specified in Unix time.
+
+    Args:
+        num_seconds - The number of seconds since the Unix epoch
+        utc (bool) - Whether the returned TimePoint should be in UTC or the
+            local time zone
 
     Note that Unix time always counts 1 day = 86400 seconds, so if
     we implement leap seconds we need to make the distinction.
-
     """
     reference_timepoint = TimePoint(
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
     reference_timepoint.set_time_zone_to_local()
+    if utc:
+        adj_secs = reference_timepoint.time_zone.get_seconds()
+        reference_timepoint.set_time_zone_to_utc()
+        reference_timepoint += Duration(seconds=adj_secs)
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 
