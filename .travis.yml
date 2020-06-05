@@ -41,7 +41,7 @@ install:
   # Coverage dependencies, coverage for reporting coverage, pytest-cov to
   # enable PyTest to produce coverage reports, and pytest-env to allow
   # PyTest to use environment variables in its configuration (e.g. TZ=UTC).
-  - pip install coverage pytest-cov pytest-env pytest-runner
+  - pip install coverage pytest-cov pytest-env pytest-runner pytest-xdist
   # Code style dependencies
   - pip install pycodestyle
   - pip install -e .
@@ -63,7 +63,7 @@ script:
     # but it does not produce any output, which can be frustrating in case of errors.
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
-    $PY_CMD setup.py test --pytest-args='--runslow' &
+    $PY_CMD setup.py test --pytest-args='--runslow -n 4' &
     TEST_PID="$!"
     minutes=0
     limit=50
