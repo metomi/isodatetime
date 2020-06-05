@@ -43,7 +43,7 @@ omit=
 parallel = False
 plugins=
 source=
-    ./isodatetime
+    ./metomi/isodatetime
 timid = False
 
 

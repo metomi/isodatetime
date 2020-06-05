@@ -5,6 +5,20 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2.0.2 (Upcoming, 2020)
+
+This is the 14th release of isodatetime.
+
+This release requires Python 3.5 or above.
+
+### Noteworthy Changes
+
+[#157](https://github.com/metomi/isodatetime/pull/157):
+TimePoints can no longer be created with out-of-bounds values, e.g.
+`2020-00-00`, `2020-13-32T25:60`, `--02-30` are not valid.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2.0.1 (Released 2019-07-23)
 
 This is the 13th release of isodatetime.
@@ -21,10 +35,10 @@ CLI take mixed required and optional arguments (Python 3.7+ only).
 [#127](https://github.com/metomi/isodatetime/pull/127):
 Raise a useful `ValueError` if time point is invalid.
 
-[#130](https://github.com/metomi/isodatetime/pull/130)
+[#130](https://github.com/metomi/isodatetime/pull/130):
 Support the CF compatible calendar mode strings `360_day`, `365_day` & `366_day`
 
-[#132](https://github.com/metomi/isodatetime/pull/132)
+[#132](https://github.com/metomi/isodatetime/pull/132):
 Change namespace of `isodatetime` to `metomi.isodatetime`
 
 --------------------------------------------------------------------------------
