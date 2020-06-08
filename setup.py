@@ -23,9 +23,7 @@ from pathlib import Path
 from setuptools.command.bdist_rpm import bdist_rpm as bdist_rpm_original
 # to parse pytest command arguments
 # https://docs.pytest.org/en/2.8.7/goodpractices.html#manual-integration
-from setuptools.command.test import test as TestCommand
 from setuptools import setup, find_namespace_packages
-import sys
 
 
 DIST_DIR = Path(__file__).resolve().parent
@@ -45,21 +43,6 @@ __version__ = get_version(
 )
 
 
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = ""
-
-    def run_tests(self):
-        import shlex
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args))
-        sys.exit(errno)
-
-
 class bdist_rpm(bdist_rpm_original):
 
     def run(self):
@@ -68,13 +51,6 @@ class bdist_rpm(bdist_rpm_original):
         self.distribution.metadata.name = "python-isodatetime"
         self.distribution.metadata.version = __version__
         super().run()
-
-
-# Only include pytest-runner in setup_requires if we're invoking tests
-if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
-    setup_requires = ['pytest-runner']
-else:
-    setup_requires = []
 
 
 install_requires = []
@@ -99,8 +75,7 @@ setup(
     author="Met Office",
     author_email="metomi@metoffice.gov.uk",
     cmdclass={
-        "bdist_rpm": bdist_rpm,
-        "pytest": PyTest
+        "bdist_rpm": bdist_rpm
     },
     description=("Python ISO 8601 date time parser" +
                  " and data model/manipulation utilities"),
@@ -111,7 +86,6 @@ setup(
     long_description=open(str(Path(DIST_DIR, 'README.md')), 'r').read(),
     long_description_content_type="text/markdown",
     platforms='any',
-    setup_requires=setup_requires,
     install_requires=install_requires,
     tests_require=tests_require,
     extras_require=extras_require,
