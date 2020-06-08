@@ -38,13 +38,8 @@ install:
   # Upgrade pip and setuptools as some times the versioning scheme hack fails
   # in Travis-CI.
   - pip install --upgrade pip setuptools
-  # Coverage dependencies, coverage for reporting coverage, pytest-cov to
-  # enable PyTest to produce coverage reports, and pytest-env to allow
-  # PyTest to use environment variables in its configuration (e.g. TZ=UTC).
-  - pip install coverage pytest-cov pytest-env pytest-runner pytest-xdist
-  # Code style dependencies
-  - pip install pycodestyle
-  - pip install -e .
+  - pip install -e . [all]
+  - pip install coverage pytest-xdist pycodestyle
 
 before_script:
   - pycodestyle -v metomi/isodatetime
