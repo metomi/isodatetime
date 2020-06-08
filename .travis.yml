@@ -46,33 +46,15 @@ before_script:
 
 script:
   - |
+    PYTEST_ARGS=('-n' '4')
     if "$RUN_COVERAGE"; then
-      PY_CMD="coverage run"
-      export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
-      export COVERAGE_FILE="${TRAVIS_BUILD_DIR}/.coverage"
-    else
-      PY_CMD="python"
+      PYTEST_ARGS+=('--cov=metomi/isodatetime')
     fi
-    # NOTE: the way to handle long-living commands in the documentation is
-    # travis_wait 40 coverage run -m isodatetime.tests.test_time_point
-    # but it does not produce any output, which can be frustrating in case of errors.
-    # So here we are using the approach documented in the issue
-    # https://github.com/travis-ci/travis-ci/issues/4190.
-    $PY_CMD setup.py test --pytest-args='-n 4' &
-    TEST_PID="$!"
-    minutes=0
-    limit=50
-    while ps -p "${TEST_PID}" >/dev/null 2>&1; do
-      echo -n -e " \b" # never leave evidences!
-      if ((minutes == limit)); then
-        exit 1
-      fi
-      minutes=$((minutes + 1))
-      sleep 60
-    done
-    wait "${TEST_PID}"
+    pytest "${PYTEST_ARGS[@]}"
 
 after_success:
-  - coverage xml --ignore-errors
-  # Report metrics, such as coverage
-  - if "$RUN_COVERAGE"; then bash <(curl -s https://codecov.io/bash); fi;
+  - |
+    coverage xml --ignore-errors
+    if "$RUN_COVERAGE"; then
+      bash <(curl -s https://codecov.io/bash)
+    fi
