@@ -80,7 +80,7 @@ $ isodatetime R/2000/P1Y --max 3
 [ISO8601 (2004)](https://www.iso.org/standard/40874.html)
 is an international standard for writing down date/time information.
 
-It is the correct, internationally-friendly, computer-sortable way to 
+It is the correct, internationally-friendly, computer-sortable way to
 numerically represent date/time information.
 
 Good reading material:
@@ -95,9 +95,9 @@ Reference material:
 
 #### How do I write the year, month-of-year, and day-of-month down?
 
-Syntax      | Example   
- ---------- | ----------    
- CCYYMMDD    | 20151231   
+Syntax      | Example
+ ---------- | ----------
+ CCYYMMDD    | 20151231
  CCYY-MM-DD  | 2015-12-31
 
 #### How about writing down the year, week-of-year, and day-of-week?
@@ -169,8 +169,8 @@ Syntax             | Example
 
 Write the time after the date, separated with a `T`:
 
-Syntax              | Example   
- ------------------ | ------------------- 
+Syntax              | Example
+ ------------------ | -------------------
  CCYYMMDDThhmmss     | 20151231T063101
  CCYY-MM-DDThh:mm:ss | 2015-12-31T06:31:01
  CCYYWwwDThhmmss     | 2015W534T063101
@@ -180,15 +180,15 @@ Syntax              | Example
 
 #### What about just the hour and minute at a date?
 
-Syntax           | Example 
- --------------- | ----------------    
+Syntax           | Example
+ --------------- | ----------------
  CCYYWwwDThhmm    | 2015W534T0631
  CCYY-Www-DThh:mm | 2015-W53-4T06:31
 
 #### What about just the hour at a date?
 
-Syntax           | Example   
- --------------- | -------------   
+Syntax           | Example
+ --------------- | -------------
  CCYYMMDDThh      | 20151231T06
  CCYY-MM-DDThh    | 2015-12-31T06
 
@@ -252,14 +252,15 @@ to delimit time from date:
 Syntax    | Example  | Meaning
  -------- | -------- | ------------------------
  PnY      |  P2Y     | 2 years
- Pn,oY    |  P5,5Y   | 5 and a half years
- Pn.oY    |  P5.5Y   | 5 and a half years
  PTnM     |  PT7M    | 7 minutes (note the 'T')
  PnM      |  P10M    | 10 months
  PnDTnH   |  P5DT6H  | 5 days and 6 hours
+ PTn,oH   |  PT5,5H  | 5 and a half hours
+ PTn.oH   |  PT5.5H  | 5 and a half hours
  PnW      |  P2W     | 2 weeks
- 
-Combining any other unit with weeks is not allowed.
+
+Combining any other unit with weeks is not allowed. Decimals may only be used
+for hours, minutes and seconds.
 
 A supplementary format (which has to be agreed in advance) is to specify a
 date-time-like duration (`PCCYY-MM-DDThh:mm:ss`) where the numbers given for

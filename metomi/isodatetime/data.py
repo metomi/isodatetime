@@ -320,24 +320,33 @@ class Duration(object):
 
     """Represent a duration or period of time.
 
+    Note that years, months, weeks and days are 'nominal' durations, whose
+    exact length of time depends on their position in the calendar. E.g., a
+    duration of 1 calendar year starts on a particular day of a particular
+    month and ends on the same day of the same month in the following calendar
+    year, and may be equal to 365 or 366 days in the Gregorian calendar.
+    Another example: a duration of 1 calendar day starts at a particular time
+    of day and ends at the same time of day the following calendar day, and
+    might be different to 24 hours if the you're using a local time zone that
+    can change due to daylight saving.
+
     Keyword arguments:
 
-    years (default 0): number of calendar years in the duration (an
-        inexact unit)
-    months (default 0): number of calendar months in the duration (also
-        an inexact unit)
-    weeks (default 0): number of weeks in the duration - cannot be
-        used in conjunction with other units (use multiples of 7 days
-        instead)
-    days (default 0): number of days in the duration
-    hours (default 0): number of hours in the duration
-    minutes (default 0): number of minutes in the duration
-    seconds (default 0): number of seconds in the duration
-    standardize (default False): boolean that, if True, switches on
-        adjusting the attributes so that small units have minimal values.
-        For example, 3664.4 seconds would become 1 hour, 1 minute, and 4.4
-        seconds. Attributes will not adjust for units that are inexact
-        (months and years).
+    years (int): number of calendar years in the duration (an inexact unit
+        due to the possibility of leap years).
+    months (int) number of calendar months in the duration (also an inexact
+        unit due to the differing number of calendar days in the calendar
+        months).
+    weeks (int): number of calendar weeks in the duration - cannot be used in
+        conjunction with other units (use multiples of 7 days instead).
+    days (int): number of calendar days in the duration.
+    hours (float): number of hours in the duration.
+    minutes (float): number of minutes in the duration.
+    seconds (float): number of seconds in the duration.
+    standardize (bool): if True, switches on adjusting the attributes so that
+        small units have minimal values. For example, 3664.4 seconds would
+        become 1 hour, 1 minute, and 4.4 seconds. Attributes will not adjust
+        for units that are inexact (months and years).
     """
 
     DATA_ATTRIBUTES = [
@@ -348,10 +357,10 @@ class Duration(object):
     def __init__(self, years=0, months=0, weeks=0, days=0,
                  hours=0.0, minutes=0.0, seconds=0.0, standardize=False):
         _type_checker(
-            (years, "years", int, float, None),
-            (months, "months", int, float, None),
-            (weeks, "weeks", int, float, None),
-            (days, "days", int, float, None),
+            (years, "years", int, None),
+            (months, "months", int, None),
+            (weeks, "weeks", int, None),
+            (days, "days", int, None),
             (hours, "hours", int, float, None),
             (minutes, "minutes", int, float, None),
             (seconds, "seconds", int, float, None)
