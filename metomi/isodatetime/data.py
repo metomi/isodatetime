@@ -795,11 +795,12 @@ class TimePoint(object):
             (day_of_month, "day_of_month", None, int),
             (day_of_week, "day_of_week", None, int),
             (hour_of_day, "hour_of_day", None, int, float),
-            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
+            (hour_of_day_decimal, "hour_of_day_decimal", None, int, float),
             (minute_of_hour, "minute_of_hour", None, int, float),
-            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
+            (minute_of_hour_decimal, "minute_of_hour_decimal", None, int,
+             float),
             (second_of_minute, "second_of_minute", None, int, float),
-            (second_of_minute_decimal, "second_of_minute_decimal", None,
+            (second_of_minute_decimal, "second_of_minute_decimal", None, int,
              float),
             (time_zone_hour, "time_zone_hour", None, int),
             (time_zone_minute, "time_zone_minute", None, int)
@@ -2411,22 +2412,30 @@ def _int_caster(number, name="number", allow_none=False):
 
 
 def _type_checker(*objects):
+    """Helper function for checking the type of method arguments.
+
+    Args:
+        *objects: Tuples of the form (value, name, *allowed_types):
+
+    Raises:
+        BadInputError: If a value is not of the correct type.
+    """
     for type_info in objects:
         value, name = type_info[:2]
         allowed_types = list(type_info[2:])
         none_is_allowed = False
         if None in allowed_types:
             if value is None:
-                break
+                continue
             none_is_allowed = True
             allowed_types.remove(None)
             allowed_types.append(type(None))
         if allowed_types and isinstance(value, allowed_types[0]):
-            break
+            continue
         if int in allowed_types and float not in allowed_types:
             value = _int_caster(value, name=name, allow_none=none_is_allowed)
         if any(isinstance(value, type_) for type_ in allowed_types):
-            break
+            continue
         values_string = ""
         if allowed_types:
             values_string = " should be: "
@@ -2436,16 +2445,17 @@ def _type_checker(*objects):
 
 
 def _bounds_checker(value, name, min_val, max_val=None, upper_val=None):
-    """
-    Helper function for checking the value of a property is within
-    bounds
+    """Helper function for checking the value of a property is within bounds.
 
     Args:
-        value [None, number]
-        name [string] - Name of value
-        min_val [number] - Minimum value, inclusive
-        max_val (optional) [number] - Maximum value, inclusive
-        upper_val (optional) [number] - Upper limit of value, not inclusive
+        value (None, float): The value to check.
+        name (str): Name of the property.
+        min_val (float): Minimum value, inclusive.
+        max_val (float, optional): Maximum value, inclusive.
+        upper_val (float, optional): Upper limit of value, not inclusive.
+
+    Raises:
+        BadInputError: If the value is out of bounds.
     """
     if (value is not None and
             (value < min_val or
