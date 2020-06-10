@@ -2301,29 +2301,32 @@ def _get_ordinal_date_week_date_start(year, _):
             return cal_year, total_days
 
 
-def get_timepoint_for_now():
-    """Return a TimePoint at the current date/time."""
+def get_timepoint_for_now(utc=False):
+    """Return a TimePoint at the current date/time.
+
+     Args:
+        utc (bool): Whether the returned TimePoint should be in UTC or the
+            local time zone.
+    """
     import time
-    return get_timepoint_from_seconds_since_unix_epoch(time.time())
+    return get_timepoint_from_seconds_since_unix_epoch(time.time(), utc=utc)
 
 
 def get_timepoint_from_seconds_since_unix_epoch(num_seconds, utc=False):
     """Return a TimePoint at a date/time specified in Unix time.
 
     Args:
-        num_seconds - The number of seconds since the Unix epoch
-        utc (bool) - Whether the returned TimePoint should be in UTC or the
-            local time zone
+        num_seconds (float): The number of seconds since the Unix epoch.
+        utc (bool): Whether the returned TimePoint should be in UTC or the
+            local time zone.
 
     Note that Unix time always counts 1 day = 86400 seconds, so if
     we implement leap seconds we need to make the distinction.
     """
     reference_timepoint = TimePoint(
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
-    reference_timepoint.set_time_zone_to_local()
-    if utc:
-        num_seconds += reference_timepoint.time_zone.get_seconds()
-        reference_timepoint.set_time_zone_to_utc()
+    if not utc:
+        reference_timepoint.set_time_zone_to_local()
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 
