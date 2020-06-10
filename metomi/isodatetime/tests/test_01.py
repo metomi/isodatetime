@@ -274,7 +274,6 @@ def get_timepoint_conflicting_input_tests():
 class TestDataModel(unittest.TestCase):
     """Test the functionality of data model manipulation."""
 
-    @pytest.mark.slow
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
         for start_year in range(-401, 2):
