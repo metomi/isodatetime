@@ -2322,9 +2322,8 @@ def get_timepoint_from_seconds_since_unix_epoch(num_seconds, utc=False):
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
     reference_timepoint.set_time_zone_to_local()
     if utc:
-        adj_secs = reference_timepoint.time_zone.get_seconds()
+        num_seconds += reference_timepoint.time_zone.get_seconds()
         reference_timepoint.set_time_zone_to_utc()
-        reference_timepoint += Duration(seconds=adj_secs)
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 
