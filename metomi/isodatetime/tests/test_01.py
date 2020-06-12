@@ -301,6 +301,16 @@ class TestDataModel(unittest.TestCase):
                 "%s -> %s(%s)" % (test_props, method, method_args)
             )
 
+    def test_duration_float_args(self):
+        """Test that floats passed to Duration() init are handled correctly."""
+        for kwarg in ["years", "months", "weeks", "days"]:
+            with self.assertRaises(BadInputError):
+                data.Duration(**{kwarg: 1.5})
+        for kwarg, expected_secs in [("hours", 5400), ("minutes", 90),
+                                     ("seconds", 1.5)]:
+            self.assertEqual(data.Duration(**{kwarg: 1.5}).get_seconds(),
+                             expected_secs)
+
     def test_duration_to_weeks(self):
         """Test that the duration does not lose precision when converted
         from days"""

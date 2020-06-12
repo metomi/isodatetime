@@ -21,10 +21,8 @@ from datetime import datetime
 import os
 import time
 
-from .data import (
-    Calendar,
-    get_timepoint_for_now as now2point,
-    get_timepoint_from_seconds_since_unix_epoch as seconds2point)
+from .data import (Calendar, TimePoint,
+                   get_timepoint_for_now as now2point)
 from .dumpers import TimePointDumper
 from .parsers import TimePointParser, DurationParser, TimeRecurrenceParser
 from metomi.isodatetime.exceptions import OffsetValueError
@@ -264,14 +262,16 @@ class DateTimeOperator(object):
 
     def get_datetime_strptime(self, time_point_str, parse_format):
         """Use the datetime library's strptime as a fallback."""
-        point = seconds2point(
-            time.mktime(time.strptime(time_point_str, parse_format)),
-            utc=True)
+        _time = time.strptime(time_point_str, parse_format)
         # NOTE: Neither time.strptime nor datetime.datetime.strptime can
         # cope with %Z (time zone) that isn't 'UTC' or 'GMT'. There is no
         # way to differentiate between an unrecognised zone (e.g. CET) and
         # a bad time_point_str
-        return point
+        return TimePoint(
+            year=_time.tm_year, month_of_year=_time.tm_mon,
+            day_of_month=_time.tm_mday, hour_of_day=_time.tm_hour,
+            minute_of_hour=_time.tm_min, second_of_minute=_time.tm_sec
+        )
 
     def process_time_point_str(
         self,

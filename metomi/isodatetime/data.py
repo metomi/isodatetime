@@ -320,24 +320,33 @@ class Duration(object):
 
     """Represent a duration or period of time.
 
+    Note that years, months, weeks and days are 'nominal' durations, whose
+    exact length of time depends on their position in the calendar. E.g., a
+    duration of 1 calendar year starts on a particular day of a particular
+    month and ends on the same day of the same month in the following calendar
+    year, and may be equal to 365 or 366 days in the Gregorian calendar.
+    Another example: a duration of 1 calendar day starts at a particular time
+    of day and ends at the same time of day the following calendar day, and
+    might be different to 24 hours if the you're using a local time zone that
+    can change due to daylight saving.
+
     Keyword arguments:
 
-    years (default 0): number of calendar years in the duration (an
-        inexact unit)
-    months (default 0): number of calendar months in the duration (also
-        an inexact unit)
-    weeks (default 0): number of weeks in the duration - cannot be
-        used in conjunction with other units (use multiples of 7 days
-        instead)
-    days (default 0): number of days in the duration
-    hours (default 0): number of hours in the duration
-    minutes (default 0): number of minutes in the duration
-    seconds (default 0): number of seconds in the duration
-    standardize (default False): boolean that, if True, switches on
-        adjusting the attributes so that small units have minimal values.
-        For example, 3664.4 seconds would become 1 hour, 1 minute, and 4.4
-        seconds. Attributes will not adjust for units that are inexact
-        (months and years).
+    years (int): number of calendar years in the duration (an inexact unit
+        due to the possibility of leap years).
+    months (int) number of calendar months in the duration (also an inexact
+        unit due to the differing number of calendar days in the calendar
+        months).
+    weeks (int): number of calendar weeks in the duration - cannot be used in
+        conjunction with other units (use multiples of 7 days instead).
+    days (int): number of calendar days in the duration.
+    hours (float): number of hours in the duration.
+    minutes (float): number of minutes in the duration.
+    seconds (float): number of seconds in the duration.
+    standardize (bool): if True, switches on adjusting the attributes so that
+        small units have minimal values. For example, 3664.4 seconds would
+        become 1 hour, 1 minute, and 4.4 seconds. Attributes will not adjust
+        for units that are inexact (months and years).
     """
 
     DATA_ATTRIBUTES = [
@@ -348,10 +357,10 @@ class Duration(object):
     def __init__(self, years=0, months=0, weeks=0, days=0,
                  hours=0.0, minutes=0.0, seconds=0.0, standardize=False):
         _type_checker(
-            (years, "years", int, float, None),
-            (months, "months", int, float, None),
-            (weeks, "weeks", int, float, None),
-            (days, "days", int, float, None),
+            (years, "years", int, None),
+            (months, "months", int, None),
+            (weeks, "weeks", int, None),
+            (days, "days", int, None),
             (hours, "hours", int, float, None),
             (minutes, "minutes", int, float, None),
             (seconds, "seconds", int, float, None)
@@ -786,11 +795,12 @@ class TimePoint(object):
             (day_of_month, "day_of_month", None, int),
             (day_of_week, "day_of_week", None, int),
             (hour_of_day, "hour_of_day", None, int, float),
-            (hour_of_day_decimal, "hour_of_day_decimal", None, float),
+            (hour_of_day_decimal, "hour_of_day_decimal", None, int, float),
             (minute_of_hour, "minute_of_hour", None, int, float),
-            (minute_of_hour_decimal, "minute_of_hour_decimal", None, float),
+            (minute_of_hour_decimal, "minute_of_hour_decimal", None, int,
+             float),
             (second_of_minute, "second_of_minute", None, int, float),
-            (second_of_minute_decimal, "second_of_minute_decimal", None,
+            (second_of_minute_decimal, "second_of_minute_decimal", None, int,
              float),
             (time_zone_hour, "time_zone_hour", None, int),
             (time_zone_minute, "time_zone_minute", None, int)
@@ -2291,30 +2301,32 @@ def _get_ordinal_date_week_date_start(year, _):
             return cal_year, total_days
 
 
-def get_timepoint_for_now():
-    """Return a TimePoint at the current date/time."""
+def get_timepoint_for_now(utc=False):
+    """Return a TimePoint at the current date/time.
+
+     Args:
+        utc (bool): Whether the returned TimePoint should be in UTC or the
+            local time zone.
+    """
     import time
-    return get_timepoint_from_seconds_since_unix_epoch(time.time())
+    return get_timepoint_from_seconds_since_unix_epoch(time.time(), utc=utc)
 
 
 def get_timepoint_from_seconds_since_unix_epoch(num_seconds, utc=False):
     """Return a TimePoint at a date/time specified in Unix time.
 
     Args:
-        num_seconds - The number of seconds since the Unix epoch
-        utc (bool) - Whether the returned TimePoint should be in UTC or the
-            local time zone
+        num_seconds (float): The number of seconds since the Unix epoch.
+        utc (bool): Whether the returned TimePoint should be in UTC or the
+            local time zone.
 
     Note that Unix time always counts 1 day = 86400 seconds, so if
     we implement leap seconds we need to make the distinction.
     """
     reference_timepoint = TimePoint(
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
-    reference_timepoint.set_time_zone_to_local()
-    if utc:
-        adj_secs = reference_timepoint.time_zone.get_seconds()
-        reference_timepoint.set_time_zone_to_utc()
-        reference_timepoint += Duration(seconds=adj_secs)
+    if not utc:
+        reference_timepoint.set_time_zone_to_local()
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 
@@ -2402,22 +2414,30 @@ def _int_caster(number, name="number", allow_none=False):
 
 
 def _type_checker(*objects):
+    """Helper function for checking the type of method arguments.
+
+    Args:
+        *objects: Tuples of the form (value, name, *allowed_types):
+
+    Raises:
+        BadInputError: If a value is not of the correct type.
+    """
     for type_info in objects:
         value, name = type_info[:2]
         allowed_types = list(type_info[2:])
         none_is_allowed = False
         if None in allowed_types:
             if value is None:
-                break
+                continue
             none_is_allowed = True
             allowed_types.remove(None)
             allowed_types.append(type(None))
         if allowed_types and isinstance(value, allowed_types[0]):
-            break
+            continue
         if int in allowed_types and float not in allowed_types:
             value = _int_caster(value, name=name, allow_none=none_is_allowed)
         if any(isinstance(value, type_) for type_ in allowed_types):
-            break
+            continue
         values_string = ""
         if allowed_types:
             values_string = " should be: "
@@ -2427,16 +2447,17 @@ def _type_checker(*objects):
 
 
 def _bounds_checker(value, name, min_val, max_val=None, upper_val=None):
-    """
-    Helper function for checking the value of a property is within
-    bounds
+    """Helper function for checking the value of a property is within bounds.
 
     Args:
-        value [None, number]
-        name [string] - Name of value
-        min_val [number] - Minimum value, inclusive
-        max_val (optional) [number] - Maximum value, inclusive
-        upper_val (optional) [number] - Upper limit of value, not inclusive
+        value (None, float): The value to check.
+        name (str): Name of the property.
+        min_val (float): Minimum value, inclusive.
+        max_val (float, optional): Maximum value, inclusive.
+        upper_val (float, optional): Upper limit of value, not inclusive.
+
+    Raises:
+        BadInputError: If the value is out of bounds.
     """
     if (value is not None and
             (value < min_val or
