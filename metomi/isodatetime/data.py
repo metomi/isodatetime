@@ -612,38 +612,22 @@ class Duration:
 
     def __lt__(self, other: "Duration") -> bool:
         if isinstance(other, Duration):
-            if not (self.is_exact() and other.is_exact()):
-                return (self.get_days_and_seconds() <
-                        other.get_days_and_seconds())
-            return (self._get_non_nominal_seconds() <
-                    other._get_non_nominal_seconds())
+            return self.get_days_and_seconds() < other.get_days_and_seconds()
         return NotImplemented
 
     def __le__(self, other: "Duration") -> bool:
         if isinstance(other, Duration):
-            if not (self.is_exact() and other.is_exact()):
-                return (self.get_days_and_seconds() <=
-                        other.get_days_and_seconds())
-            return (self._get_non_nominal_seconds() <=
-                    other._get_non_nominal_seconds())
+            return self.get_days_and_seconds() <= other.get_days_and_seconds()
         return NotImplemented
 
     def __gt__(self, other: "Duration") -> bool:
         if isinstance(other, Duration):
-            if not (self.is_exact() and other.is_exact()):
-                return (self.get_days_and_seconds() >
-                        other.get_days_and_seconds())
-            return (self._get_non_nominal_seconds() >
-                    other._get_non_nominal_seconds())
+            return self.get_days_and_seconds() > other.get_days_and_seconds()
         return NotImplemented
 
     def __ge__(self, other: "Duration") -> bool:
         if isinstance(other, Duration):
-            if not (self.is_exact() and other.is_exact()):
-                return (self.get_days_and_seconds() >=
-                        other.get_days_and_seconds())
-            return (self._get_non_nominal_seconds() >=
-                    other._get_non_nominal_seconds())
+            return self.get_days_and_seconds() >= other.get_days_and_seconds()
         return NotImplemented
 
     def __bool__(self):
