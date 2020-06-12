@@ -475,6 +475,8 @@ class Duration:
         This is not rigorous when converting from non-uniform units
         such as years and months.
         """
+        if self.is_exact():
+            return self._get_non_nominal_seconds()
         days, seconds = self.get_days_and_seconds()
         return days * CALENDAR.SECONDS_IN_DAY + seconds
 
@@ -589,6 +591,7 @@ class Duration:
         return new
 
     def __hash__(self) -> int:
+        # TODO: alt calendar modes
         if self.get_is_in_weeks():
             return hash((0, 0, self._get_non_nominal_seconds()))
         return hash((self.years, self.months, self._get_non_nominal_seconds()))
@@ -692,6 +695,9 @@ class Duration:
 
         total_string = start_string + content_string
         return total_string.replace(".", ",")
+
+    def __repr__(self):
+        return "<isodatetime.data.Duration: {0}>".format(repr(str(self)))
 
 
 class TimeZone(Duration):

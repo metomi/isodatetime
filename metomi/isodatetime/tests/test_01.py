@@ -416,10 +416,10 @@ class TestDataModel(unittest.TestCase):
         dur = data.Duration(weeks=4)
         self.assertEqual(dur.get_is_in_weeks(), True)
 
-        for kwarg, expected_days in [  # 2 units of each property + 4 weeks
-                ("years", 758), ("months", 88), ("days", 30),
+        for kwarg, expected_days in [  # 1 unit of each property + 4 weeks
+                ("years", 365 + 28), ("months", 30 + 28), ("days", 1 + 28),
                 ("hours", 28), ("minutes", 28), ("seconds", 28)]:
-            dur = data.Duration(weeks=4, **{kwarg: 2})
+            dur = data.Duration(weeks=4, **{kwarg: 1})
             self.assertFalse(dur.get_is_in_weeks())
             self.assertIsNone(dur.weeks)
             self.assertEqual(dur.get_days_and_seconds()[0], expected_days)
@@ -462,6 +462,11 @@ class TestDataModel(unittest.TestCase):
                     self.assertIs(hash(lhs) == hash(rhs), expected["forward"],
                                   "hash of {0} == hash of {1}"
                                   .format(rhs, lhs))
+
+        # for var in [7, 'foo', (1, 2), data.TimePoint(year=2000)]:
+        #     self.assertFalse(data.Duration(days=1) == var)
+        #     with self.assertRaises(TypeError):
+        #         data.Duration(days=1) < var
 
     def test_timeduration_add_week(self):
         """Test the Duration not in weeks add Duration in weeks."""
