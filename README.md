@@ -91,9 +91,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License along
 with this program.  If not, see [GNU licenses](http://www.gnu.org/licenses/).
 
-## ISO8601
+## ISO 8601
 
-[ISO8601 (2004)](https://www.iso.org/standard/40874.html)
+[ISO 8601 (2004)](https://www.iso.org/standard/40874.html)
 is an international standard for writing down date/time information.
 
 It is the correct, internationally-friendly, computer-sortable way to
@@ -277,6 +277,20 @@ Syntax    | Example  | Meaning
 
 Combining any other unit with weeks is not allowed. Decimals may only be used
 for hours, minutes and seconds.
+
+Note that years and months are "nominal" durations, whose exact length of time
+depends on their position in the calendar. E.g., a duration of 1 calendar year
+starts on a particular day of a particular month and ends on the same day of
+the same month in the following calendar year, and may be different to 365 days
+in the Gregorian calendar due to leap years.
+
+Conversely, weeks, days, hours, minutes and seconds are exact units, so
+`P1W == P7D`, `P1D == PT24H` and `PT1H == PT60M` etc. are always true.
+(Although ISO 8601 specifies that weeks and days are nominal durations, there
+is no case where they are not exact in our implementation.)
+<!-- ...because TimePoints always have time zones assigned to them (apart
+from truncated TimePoints, but you can't add Durations to truncated
+TimePoints). Local time zones don't actually exist in our implementation. -->
 
 A supplementary format (which has to be agreed in advance) is to specify a
 date-time-like duration (`PCCYY-MM-DDThh:mm:ss`) where the numbers given for

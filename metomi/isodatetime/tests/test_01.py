@@ -90,11 +90,20 @@ def get_duration_subtract_tests():
 
 
 def get_duration_comparison_tests():
-    nominal_units = ["years", "months", "weeks", "days"]
+    """Yield tests for executing comparison operators on Durations.
+
+    Tuple format --> test:
+    (args1, args2, bool1 [, bool2]) -->
+        Duration(**args1) <operator> Duration(**args2) is bool1
+    & the reverse:
+        Duration(**args2) <operator> Duration(**args1) is bool2 if
+            bool2 supplied else bool1
+    """
+    nominal_units = ["years", "months"]
     # TODO: test in different calendars
     return {
         "==": [
-            # Nominal durations of same type:
+            # Durations of same type:
             *[({prop: 1}, {prop: 1}, True) for prop in nominal_units],
             *[(dur, dur, True) for dur in [
                 {"years": 1, "months": 1, "days": 1}]],
@@ -103,20 +112,22 @@ def get_duration_comparison_tests():
             ({"years": 1}, {"months": 12}, False),
             *[({"years": 1}, {"days": i}, False) for i in [365, 366]],
             *[({"months": 1}, {"days": i}, False) for i in [28, 29, 30, 31]],
-            ({"weeks": 1}, {"days": 7}, False),
-            ({"weeks": 1}, {"hours": 168}, False),
-            ({"days": 1}, {"hours": 24}, False),
+            ({"months": 1, "days": 7}, {"weeks": 1}, False),
             # Non-nominal/exact durations of different types equal:
+            ({"weeks": 1}, {"days": 7}, True),
+            ({"weeks": 1}, {"hours": 168}, True),
+            ({"days": 1}, {"hours": 24}, True),
             ({"hours": 1}, {"minutes": 60}, True),
             ({"hours": 1}, {"minutes": 30, "seconds": 30 * 60}, True),
+            ({"hours": 1.5}, {"minutes": 90}, True)
         ],
         "<": [
-            # Nominal durations of same type:
+            # Durations of same type:
             *[({prop: 1}, {prop: 1}, False) for prop in nominal_units],
             *[(dur, dur, False) for dur in [
                 {"years": 1, "months": 1, "days": 1}]],
             *[({prop: 1}, {prop: 2}, True, False) for prop in nominal_units],
-            # Nominal durations of different type:
+            # Durations of different type:
             ({"years": 1}, {"months": 12}, False, True),
             ({"years": 1}, {"months": 12, "days": 10}, True, False),
             ({"years": 1}, {"days": 365}, False),
@@ -129,10 +140,10 @@ def get_duration_comparison_tests():
             ({"days": 1}, {"seconds": 24 * 60 * 60 + 1}, True, False),
         ],
         "<=": [
-            # Nominal durations of same type:
+            # Durations of same type:
             *[({prop: 1}, {prop: 1}, True) for prop in nominal_units],
             *[({prop: 1}, {prop: 2}, True, False) for prop in nominal_units],
-            # Nominal durations of different type:
+            # Durations of different type:
             ({"years": 1}, {"months": 12}, False, True),
             ({"years": 1}, {"days": 364}, False, True),
             ({"years": 1}, {"days": 365}, True),
@@ -144,10 +155,10 @@ def get_duration_comparison_tests():
             ({"days": 1}, {"seconds": 24 * 60 * 60}, True),
         ],
         ">": [
-            # Nominal durations of same type:
+            # Durations of same type:
             *[({prop: 1}, {prop: 1}, False) for prop in nominal_units],
             *[({prop: 2}, {prop: 1}, True, False) for prop in nominal_units],
-            # Nominal durations of different type:
+            # Ddurations of different type:
             ({"years": 1}, {"months": 12}, True, False),
             ({"years": 1}, {"days": 364}, True, False),
             ({"years": 1}, {"days": 365}, False),
@@ -159,12 +170,12 @@ def get_duration_comparison_tests():
             ({"days": 1}, {"seconds": 24 * 60 * 60}, False),
         ],
         ">=": [
-            # Nominal durations of same type:
+            # Durations of same type:
             *[({prop: 1}, {prop: 1}, True) for prop in nominal_units],
             *[(dur, dur, True) for dur in [
                 {"years": 1, "months": 1, "days": 1}]],
             *[({prop: 2}, {prop: 1}, True, False) for prop in nominal_units],
-            # Nominal durations of different type:
+            # Durations of different type:
             ({"years": 1}, {"months": 12}, True, False),
             ({"years": 1}, {"days": 365}, True),
             ({"years": 1}, {"days": 366}, False, True),
@@ -447,6 +458,10 @@ class TestDataModel(unittest.TestCase):
                               "{0} {1} {2}".format(lhs, op, rhs))
                 self.assertIs(test["reverse"], expected["reverse"],
                               "{0} {1} {2}".format(rhs, op, lhs))
+                if op == "==":
+                    self.assertIs(hash(lhs) == hash(rhs), expected["forward"],
+                                  "hash of {0} == hash of {1}"
+                                  .format(rhs, lhs))
 
     def test_timeduration_add_week(self):
         """Test the Duration not in weeks add Duration in weeks."""
