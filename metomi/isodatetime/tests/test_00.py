@@ -983,29 +983,29 @@ class TestSuite(unittest.TestCase):
                         minute_of_hour=minute_of_hour
                     )
                 ]
-                test_dates.append(test_dates[0].copy())
-                test_dates.append(test_dates[0].copy())
-                test_dates.append(test_dates[0].copy())
-                test_dates[0].set_time_zone_to_utc()
+                test_dates.append(test_dates[0]._copy())
+                test_dates.append(test_dates[0]._copy())
+                test_dates.append(test_dates[0]._copy())
+                test_dates[0] = test_dates[0].to_utc()
                 self.assertEqual(test_dates[0].time_zone.hours, 0,
                                  test_dates[0])
                 self.assertEqual(test_dates[0].time_zone.minutes, 0,
                                  test_dates[0])
-                test_dates[1].set_time_zone_to_local()
+                test_dates[1] = test_dates[1].to_local_time_zone()
                 self.assertEqual(test_dates[1].time_zone.hours,
                                  utc_offset_hours, test_dates[1])
 
                 self.assertEqual(test_dates[1].time_zone.minutes,
                                  utc_offset_minutes, test_dates[1])
-                test_dates[2].set_time_zone(
+                test_dates[2] = test_dates[2].to_time_zone(
                     data.TimeZone(hours=-13, minutes=-45))
 
-                test_dates[3].set_time_zone(
+                test_dates[3] = test_dates[3].to_time_zone(
                     data.TimeZone(hours=8, minutes=30))
                 for i_test_date in list(test_dates):
                     i_test_date_str = str(i_test_date)
-                    date_no_tz = i_test_date.copy()
-                    date_no_tz.time_zone = data.TimeZone(hours=0, minutes=0)
+                    date_no_tz = i_test_date._copy()
+                    date_no_tz._time_zone = data.TimeZone(hours=0, minutes=0)
                     if (i_test_date.time_zone.hours >= 0 or
                             i_test_date.time_zone.minutes >= 0):
                         utc_offset = date_no_tz - i_test_date
@@ -1059,7 +1059,7 @@ class TestSuite(unittest.TestCase):
                 self.assertRaises(ctrl_exception, dumper.dump,
                                   ctrl_timepoint, format_)
         value_error_timepoint = data.TimePoint(minute_of_hour=10)
-        value_error_timepoint.minute_of_hour = "1O"
+        value_error_timepoint._minute_of_hour = "1O"
         self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
 
     def test_timepoint_dumper_bounds_error_message(self):
@@ -1102,7 +1102,7 @@ class TestSuite(unittest.TestCase):
         been copied, see issue #102 for more information"""
         time_point = data.TimePoint(year=2000, truncated=True,
                                     truncated_dump_format='CCYY')
-        the_copy = time_point.copy()
+        the_copy = time_point._copy()
         self.assertEqual(str(time_point), str(the_copy))
 
     def test_timepoint_parser(self):
@@ -1212,10 +1212,10 @@ class TestSuite(unittest.TestCase):
             minute_of_hour=ctrl_date.minute,
             second_of_minute=ctrl_date.second
         )
-        test_date.set_time_zone_to_utc()
+        # test_date = test_date.to_utc()
 
-        for test_date in [test_date, test_date.copy().to_week_date(),
-                          test_date.copy().to_ordinal_date()]:
+        for test_date in [test_date, test_date.to_week_date(),
+                          test_date.to_ordinal_date()]:
             # Test strftime (dumping):
             ctrl_data = ctrl_date.strftime(strftime_string)
             test_data = test_date.strftime(strftime_string)
@@ -1235,7 +1235,7 @@ class TestSuite(unittest.TestCase):
                         ctrl_dump, strptime_string)
                 test_dump = test_date.strftime(strptime_string)
                 test_data = parser.strptime(test_dump, strptime_string)
-                test_data.set_time_zone_to_utc()
+                test_data = test_data.to_utc()
 
                 self.assertEqual(test_dump, ctrl_dump, strptime_string)
 
@@ -1488,11 +1488,12 @@ class TestSuite(unittest.TestCase):
     def test_timepoint_dump_format(self):
         """Test the timepoint format dump when values are programmatically
         set to None"""
+        # TODO: Get rid of this now that TimePoint is immutable?
         t = data.TimePoint(year="1984")
         # commenting out month_of_year here is enough to make the test pass
-        t.month_of_year = None
-        t.day_of_year = None
-        t.week_of_year = None
+        t._month_of_year = None
+        t._day_of_year = None
+        t._week_of_year = None
         with self.assertRaises(RuntimeError):
             self.assertEqual("1984-01-01T00:00:00Z", str(t))
         # QUESTION: What was this test meant to do exactly?

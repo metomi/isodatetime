@@ -302,8 +302,8 @@ def get_timepoint_bounds_tests():
             {"year": 2019, "hour_of_day": 24},
             {"year": 2019, "time_zone_hour": 99},
             {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -1},
+            {"year": 2019, "time_zone_hour": 0, "time_zone_minute": 1},
             {"year": 2019, "time_zone_hour": -1, "time_zone_minute": -1},
-            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": 1},
         ],
         "out_of_bounds": [
             {"year": 2019, "month_of_year": 0},
@@ -350,7 +350,8 @@ def get_timepoint_bounds_tests():
             {"year": 2019, "time_zone_hour": 100},
             {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -60},
             {"year": 2019, "time_zone_hour": 1, "time_zone_minute": -1},
-            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": 60}
+            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": 60},
+            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": 1}
         ]
     }
 
