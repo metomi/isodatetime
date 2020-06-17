@@ -592,10 +592,7 @@ def get_timepointparser_tests(allow_only_basic=False,
 
 
 def get_truncated_property_tests():
-    """
-    Tests for largest truncated and
-    smallest missing property names
-    """
+    """Tests for largest truncated and smallest missing property names."""
     test_timepoints = {
         "-9001": {"year": 90,
                   "month_of_year": 1,
@@ -966,42 +963,32 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_time_zone(self):
         """Test the time zone handling of timepoint instances."""
-        year = 2000
-        month_of_year = 1
-        day_of_month = 1
+        year, month_of_year, day_of_month = (2000, 1, 1)
         utc_offset_hours, utc_offset_minutes = (
             get_local_time_zone_hours_minutes()
         )
         for hour_of_day in range(24):
             for minute_of_hour in [0, 30]:
+                point = data.TimePoint(year=year, month_of_year=month_of_year,
+                                       day_of_month=day_of_month,
+                                       hour_of_day=hour_of_day,
+                                       minute_of_hour=minute_of_hour)
                 test_dates = [
-                    data.TimePoint(
-                        year=year,
-                        month_of_year=month_of_year,
-                        day_of_month=day_of_month,
-                        hour_of_day=hour_of_day,
-                        minute_of_hour=minute_of_hour
-                    )
+                    point.to_utc(),
+                    point.to_local_time_zone(),
+                    point.to_time_zone(data.TimeZone(hours=-13, minutes=-45)),
+                    point.to_time_zone(data.TimeZone(hours=8, minutes=30))
                 ]
-                test_dates.append(test_dates[0]._copy())
-                test_dates.append(test_dates[0]._copy())
-                test_dates.append(test_dates[0]._copy())
-                test_dates[0] = test_dates[0].to_utc()
                 self.assertEqual(test_dates[0].time_zone.hours, 0,
                                  test_dates[0])
                 self.assertEqual(test_dates[0].time_zone.minutes, 0,
                                  test_dates[0])
-                test_dates[1] = test_dates[1].to_local_time_zone()
+
                 self.assertEqual(test_dates[1].time_zone.hours,
                                  utc_offset_hours, test_dates[1])
-
                 self.assertEqual(test_dates[1].time_zone.minutes,
                                  utc_offset_minutes, test_dates[1])
-                test_dates[2] = test_dates[2].to_time_zone(
-                    data.TimeZone(hours=-13, minutes=-45))
 
-                test_dates[3] = test_dates[3].to_time_zone(
-                    data.TimeZone(hours=8, minutes=30))
                 for i_test_date in list(test_dates):
                     i_test_date_str = str(i_test_date)
                     date_no_tz = i_test_date._copy()
@@ -1026,6 +1013,7 @@ class TestSuite(unittest.TestCase):
                         self.assertEqual(
                             duration, data.Duration(days=0),
                             i_test_date_str + " - " + j_test_date_str)
+        # TODO: test truncated TimePoints
 
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
@@ -1067,6 +1055,7 @@ class TestSuite(unittest.TestCase):
         the_error = TimePointDumperBoundsError("TimePoint1", "year",
                                                10, 20)
         the_string = the_error.__str__()
+        # FIXME:
         self.assertTrue("TimePoint1" in the_string,
                         "Failed to find TimePoint1 in {}".format(the_string))
         self.assertTrue("year" in the_string,
@@ -1434,7 +1423,6 @@ class TestSuite(unittest.TestCase):
     # the format for the parameters is
     # [tz_seconds, tz_format_mode, expected_format]
     get_test_get_local_time_zone_format = [
-        # UTC
         # UTC, returns Z, flags are never used for UTC
         [0, timezone.TimeZoneFormatMode.normal, "Z"],
         # Positive values, some with minutes != 0

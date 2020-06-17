@@ -735,7 +735,7 @@ class TimeZone(Duration):
     @property
     def unknown(self): return self._unknown
 
-    def _copy(self):
+    def _copy(self) -> "TimeZone":
         """Return an unlinked copy of this instance."""
         return TimeZone(hours=self.hours, minutes=self.minutes,
                         unknown=self.unknown, _is_copy=True)
@@ -752,10 +752,10 @@ class TimeZone(Duration):
             return time_string % (abs(self.hours), abs(self.minutes))
 
     def __repr__(self):
-        return "<isodatetime.data.TimeZone:" + repr(str(self)) + ">"
+        return "<isodatetime.data.TimeZone: {0}>".format(repr(str(self)))
 
 
-class TimePoint(object):
+class TimePoint:
 
     """Represent an instant in time.
 
@@ -784,57 +784,56 @@ class TimePoint(object):
     expanded_year_digits (default 0) - an agreed-upon number of extra
         digits to represent the year, beyond the default of 4. For example,
         a value of 2 would suggest representing the year 2000 as 002000.
-    year - a positive or negative integer. Note that ISO 8601 implies
+    year (int): A positive or negative integer. Note that ISO 8601 implies
         using non-zero expanded_year_digits when using negative integers.
         Remember we are using the proleptic Gregorian calendar, with a year
         zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
         should be represented as -1.
-    month_of_year - an integer between 1 and 12 inclusive, if using the
+    month_of_year (int): An integer between 1 and 12 inclusive, if using the
         calendar date representation.
-    week_of_year - an integer between 1 and 52/53 (depending on the
+    week_of_year (int): An integer between 1 and 52/53 (depending on the
         year), if using the week date representation.
-    day_of_year - an integer between 1 and 365/366 (depending on the
+    day_of_year (int): An integer between 1 and 365/366 (depending on the
         year), if using the ordinal date representation.
-    day_of_month - an integer between 1 and 28/29/30/31 (depending on
+    day_of_month (int): An integer between 1 and 28/29/30/31 (depending on
         the month and year), if using the calendar date representation.
-    day_of_week - an integer between 1 and 7, if using the week date
+    day_of_week (int): An integer between 1 and 7, if using the week date
         representation.
-    hour_of_day - an integer between 0 and 24 (note: 24 represents midnight at
-        the end of the day, which is equivalent to 00/midnight the next day. If
-        24 is given, minute_of_hour must be 0)
-    hour_of_day_decimal - a float between 0 and 1, if using decimal
+    hour_of_day (int): An integer between 0 and 24 (note: 24 represents
+        midnight at the end of the day, which is equivalent to 00/midnight
+        the next day. If 24 is given, minute_of_hour must be 0).
+    hour_of_day_decimal (float): A float between 0 and 1, if using decimal
         accuracy for hours. Note that you should not provide lower units
         such as minute_of_hour or second_of_minute when using this.
-    minute_of_hour - an integer between 0 and 59.
-    minute_of_hour_decimal - a float between 0 and 1, if using decimal
+    minute_of_hour (int): An integer between 0 and 59.
+    minute_of_hour_decimal (float): A float between 0 and 1, if using decimal
         accuracy for minutes. Note that you should not provide lower units
         such as second_of_minute when using this.
-    second_of_minute - an integer between 0 and 59 (note: no support
-        for leap seconds at 60 yet)
-    second_of_minute_decimal - a float between 0 and 1, if using decimal
+    second_of_minute (int): An integer between 0 and 59 (note: no support
+        for leap seconds yet).
+    second_of_minute_decimal (float): A float between 0 and 1, if using decimal
         accuracy for seconds.
-    time_zone_hour - (default 0) an integer denoting the hour time zone
-        offset from UTC. Note that unless this is a truncated
-        representation, 0 will be assumed if this is not provided.
-    time_zone_minute - (default 0) an integer between 0 and 59 denoting
-        the minute component of the time zone offset from UTC.
-    dump_format - a custom format string to control the stringification
+    time_zone_hour (int): The hour component of the time zone offset from UTC,
+        between -99 and 99. The default is 0 unless this is a truncated
+        TimePoint.
+    time_zone_minute (int): The minute component of the time zone offset from
+        UTC. If the hour component is negative, this should be negative too.
+    dump_format (str): A custom format string to control the stringification
         of the timepoint. See isodatetime.parser_spec for more details.
-    truncated - (default False) a boolean denoting whether the
-        date/time instant has purposefully incomplete information
-        (ISO 8601:2000 truncation).
-    truncated_dump_format - a custom format string to control the
-        stringification of the timepoint if it is truncated. See
-        isodatetime.parser_spec for more details.
-    truncated_property - a string that can either be "year_of_decade"
-        or "year_of_century". This is used for truncated representations to
+    truncated (bool): Whether the date-time instant has purposefully incomplete
+        information (ISO 8601:2000 truncation). Default is False.
+    truncated_dump_format (str): A custom format to control the stringification
+        of the timepoint if it is truncated. See isodatetime.parser_spec for
+        more details.
+    truncated_property (str): Can either be "year_of_decade" or
+        "year_of_century". This is used for truncated representations to
         distinguish between the two ways of truncating the year.
-    is_empty_instance - if True, do not set any properties yet. These
-        should be set as part of a copy operation.
-    is_duration - for datetime-like durations syntax. If True the datetime
-        will not be checked to make sure values are within bounds, and if the
-        values of month_of_year, day_of_month etc are not supplied they will be
-        assumed to be 0 instead of 1.
+    is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation. Default is False.
+    is_duration (bool): For datetime-like durations syntax. If True the
+        args will not be checked to make sure values are within bounds, and if
+        the values of month_of_year, day_of_month etc are not supplied they
+        will be assumed to be 0 instead of 1. Default is False.
     """
 
     DATA_ATTRIBUTES = [
@@ -859,13 +858,12 @@ class TimePoint(object):
         if is_empty_instance:
             # This has been created for a copy - set properties later.
             return
-        if (dump_format is not None and not
-                isinstance(dump_format, str)):
+        if dump_format is not None and not isinstance(dump_format, str):
             raise BadInputError(
                 BadInputError.TYPE,
                 "dump_format", repr(dump_format), type(dump_format))
-        if (truncated_dump_format is not None and not
-                isinstance(truncated_dump_format, str)):
+        if (truncated_dump_format is not None and
+                not isinstance(truncated_dump_format, str)):
             raise BadInputError(
                 BadInputError.TYPE,
                 "truncated_dump_format", repr(truncated_dump_format),
@@ -1199,7 +1197,7 @@ class TimePoint(object):
         second_of_day += self.hour_of_day * CALENDAR.SECONDS_IN_HOUR
         return second_of_day
 
-    def get_time_zone_utc(self):
+    def get_time_zone_utc(self) -> bool:
         # FIXME: Misleading name
         """Return whether the time zone is explicitly in UTC."""
         if self.time_zone.unknown:
@@ -1218,7 +1216,7 @@ class TimePoint(object):
         if self.get_is_week_date():
             return self.year, self.week_of_year, self.day_of_week
 
-    def get_time_zone_offset(self, other):
+    def get_time_zone_offset(self, other: "TimePoint") -> "Duration":
         """Get the difference in hours and minutes between time zones.
 
         Args:
@@ -1229,7 +1227,7 @@ class TimePoint(object):
             return Duration()
         return other.time_zone - self.time_zone
 
-    def to_time_zone(self, dest_time_zone):
+    def to_time_zone(self, dest_time_zone: "TimeZone") -> "TimePoint":
         """Return a copy of this TimePoint in the specified time zone.
 
         Args:
@@ -1241,17 +1239,17 @@ class TimePoint(object):
         new._time_zone = dest_time_zone
         return new
 
-    def to_local_time_zone(self):
+    def to_local_time_zone(self) -> "TimePoint":
         """Return a copy of this TimePoint in the local time zone."""
         local_hours, local_minutes = timezone.get_local_time_zone()
         return self.to_time_zone(
             TimeZone(hours=local_hours, minutes=local_minutes))
 
-    def to_utc(self):
+    def to_utc(self) -> "TimePoint":
         """Return a copy of this TimePoint in the UTC time zone."""
         return self.to_time_zone(TimeZone(hours=0, minutes=0))
 
-    def to_calendar_date(self):
+    def to_calendar_date(self) -> "TimePoint":
         """Return a copy of this TimePoint reformatted in years, month-of-year
         and day-of-month."""
         if self.get_is_calendar_date():
@@ -1263,7 +1261,7 @@ class TimePoint(object):
         new._week_of_year, new._day_of_week = (None, None)
         return new
 
-    def to_hour_minute_second(self):
+    def to_hour_minute_second(self) -> "TimePoint":
         """Return a copy of this TimePoint with any time fractions expanded
         into hours, minutes and seconds."""
         new = self._copy()
@@ -1271,7 +1269,7 @@ class TimePoint(object):
             self.get_hour_minute_second())
         return new
 
-    def to_week_date(self):
+    def to_week_date(self) -> "TimePoint":
         """Return a copy of this TimePoint reformatted in years, week-of-year
         and day-of-week."""
         if self.get_is_week_date():
@@ -1282,7 +1280,7 @@ class TimePoint(object):
         new._month_of_year, new._day_of_month = (None, None)
         return new
 
-    def to_ordinal_date(self):
+    def to_ordinal_date(self) -> "TimePoint":
         """Return a copy of this TimePoint reformatted in years and
         day-of-the-year."""
         new = self._copy()
@@ -1305,8 +1303,7 @@ class TimePoint(object):
         return None
 
     def get_smallest_missing_property_name(self):
-        """Return the smallest unit missing
-        from a truncated representation."""
+        """Return the smallest unit missing from a truncated representation."""
         if not self.truncated:
             return None
         prop_dict = self.get_truncated_properties()
@@ -1407,7 +1404,7 @@ class TimePoint(object):
                 new_year_of_century = new.year % 100
         return new
 
-    def __add__(self, other):
+    def __add__(self, other) -> "TimePoint":
         if isinstance(other, TimePoint):
             if self.truncated and not other.truncated:
                 new = other.to_time_zone(self.time_zone)
@@ -1479,7 +1476,7 @@ class TimePoint(object):
                     new._week_of_year = max_weeks_in_year
         return new
 
-    def _copy(self):
+    def _copy(self) -> "TimePoint":
         """Returns an unlinked copy of this instance."""
         new_timepoint = TimePoint(is_empty_instance=True)
         for attr in self.DATA_ATTRIBUTES:
@@ -1487,8 +1484,8 @@ class TimePoint(object):
         new_timepoint._time_zone = self.time_zone._copy()
         return new_timepoint
 
-    def get_props(self):
-        """Return the data properties of this TimePoint."""
+    def get_props(self) -> list:
+        """Return the data properties of this TimePoint as a list of tuples."""
         props = []
         for attr in self.DATA_ATTRIBUTES:
             value = getattr(self, attr, None)
@@ -1918,7 +1915,6 @@ class TimePoint(object):
         """Implement equivalent of Python 2's datetime.datetime.strftime.
 
         Dump based on the format given in the strftime_format string.
-
         """
         return self.__str__(strftime_format=strftime_format)
 
