@@ -1510,7 +1510,13 @@ class TimePoint:
         return hash((*point.get_calendar_date(),
                      *point.get_hour_minute_second()))
 
-    def __eq__(self, other: "TimePoint") -> bool:
+    def _cmp(self, other: "TimePoint", op: str) -> bool:
+        """Compare self with other, using the chosen operator.
+
+        Args:
+            op: The comparison operator/method, one of ["eq", "lt", "le",
+                "gt", "ge"].
+        """
         if not isinstance(other, TimePoint):
             return NotImplemented
         if self.truncated != other.truncated:
@@ -1518,14 +1524,23 @@ class TimePoint:
                 "Cannot compare truncated to non-truncated "
                 "TimePoint: {0}, {1}".format(self, other))
         if self.get_props() == other.get_props():
-            return True
+            return True if op in ["eq", "le", "ge"] else False
         if self.truncated:
             # TODO: Convert truncated TimePoints to UTC when not buggy
             for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
                 self_attr = getattr(self, attribute)
+                other_attr = getattr(other, attribute)
                 if self_attr != other_attr:
-                    return False
+                    if op == "eq":
+                        return False
+                    if op == "lt":
+                        return self_attr < other_attr
+                    if op == "le":
+                        return self_attr <= other_attr
+                    if op == "gt":
+                        return self_attr > other_attr
+                    if op == "ge":
+                        return self_attr >= other_attr
             return True
         other = other.to_time_zone(self.time_zone)
         if self.get_is_calendar_date():
@@ -1534,117 +1549,33 @@ class TimePoint:
         else:
             my_date = self.get_ordinal_date()
             other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime == other_datetime
+        my_datetime = [*my_date, self.get_second_of_day()]
+        other_datetime = [*other_date, other.get_second_of_day()]
+        if op == "eq":
+            return my_datetime == other_datetime
+        if op == "lt":
+            return my_datetime < other_datetime
+        if op == "le":
+            return my_datetime <= other_datetime
+        if op == "gt":
+            return my_datetime > other_datetime
+        if op == "ge":
+            return my_datetime >= other_datetime
+
+    def __eq__(self, other: "TimePoint") -> bool:
+        return self._cmp(other, "eq")
 
     def __lt__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return False
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr < other_attr
-            return True
-        other = other.to_time_zone(self.time_zone)
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime < other_datetime
+        return self._cmp(other, "lt")
 
     def __le__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return True
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr <= other_attr
-            return True
-        other = other.to_time_zone(self.time_zone)
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime <= other_datetime
+        return self._cmp(other, "le")
 
     def __gt__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return True
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return False
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr > other_attr
-            return True
-        other = other.to_time_zone(self.time_zone)
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime > other_datetime
+        return self._cmp(other, "gt")
 
     def __ge__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return True
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr >= other_attr
-            return True
-        other = other.to_time_zone(self.time_zone)
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime >= other_datetime
+        return self._cmp(other, "ge")
 
     def __sub__(self, other):
         if isinstance(other, TimePoint):
