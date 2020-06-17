@@ -740,6 +740,11 @@ class TimeZone(Duration):
         return TimeZone(hours=self.hours, minutes=self.minutes,
                         unknown=self.unknown, _is_copy=True)
 
+    def __hash__(self) -> int:
+        # TODO: Do we have to worry about the possibility of a hash collision
+        # between instances of two different classes?
+        return hash((self.unknown, self.hours, self.minutes))
+
     def __str__(self):
         if self.unknown:
             return ""
@@ -1413,7 +1418,7 @@ class TimePoint:
             if other.truncated and not self.truncated:
                 return other + self
         if not isinstance(other, Duration):
-            raise TypeError(
+            raise ValueError(
                 "Invalid addition: can only add Duration or "
                 "truncated TimePoint to TimePoint.")
         duration = other
@@ -1431,6 +1436,7 @@ class TimePoint:
             else:
                 new._second_of_minute += duration.seconds
             new._tick_over()
+        # FIXME: self._tick_over() broken for truncated TimePoints: issue #168
         if duration.minutes:
             if new.minute_of_hour is None:
                 new._hour_of_day += (
@@ -1495,16 +1501,26 @@ class TimePoint:
             # Have sliced attr string to remove leading underscore
         return props
 
+    def __hash__(self) -> int:
+        if self.truncated:
+            # TODO: Convert truncated TimePoints to UTC when not buggy
+            return hash(
+                tuple(getattr(self, attr) for attr in self.DATA_ATTRIBUTES))
+        point = self.to_utc()
+        return hash((*point.get_calendar_date(),
+                     *point.get_hour_minute_second()))
+
     def __eq__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
+        if not isinstance(other, TimePoint):
+            return NotImplemented
         if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
+            raise ValueError(
+                "Cannot compare truncated to non-truncated "
+                "TimePoint: {0}, {1}".format(self, other))
         if self.get_props() == other.get_props():
             return True
         if self.truncated:
+            # TODO: Convert truncated TimePoints to UTC when not buggy
             for attribute in self.DATA_ATTRIBUTES:
                 other_attr = getattr(other, attribute)
                 self_attr = getattr(self, attribute)
@@ -1521,9 +1537,6 @@ class TimePoint:
         my_datetime = list(my_date) + [self.get_second_of_day()]
         other_datetime = list(other_date) + [other.get_second_of_day()]
         return my_datetime == other_datetime
-
-    def __ne__(self, other: "TimePoint") -> bool:
-        return not self.__eq__(other)
 
     def __lt__(self, other: "TimePoint") -> bool:
         if other is None:
