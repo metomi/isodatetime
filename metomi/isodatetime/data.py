@@ -354,6 +354,8 @@ class Duration:
         small units have minimal values. For example, 3664.4 seconds would
         become 1 hour, 1 minute, and 4.4 seconds. Attributes will not adjust
         for units that are inexact (months and years).
+    _is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation.
     """
 
     DATA_ATTRIBUTES = ["_years", "_months", "_weeks", "_days",
@@ -362,7 +364,10 @@ class Duration:
     __slots__ = DATA_ATTRIBUTES
 
     def __init__(self, years=0, months=0, weeks=0, days=0,
-                 hours=0.0, minutes=0.0, seconds=0.0, standardize=False):
+                 hours=0.0, minutes=0.0, seconds=0.0, standardize=False,
+                 _is_empty_instance=False):
+        if _is_empty_instance:
+            return
         _type_checker(
             (years, "years", int, None),
             (months, "months", int, None),
@@ -432,10 +437,10 @@ class Duration:
 
     def _copy(self):
         """Return an (unlinked) copy of this instance."""
-        return Duration(
-            years=self.years, months=self.months, weeks=self.weeks,
-            days=self.days, hours=self.hours, minutes=self.minutes,
-            seconds=self.seconds)
+        new = self.__class__(_is_empty_instance=True)
+        for attr in self.__slots__:
+            setattr(new, attr, getattr(self, attr))
+        return new
 
     def is_exact(self):
         """Return True if the instance is defined in non-nominal/exact units
@@ -697,34 +702,36 @@ class TimeZone(Duration):
         negative, this should be negative if non-zero.
     unknown (bool): If True, the returned instance represents an unknown
         TimeZone. Some operations and comparisons may fail when this is True.
-    _is_copy (bool): If True, simply set properties of instance without
-        performing any logic on args, for fast copying.
+    _is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation.
     """
 
     __slots__ = ['_unknown'] + Duration.__slots__
 
     to_weeks = property(doc='Unavailable/not inherited')
 
-    def __init__(self, hours=0, minutes=0, unknown=False, _is_copy=False):
-        if not _is_copy:
-            if hours is None:
-                hours = 0
-            else:
-                hours = _int_caster(hours, "TimeZone hours")
-                _bounds_checker(hours, "TimeZone hours",
-                                min_val=-99, max_val=99)
-            if minutes is None:
-                minutes = 0
-            else:
-                minutes = _int_caster(minutes, "TimeZone minutes")
-                min_minutes = 1 - CALENDAR.MINUTES_IN_HOUR
-                max_minutes = CALENDAR.MINUTES_IN_HOUR - 1
-                if hours > 0:
-                    min_minutes = 0
-                elif hours < 0:
-                    max_minutes = 0
-                _bounds_checker(minutes, "TimeZone minutes",
-                                min_val=min_minutes, max_val=max_minutes)
+    def __init__(self, hours=0, minutes=0, unknown=False,
+                 _is_empty_instance=False):
+        if _is_empty_instance:
+            return
+        if hours is None:
+            hours = 0
+        else:
+            hours = _int_caster(hours, "TimeZone hours")
+            _bounds_checker(hours, "TimeZone hours",
+                            min_val=-99, max_val=99)
+        if minutes is None:
+            minutes = 0
+        else:
+            minutes = _int_caster(minutes, "TimeZone minutes")
+            min_minutes = 1 - CALENDAR.MINUTES_IN_HOUR
+            max_minutes = CALENDAR.MINUTES_IN_HOUR - 1
+            if hours > 0:
+                min_minutes = 0
+            elif hours < 0:
+                max_minutes = 0
+            _bounds_checker(minutes, "TimeZone minutes",
+                            min_val=min_minutes, max_val=max_minutes)
         self._unknown = unknown
         self._hours = hours
         self._minutes = minutes
@@ -734,11 +741,6 @@ class TimeZone(Duration):
 
     @property
     def unknown(self): return self._unknown
-
-    def _copy(self) -> "TimeZone":
-        """Return an unlinked copy of this instance."""
-        return TimeZone(hours=self.hours, minutes=self.minutes,
-                        unknown=self.unknown, _is_copy=True)
 
     def __hash__(self) -> int:
         # TODO: Do we have to worry about the possibility of a hash collision
