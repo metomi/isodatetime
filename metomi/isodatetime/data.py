@@ -151,8 +151,8 @@ class TimeRecurrence(object):
     max_point
     """
 
-    __slots__ = ("repetitions", "start_point", "duration", "end_point",
-                 "min_point", "max_point", "format_number")
+    __slots__ = ["_repetitions", "_start_point", "_duration", "_end_point",
+                 "_min_point", "_max_point", "_format_number"]
 
     def __init__(self, repetitions=None, start_point=None,
                  duration=None, end_point=None, min_point=None,
@@ -166,19 +166,19 @@ class TimeRecurrence(object):
             (max_point, "max_point", None, TimePoint)
         )
         _type_checker(*inputs)
-        self.repetitions = repetitions
-        self.start_point = start_point
-        self.duration = duration
-        self.end_point = end_point
-        self.min_point = min_point
-        self.max_point = max_point
-        self.format_number = None
+        self._repetitions = repetitions
+        self._start_point = start_point
+        self._duration = duration
+        self._end_point = end_point
+        self._min_point = min_point
+        self._max_point = max_point
+        self._format_number = None
         if self.duration is None:
             # First form.
-            self.format_number = 1
+            self._format_number = 1
             start_year, start_days = self.start_point.get_ordinal_date()
             start_seconds = self.start_point.get_second_of_day()
-            self.end_point = self.end_point.to_time_zone(
+            self._end_point = self.end_point.to_time_zone(
                 self.start_point.time_zone)
             end_year, end_days = self.end_point.get_ordinal_date()
             end_seconds = self.end_point.get_second_of_day()
@@ -193,7 +193,7 @@ class TimeRecurrence(object):
                 diff_days += 1
                 diff_seconds -= CALENDAR.SECONDS_IN_DAY
             if self.repetitions == 1:
-                self.duration = Duration(years=0)
+                self._duration = Duration(years=0)
             else:
                 diff_days_float = diff_days / float(
                     self.repetitions - 1)
@@ -202,25 +202,46 @@ class TimeRecurrence(object):
                 diff_days = int(diff_days_float)
                 diff_seconds_float += (
                     diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
-                self.duration = Duration(
+                self._duration = Duration(
                     days=diff_days, seconds=diff_seconds_float)
         elif self.end_point is None:
             # Third form.
-            self.format_number = 3
+            self._format_number = 3
             if self.repetitions is not None:
-                self.end_point = (
+                self._end_point = (
                     self.start_point + self.duration * (self.repetitions - 1))
         elif self.start_point is None:
             # Fourth form.
-            self.format_number = 4
+            self._format_number = 4
             if self.repetitions is not None:
-                self.start_point = (
+                self._start_point = (
                     self.end_point - self.duration * (self.repetitions - 1))
         else:
             raise BadInputError(
                 BadInputError.RECURRENCE, [i[:2] for i in inputs])
 
-    def get_is_valid(self, timepoint):
+    @property
+    def repetitions(self): return self._repetitions
+
+    @property
+    def start_point(self): return self._start_point
+
+    @property
+    def duration(self): return self._duration
+
+    @property
+    def end_point(self): return self._end_point
+
+    @property
+    def min_point(self): return self._min_point
+
+    @property
+    def max_point(self): return self._max_point
+
+    @property
+    def format_number(self): return self._format_number
+
+    def get_is_valid(self, timepoint: "TimePoint") -> bool:
         """Return whether the timepoint is valid for this recurrence."""
         if not self._get_is_in_bounds(timepoint):
             return False
