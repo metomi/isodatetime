@@ -26,7 +26,7 @@ from functools import lru_cache
 from metomi.isodatetime.exceptions import BadInputError
 
 
-class Calendar(object):
+class Calendar:
 
     """Store constants for Gregorian calendar date-time calculation."""
 
@@ -136,19 +136,34 @@ TIMEPOINT_DUMPER_MAP = {
 }
 
 
-class TimeRecurrence(object):
+class TimeRecurrence:
 
-    # TODO: Need arg descriptions in docstring!
     """Represent a recurring duration.
+
+    There are four possible formats for recurrences in ISO 8601:
+    1. Recur with a duration given by the difference between a start date-time
+        and a subsequent date-time.
+    2. (Not supported) Recur with a specified duration, starting at some
+        context date-time specified elsewhere.
+    3. Recur with a specified duration starting at a particular date-time.
+    4. Recur with a specified duration counting back from a particular
+        date-time.
+
+    The format of the TimeRecurrence instance is automatically chosen from the
+    arguments supplied.
 
     Keyword arguments:
 
-    repetitions
-    start_point
-    duration
-    end_point
-    min_point
-    max_point
+    repetitions (int): The number of repetitions in the recurrence. If omitted,
+        the number of repetitions is unbounded.
+    start_point (TimePoint): Start date-time of the recurrence.
+    duration (Duration): The duration of the recurrence.
+    end_point (TimePoint): End date-time of the recurrence, or if using
+        format 1, the end date-time of the first interval.
+    min_point (TimePoint): If specified, marks the start of a subset of 'valid'
+        date-times in the recurrence.
+    max_point (TimePoint): If specified, marks the end of a subset of 'valid'
+        date-times in the recurrence.
     """
 
     __slots__ = ["_repetitions", "_start_point", "_duration", "_end_point",
@@ -175,6 +190,7 @@ class TimeRecurrence(object):
         self._format_number = None
         if self.duration is None:
             # First form.
+            # FIXME: see issue #45
             self._format_number = 1
             start_year, start_days = self.start_point.get_ordinal_date()
             start_seconds = self.start_point.get_second_of_day()
@@ -254,7 +270,7 @@ class TimeRecurrence(object):
                 return False
         return False
 
-    def get_next(self, timepoint):
+    def get_next(self, timepoint: "TimePoint") -> "TimePoint":
         """Return the next timepoint after this timepoint, or None."""
         if self.repetitions == 1 or timepoint is None:
             return None
@@ -268,7 +284,7 @@ class TimeRecurrence(object):
                 return self.end_point
         return None
 
-    def get_prev(self, timepoint):
+    def get_prev(self, timepoint: "TimePoint") -> "TimePoint":
         """Return the previous timepoint before this timepoint, or None."""
         if self.repetitions == 1 or timepoint is None:
             return None
@@ -277,7 +293,7 @@ class TimeRecurrence(object):
             return prev_timepoint
         return None
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> "TimePoint":
         if index < 0 or not isinstance(index, int):
             raise IndexError(
                 "Unsupported index for TimeRecurrence")
@@ -287,7 +303,7 @@ class TimeRecurrence(object):
         raise IndexError(
             "Invalid index for TimeRecurrence")
 
-    def _get_is_in_bounds(self, timepoint):
+    def _get_is_in_bounds(self, timepoint: "TimePoint") -> bool:
         """Return whether the timepoint is within this recurrence series."""
         if timepoint is None:
             return False
@@ -337,6 +353,9 @@ class TimeRecurrence(object):
             return prefix + str(self.duration) + "/" + str(self.end_point)
         return "R/?/?"
 
+    def __repr__(self):
+        return "<isodatetime.data.TimeRecurrence: {0}>".format(repr(str(self)))
+
 
 class Duration:
 
@@ -379,10 +398,8 @@ class Duration:
         should be set as part of a copy operation.
     """
 
-    DATA_ATTRIBUTES = ["_years", "_months", "_weeks", "_days",
-                       "_hours", "_minutes", "_seconds"]
-
-    __slots__ = DATA_ATTRIBUTES
+    __slots__ = ["_years", "_months", "_weeks", "_days",
+                 "_hours", "_minutes", "_seconds"]
 
     def __init__(self, years=0, months=0, weeks=0, days=0,
                  hours=0.0, minutes=0.0, seconds=0.0, standardize=False,
@@ -545,7 +562,7 @@ class Duration:
 
     def __abs__(self):
         new = self._copy()
-        for attribute in new.DATA_ATTRIBUTES:
+        for attribute in new.__slots__:
             attr_value = getattr(new, attribute)
             if attr_value is not None:
                 setattr(new, attribute, abs(attr_value))
@@ -588,7 +605,7 @@ class Duration:
                 type(other).__name__
             )
         new = self._copy()
-        for attr in new.DATA_ATTRIBUTES:
+        for attr in new.__slots__:
             value = getattr(new, attr)
             if value is not None:
                 setattr(new, attr, value * other)
@@ -658,7 +675,7 @@ class Duration:
         return NotImplemented
 
     def __bool__(self):
-        for attr in self.DATA_ATTRIBUTES:
+        for attr in self.__slots__:
             if getattr(self, attr, None):
                 return True
         return False
@@ -672,7 +689,7 @@ class Duration:
 
         # Handle negative durations.
         is_fully_negative = False
-        for attribute in self.DATA_ATTRIBUTES:
+        for attribute in self.__slots__:
             attr_value = getattr(self, attribute)
             if attr_value is not None:
                 if attr_value > 0:
@@ -727,7 +744,7 @@ class TimeZone(Duration):
         should be set as part of a copy operation.
     """
 
-    __slots__ = ['_unknown'] + Duration.__slots__
+    __slots__ = [*Duration.__slots__, "_unknown"]
 
     to_weeks = property(doc='Unavailable/not inherited')
 
@@ -864,15 +881,13 @@ class TimePoint:
         will be assumed to be 0 instead of 1. Default is False.
     """
 
-    DATA_ATTRIBUTES = [
+    __slots__ = [
         "_expanded_year_digits", "_year", "_month_of_year",
         "_day_of_year", "_day_of_month", "_day_of_week",
         "_week_of_year", "_hour_of_day", "_minute_of_hour",
         "_second_of_minute", "_truncated", "_truncated_property",
         "_truncated_dump_format", "_dump_format", "_time_zone"
     ]
-
-    __slots__ = DATA_ATTRIBUTES
 
     def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
                  week_of_year=None, day_of_year=None, day_of_month=None,
@@ -1508,7 +1523,7 @@ class TimePoint:
     def _copy(self) -> "TimePoint":
         """Returns an unlinked copy of this instance."""
         new_timepoint = TimePoint(is_empty_instance=True)
-        for attr in self.DATA_ATTRIBUTES:
+        for attr in self.__slots__:
             setattr(new_timepoint, attr, getattr(self, attr))
         new_timepoint._time_zone = self.time_zone._copy()
         return new_timepoint
@@ -1516,7 +1531,7 @@ class TimePoint:
     def get_props(self) -> list:
         """Return the data properties of this TimePoint as a list of tuples."""
         props = []
-        for attr in self.DATA_ATTRIBUTES:
+        for attr in self.__slots__:
             value = getattr(self, attr, None)
             if callable(getattr(value, "_copy", None)):
                 value = value._copy()
@@ -1528,7 +1543,7 @@ class TimePoint:
         if self.truncated:
             # TODO: Convert truncated TimePoints to UTC when not buggy
             return hash(
-                tuple(getattr(self, attr) for attr in self.DATA_ATTRIBUTES))
+                tuple(getattr(self, attr) for attr in self.__slots__))
         point = self.to_utc()
         return hash((*point.get_calendar_date(),
                      *point.get_hour_minute_second()))
@@ -1550,7 +1565,7 @@ class TimePoint:
             return True if op in ["eq", "le", "ge"] else False
         if self.truncated:
             # TODO: Convert truncated TimePoints to UTC when not buggy
-            for attribute in self.DATA_ATTRIBUTES:
+            for attribute in self.__slots__:
                 self_attr = getattr(self, attribute)
                 other_attr = getattr(other, attribute)
                 if self_attr != other_attr:
@@ -1693,7 +1708,7 @@ class TimePoint:
                 if check_changes is True else None.
         """
         if check_changes:
-            before = {key: getattr(self, key) for key in self.DATA_ATTRIBUTES}
+            before = {key: getattr(self, key) for key in self.__slots__}
         if (self.hour_of_day is not None and
                 self.minute_of_hour is not None):
             hours_remainder = self.hour_of_day - int(self.hour_of_day)

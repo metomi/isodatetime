@@ -302,11 +302,11 @@ years, months, days, hours, minutes, and seconds are used literally
 #### 1 - Recur with a duration given by the difference between a start date
 and a subsequent date, starting at the start date
 
-Example Syntax           | Example                 | Meaning
- ----------------------- | ----------------------- | ------------------------------------------------------------------
-R/CCYY/CCYY              | R/2010/2014             | Repeat every 4 years, starting at 2010-01-01.
-R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045      | Repeat every 2 years and 44 days, starting at 2010-01-01
-R5/CCYY-Www-D/CCYY-Www-D | R/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
+Example Syntax           | Example                  | Meaning
+ ----------------------- | ------------------------ | ------------------------------------------------------------------
+R/CCYY/CCYY              | R/2010/2014              | Repeat every 4 years, starting at 2010-01-01.
+R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045       | Repeat every 2 years and 44 days, starting at 2010-01-01
+Rn/CCYY-Www-D/CCYY-Www-D | R5/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
 
 #### 2 - Recur with a given duration, starting at a context date-time
 
