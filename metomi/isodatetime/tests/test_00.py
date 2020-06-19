@@ -704,6 +704,22 @@ def get_timerecurrence_expansion_tests():
     ]
 
 
+def get_timerecurrence_comparison_tests():
+    """Yield tests for executing the '==' operator and hash() on
+    TimeRecurrences."""
+    return [
+        ("R5/2020-036T00Z/PT15M", "R5/2020-036T00Z/PT15M", True),
+        *[("R5/2020-036T00Z/PT15M", rhs, False) for rhs in (
+            "R4/2020-036T00Z/PT15M",
+            "R5/2020-036T01Z/PT15M",
+            "R5/2020-036T00Z/PT14M")],
+        # Format 3 vs 4:
+        ("R4/2020-01-01T00Z/P1D", "R4/P1D/2020-01-04T00Z", True),
+        ("R/2020-01-01T00Z/P1D", "R/P1D/2020-01-04T00Z", False),
+        # TODO: Format 1 vs others after fixing issue #45
+    ]
+
+
 def get_timerecurrence_expansion_tests_for_alt_calendar(calendar_mode):
     """Return alternate calendar tests for data.TimeRecurrence."""
     if calendar_mode == "360":
@@ -1352,6 +1368,26 @@ class TestSuite(unittest.TestCase):
                 raise ValueError("Parsing failed for %s" % expression)
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
+
+    def test_timerecurrence_comparison(self):
+        """Test the '==' operator and hash() on TimeRecurrences."""
+        parser = parsers.TimeRecurrenceParser()
+        tests = get_timerecurrence_comparison_tests()
+        for lhs_str, rhs_str, expected in tests:
+            lhs = parser.parse(lhs_str)
+            rhs = parser.parse(rhs_str)
+            test = lhs == rhs
+            assert test is expected, "{0} == {1}".format(lhs_str, rhs_str)
+            test = rhs == lhs
+            assert test is expected, "{0} == {1}".format(rhs_str, lhs_str)
+            test = lhs != rhs
+            assert test is not expected, "{0} != {1}".format(lhs_str, rhs_str)
+            test = hash(lhs) == hash(rhs)
+            assert test is expected, (
+                "hash of {0} == hash of {1}".format(lhs_str, rhs_str))
+        test_recurrence = parser.parse(tests[0][0])
+        for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
+            self.assertFalse(test_recurrence == var)
 
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is

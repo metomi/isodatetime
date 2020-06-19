@@ -223,6 +223,8 @@ class TimeRecurrence:
         elif self.end_point is None:
             # Third form.
             self._format_number = 3
+            # If repetitions == 1, duration is actually ignored. TODO: Can
+            # probably set to None or something for the purposes of __eq__()
             if self.repetitions is not None:
                 self._end_point = (
                     self.start_point + self.duration * (self.repetitions - 1))
@@ -339,6 +341,21 @@ class TimeRecurrence:
                 point = self.get_prev(point)
             else:
                 point = self.get_next(point)
+
+    def __hash__(self) -> int:
+        # TODO: fix when fixing issue #45
+        return hash((self.repetitions, self.start_point, self.end_point,
+                     self.min_point, self.max_point))
+
+    def __eq__(self, other: "TimeRecurrence") -> bool:
+        if not isinstance(other, TimeRecurrence):
+            return NotImplemented
+        # TODO: fix when fixing issue #45
+        for attr in ["repetitions", "start_point", "end_point", "min_point",
+                     "max_point"]:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
 
     def __str__(self):
         if self.repetitions is None:
