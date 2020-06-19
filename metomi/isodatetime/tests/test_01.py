@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pragma pylint: disable=pointless-statement
 # ----------------------------------------------------------------------------
 # Copyright (C) British Crown (Met Office) & Contributors.
 #

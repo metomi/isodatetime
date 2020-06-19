@@ -146,8 +146,8 @@ class TimeRecurrence:
     2. (Not supported) Recur with a specified duration, starting at some
         context date-time specified elsewhere.
     3. Recur with a specified duration starting at a particular date-time.
-    4. Recur with a specified duration counting back from a particular
-        date-time.
+    4. Recur with a specified duration ending at a particular date-time (the
+        starting date-time is calculated from the duration).
 
     The format of the TimeRecurrence instance is automatically chosen from the
     arguments supplied.
