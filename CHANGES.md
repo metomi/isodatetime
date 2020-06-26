@@ -5,6 +5,17 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
+## isodatetime 2.0.3 (Upcoming, 2020)
+
+This is the 15th release of isodatetime. Requires Python 3.5+.
+
+### Noteworthy Changes
+
+[#165](https://github.com/metomi/isodatetime/pull/165):
+Data classes are now immutable and hashable.
+
+--------------------------------------------------------------------------------
+
 ## isodatetime 2.0.2 (Released 2020-07-01)
 
 This is the 14th release of isodatetime. Requires Python 3.5+.
@@ -29,7 +40,7 @@ This is the 13th release of isodatetime.
 
 This release requires Python 3.5 or above.
 
-Note the major change in namespace from `isodatetime` to `metomi.isodatime`.
+Note the major change in namespace from `isodatetime` to `metomi.isodatetime`.
 
 ### Noteworthy Changes
 
