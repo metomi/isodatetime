@@ -75,6 +75,22 @@ $ isodatetime R/2000/P1Y --max 3
 2002-01-01T00:00:00Z
 ```
 
+## Copyright and Terms of Use
+
+Copyright (C) 2013-2020 British Crown (Met Office) & Contributors.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Lesser General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along
+with this program.  If not, see [GNU licenses](http://www.gnu.org/licenses/).
+
 ## ISO8601
 
 [ISO8601 (2004)](https://www.iso.org/standard/40874.html)
