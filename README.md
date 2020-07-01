@@ -5,7 +5,7 @@ isodatetime
 [![codecov](https://codecov.io/gh/metomi/isodatetime/branch/master/graph/badge.svg)](https://codecov.io/gh/metomi/isodatetime)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.597555.svg)](https://doi.org/10.5281/zenodo.597555)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fd1147b75474d4d9a0f64bececf3bb5)](https://www.codacy.com/app/metomi/isodatetime?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=metomi/isodatetime&amp;utm_campaign=Badge_Grade)
-[![PYPI Badge](https://img.shields.io/pypi/v/isodatetime.svg)](https://pypi.org/project/isodatetime/)
+[![PYPI Badge](https://img.shields.io/pypi/v/metomi-isodatetime)](https://pypi.org/project/metomi-isodatetime/)
 
 Python [ISO8601 (2004)](https://www.iso.org/standard/40874.html)
 full-specification parser and data model/manipulation utilities.
