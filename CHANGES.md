@@ -5,7 +5,7 @@ for a full listing of issues for each release.
 
 --------------------------------------------------------------------------------
 
-## isodatetime 2.0.2 (Upcoming, 2020)
+## isodatetime 2.0.2 (Released 2020-07-01)
 
 This is the 14th release of isodatetime. Requires Python 3.5+.
 
