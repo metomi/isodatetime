@@ -7,11 +7,15 @@ for a full listing of issues for each release.
 
 ## isodatetime 2.0.2 (Upcoming, 2020)
 
-This is the 14th release of isodatetime.
-
-This release requires Python 3.5 or above.
+This is the 14th release of isodatetime. Requires Python 3.5+.
 
 ### Noteworthy Changes
+
+[#148](https://github.com/metomi/isodatetime/pull/148):
+Exceptions have moved to `metomi.isodatetime.exceptions`.
+
+[#151](https://github.com/metomi/isodatetime/pull/151):
+CLI can now read in from piped stdin.
 
 [#157](https://github.com/metomi/isodatetime/pull/157):
 TimePoints can no longer be created with out-of-bounds values, e.g.
