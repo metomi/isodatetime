@@ -42,6 +42,7 @@ test_duration_attributes = [
             ]
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('test_year', range(1801, 2403))
 def test_timepoint(test_year):
     """Test the time point data model (takes a while).
