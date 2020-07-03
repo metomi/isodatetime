@@ -76,11 +76,25 @@ if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
 else:
     setup_requires = []
 
-tests_require = [
-    'coverage', 'pytest>=5', 'pytest-cov', 'pytest-env', 'flake8'
-]
 
 install_requires = []
+tests_require = [
+    'coverage',
+    'pytest>=5',
+    'pytest-env',
+    'pytest-cov',
+    'flake8'
+]
+extras_require = {}
+extras_require['all'] = (
+    tests_require
+    + list({
+        req
+        for reqs in extras_require.values()
+        for req in reqs
+    })
+)
+
 
 setup(
     name="metomi-isodatetime",
@@ -101,11 +115,9 @@ setup(
     long_description_content_type="text/markdown",
     platforms='any',
     setup_requires=setup_requires,
-    tests_require=tests_require,
     install_requires=install_requires,
-    extras_require={
-        'all': setup_requires + tests_require + install_requires
-    },
+    tests_require=tests_require,
+    extras_require=extras_require,
     python_requires='>=3.5',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
