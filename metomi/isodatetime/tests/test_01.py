@@ -290,7 +290,7 @@ class TestDataModel(unittest.TestCase):
                 )
 
     def test_timeduration(self):
-        """Test the duration class methods."""
+        """Test the Duration class methods."""
         for test_props, method, method_args, ctrl_results in (
                 get_timeduration_tests()):
             duration = data.Duration(**test_props)
@@ -311,15 +311,35 @@ class TestDataModel(unittest.TestCase):
             self.assertEqual(data.Duration(**{kwarg: 1.5}).get_seconds(),
                              expected_secs)
 
+    def test_duration_in_weeks(self):
+        """Test the Duration class when the week arg is supplied."""
+        dur = data.Duration(weeks=4)
+        self.assertEqual(dur.get_is_in_weeks(), True)
+
+        for kwarg, expected_days in [  # 2 units of each property + 4 weeks
+                ("years", 758), ("months", 88), ("days", 30),
+                ("hours", 28), ("minutes", 28), ("seconds", 28)]:
+            dur = data.Duration(weeks=4, **{kwarg: 2})
+            self.assertFalse(dur.get_is_in_weeks())
+            self.assertIsNone(dur.weeks)
+            self.assertEqual(dur.get_days_and_seconds()[0], expected_days)
+
     def test_duration_to_weeks(self):
-        """Test that the duration does not lose precision when converted
+        """Test that the Duration does not lose precision when converted
         from days"""
+        # FIXME - it does lose precision!
+        # https://github.com/metomi/isodatetime/issues/166
         duration_in_days = data.Duration(days=365).to_weeks()
         duration_in_weeks = data.Duration(weeks=52)
         self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
 
+    def test_duration_to_days(self):
+        """Test converting Duration in weeks to Duration in days"""
+        dur = data.Duration(weeks=4)
+        self.assertEqual(dur.to_days().days, 28)
+
     def test_timeduration_add_week(self):
-        """Test the duration not in weeks add duration in weeks."""
+        """Test the Duration not in weeks add Duration in weeks."""
         self.assertEqual(
             str(data.Duration(days=7) + data.Duration(weeks=1)),
             "P14D")
@@ -329,13 +349,10 @@ class TestDataModel(unittest.TestCase):
         move to Python 3"""
         duration = data.Duration(years=4, months=4, days=4, hours=4,
                                  minutes=4, seconds=4)
+        expected = data.Duration(years=2, months=2, days=2, hours=2,
+                                 minutes=2, seconds=2)
         duration //= 2
-        self.assertEqual(2, duration.years)
-        self.assertEqual(2, duration.months)
-        self.assertEqual(2, duration.days)
-        self.assertEqual(2, duration.hours)
-        self.assertEqual(2, duration.minutes)
-        self.assertEqual(2, duration.seconds)
+        self.assertEqual(duration, expected)
 
     def test_duration_in_weeks_floordiv(self):
         """Test the existing dunder floordir, which will be removed when we
