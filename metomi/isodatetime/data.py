@@ -377,9 +377,8 @@ class Duration(object):
         self._hours = hours
         self._minutes = minutes
         self._seconds = seconds
-        if (not self.years and not self.months and not self.hours and
-                not self.minutes and not self.seconds and
-                weeks and not days):
+        if (weeks and not years and not months and not days and
+                not hours and not minutes and not seconds):
             self._weeks = self.days // CALENDAR.DAYS_IN_WEEK
             self._years, self._months, self._days = (None, None, None)
             self._hours, self._minutes, self._seconds = (None, None, None)
@@ -569,32 +568,22 @@ class Duration(object):
 
     def __eq__(self, other: "Duration") -> bool:
         # TODO: check instance of other
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data == other_data
+        return self.get_days_and_seconds() == other.get_days_and_seconds()
 
     def __ne__(self, other: "Duration") -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data < other_data
+        return self.get_days_and_seconds() < other.get_days_and_seconds()
 
     def __le__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data <= other_data
+        return self.get_days_and_seconds() <= other.get_days_and_seconds()
 
     def __gt__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data > other_data
+        return self.get_days_and_seconds() > other.get_days_and_seconds()
 
     def __ge__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data >= other_data
+        return self.get_days_and_seconds() >= other.get_days_and_seconds()
 
     def __bool__(self):
         for attr in self.DATA_ATTRIBUTES:
@@ -603,6 +592,9 @@ class Duration(object):
         return False
 
     def __str__(self):
+        if not self:
+            return "P0Y"
+
         start_string = "P"
         content_string = ""
 
@@ -636,10 +628,7 @@ class Duration(object):
             if prop_ == "days":
                 content_string += "T"
 
-        if content_string == "T":
-            # No content, zero duration.
-            content_string = "0Y"
-        elif content_string.endswith("T"):
+        if content_string.endswith("T"):
             # No time unit information, so strip the delimiter.
             content_string = content_string[:-1]
 
