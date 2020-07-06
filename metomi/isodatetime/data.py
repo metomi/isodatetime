@@ -443,14 +443,15 @@ class Duration(object):
         100 will return 1 day, 100 seconds or (1, 100) from this
         method.
         """
+        if self.get_is_in_weeks():
+            return self.weeks * CALENDAR.DAYS_IN_WEEK, 0
         # TODO: Implement error calculation for the below quantities.
-        new = self.to_days()
-        new_days = (new.years * CALENDAR.ROUGH_DAYS_IN_YEAR +
-                    new.months * CALENDAR.ROUGH_DAYS_IN_MONTH +
-                    new.days)
-        new_seconds = (new.hours * CALENDAR.SECONDS_IN_HOUR +
-                       new.minutes * CALENDAR.SECONDS_IN_MINUTE +
-                       new.seconds)
+        new_days = (self.years * CALENDAR.ROUGH_DAYS_IN_YEAR +
+                    self.months * CALENDAR.ROUGH_DAYS_IN_MONTH +
+                    self.days)
+        new_seconds = (self.hours * CALENDAR.SECONDS_IN_HOUR +
+                       self.minutes * CALENDAR.SECONDS_IN_MINUTE +
+                       self.seconds)
         diff_days, new_seconds = divmod(new_seconds, CALENDAR.SECONDS_IN_DAY)
         new_days += diff_days
         return new_days, new_seconds
