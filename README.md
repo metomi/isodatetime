@@ -47,12 +47,12 @@ Python API:
 >>> duration.get_days_and_seconds()
 (365.0, 10800.0)
 >>> date_time + duration
-2001-01-01T03:00:00Z
+<metomi.isodatetime.data.TimePoint: 2001-01-01T03:00:00Z>
 
 # Recurrences
 >>> recurrence = parse.TimeRecurrenceParser().parse('R/1999/P1Y')
 >>> recurrence.get_next(date_time)
-2001-01-01T00:00:00Z
+<metomi.isodatetime.data.TimePoint: 2001-01-01T00:00:00Z>
 
 # Output
 >>> dump.TimePointDumper().strftime(date_time, '%d/%M/%Y %H:%M:%S')

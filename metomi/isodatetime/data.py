@@ -21,9 +21,14 @@
 
 from . import dumpers
 from . import timezone
+from .exceptions import BadInputError
 
+import operator
 from functools import lru_cache
-from metomi.isodatetime.exceptions import BadInputError
+
+
+_operator_map = {op.__name__: op for op in [
+    operator.eq, operator.lt, operator.le, operator.gt, operator.ge]}
 
 
 class Calendar:
@@ -124,7 +129,8 @@ class Calendar:
             self.DAYS_IN_YEAR_LEAP * self.SECONDS_IN_DAY)
 
     def __repr__(self):
-        return "<%s-%s>" % (type(self).__name__, self.mode)
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, self.mode)
 
 
 CALENDAR = Calendar.default()
@@ -372,7 +378,8 @@ class TimeRecurrence:
         return "R/?/?"
 
     def __repr__(self):
-        return "<isodatetime.data.TimeRecurrence: {0}>".format(repr(str(self)))
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
 
 class Duration:
@@ -746,7 +753,8 @@ class Duration:
         return total_string.replace(".", ",")
 
     def __repr__(self):
-        return "<isodatetime.data.Duration: {0}>".format(repr(str(self)))
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
 
 class TimeZone(Duration):
@@ -816,9 +824,6 @@ class TimeZone(Duration):
             if self._hours < 0 or (self._hours == 0 and self._minutes < 0):
                 time_string = "-%02d:%02d"
             return time_string % (abs(self._hours), abs(self._minutes))
-
-    def __repr__(self):
-        return "<isodatetime.data.TimeZone: {0}>".format(repr(str(self)))
 
 
 class TimePoint:
@@ -1590,16 +1595,7 @@ class TimePoint:
                 self_attr = getattr(self, attribute)
                 other_attr = getattr(other, attribute)
                 if self_attr != other_attr:
-                    if op == "eq":
-                        return False
-                    if op == "lt":
-                        return self_attr < other_attr
-                    if op == "le":
-                        return self_attr <= other_attr
-                    if op == "gt":
-                        return self_attr > other_attr
-                    if op == "ge":
-                        return self_attr >= other_attr
+                    return _operator_map[op](self_attr, other_attr)
             return True
         other = other.to_time_zone(self._time_zone)
         if self.get_is_calendar_date():
@@ -1610,16 +1606,7 @@ class TimePoint:
             other_date = other.get_ordinal_date()
         my_datetime = [*my_date, self.get_second_of_day()]
         other_datetime = [*other_date, other.get_second_of_day()]
-        if op == "eq":
-            return my_datetime == other_datetime
-        if op == "lt":
-            return my_datetime < other_datetime
-        if op == "le":
-            return my_datetime <= other_datetime
-        if op == "gt":
-            return my_datetime > other_datetime
-        if op == "ge":
-            return my_datetime >= other_datetime
+        return _operator_map[op](my_datetime, other_datetime)
 
     def __eq__(self, other: "TimePoint") -> bool:
         return self._cmp(other, "eq")
@@ -2043,7 +2030,9 @@ class TimePoint:
             date_string = ""
         return date_string + time_string
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
 
 def _format_remainder(float_time_number):
