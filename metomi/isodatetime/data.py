@@ -349,8 +349,8 @@ class Duration(object):
         for units that are inexact (months and years).
     """
 
-    DATA_ATTRIBUTES = [
-        "years", "months", "weeks", "days", "hours", "minutes", "seconds"]
+    DATA_ATTRIBUTES = ["_years", "_months", "_weeks", "_days",
+                       "_hours", "_minutes", "_seconds"]
 
     __slots__ = DATA_ATTRIBUTES
 
@@ -365,46 +365,67 @@ class Duration(object):
             (minutes, "minutes", int, float, None),
             (seconds, "seconds", int, float, None)
         )
-        self.years = years
-        self.months = months
-        self.weeks = None
-        self.days = days
+        self._years = years
+        self._months = months
+        self._weeks = None
+        self._days = days
         if weeks is not None:
             if days is None:
-                self.days = CALENDAR.DAYS_IN_WEEK * weeks
+                self._days = CALENDAR.DAYS_IN_WEEK * weeks
             else:
-                self.days += CALENDAR.DAYS_IN_WEEK * weeks
-        self.hours = hours
-        self.minutes = minutes
-        self.seconds = seconds
+                self._days += CALENDAR.DAYS_IN_WEEK * weeks
+        self._hours = hours
+        self._minutes = minutes
+        self._seconds = seconds
         if (not self.years and not self.months and not self.hours and
                 not self.minutes and not self.seconds and
                 weeks and not days):
-            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
-            self.years, self.months, self.days = (None, None, None)
-            self.hours, self.minutes, self.seconds = (None, None, None)
+            self._weeks = self.days // CALENDAR.DAYS_IN_WEEK
+            self._years, self._months, self._days = (None, None, None)
+            self._hours, self._minutes, self._seconds = (None, None, None)
         if standardize:
             if self.seconds:
-                num_minutes, self.seconds = divmod(
+                num_minutes, self._seconds = divmod(
                     self.seconds, CALENDAR.SECONDS_IN_MINUTE)
                 if self.minutes is None:
-                    self.minutes = 0
-                self.minutes += num_minutes
+                    self._minutes = 0
+                self._minutes += num_minutes
             if self.minutes:
-                num_hours, self.minutes = divmod(
+                num_hours, self._minutes = divmod(
                     self.minutes, CALENDAR.MINUTES_IN_HOUR)
                 if self.hours is None:
-                    self.hours = 0
-                self.hours += num_hours
+                    self._hours = 0
+                self._hours += num_hours
             if self.hours:
-                num_days, self.hours = divmod(
+                num_days, self._hours = divmod(
                     self.hours, CALENDAR.HOURS_IN_DAY)
                 if self.days is None:
-                    self.days = 0
-                self.days += num_days
+                    self._days = 0
+                self._days += num_days
 
-    def copy(self):
-        """Return an unlinked copy of this instance."""
+    @property
+    def years(self): return self._years
+
+    @property
+    def months(self): return self._months
+
+    @property
+    def weeks(self): return self._weeks
+
+    @property
+    def days(self): return self._days
+
+    @property
+    def hours(self): return self._hours
+
+    @property
+    def minutes(self): return self._minutes
+
+    @property
+    def seconds(self): return self._seconds
+
+    def _copy(self):
+        """Return an (unlinked) copy of this instance."""
         return Duration(
             years=self.years, months=self.months, weeks=self.weeks,
             days=self.days, hours=self.hours, minutes=self.minutes,
@@ -422,11 +443,9 @@ class Duration(object):
         Duration which has self.seconds = CALENDAR.SECONDS_IN_DAY +
         100 will return 1 day, 100 seconds or (1, 100) from this
         method.
-
         """
         # TODO: Implement error calculation for the below quantities.
-        new = self.copy()
-        new.to_days()
+        new = self.to_days()
         new_days = (new.years * CALENDAR.ROUGH_DAYS_IN_YEAR +
                     new.months * CALENDAR.ROUGH_DAYS_IN_MONTH +
                     new.days)
@@ -442,7 +461,6 @@ class Duration(object):
 
         This is not rigorous when converting from non-uniform units
         such as years and months.
-
         """
         days, seconds = self.get_days_and_seconds()
         return days * CALENDAR.SECONDS_IN_DAY + seconds
@@ -452,24 +470,28 @@ class Duration(object):
         return self.weeks is not None
 
     def to_days(self):
-        """Convert to day representation rather than weeks."""
+        """Return a new Duration in day representation rather than weeks."""
         if self.get_is_in_weeks():
-            for attribute in ["years", "months", "hours",
-                              "minutes", "seconds"]:
-                if getattr(self, attribute) is None:
-                    setattr(self, attribute, 0)
-            self.days = self.weeks * CALENDAR.DAYS_IN_WEEK
-            self.weeks = None
+            new = self._copy()
+            for attribute in ["_years", "_months", "_hours",
+                              "_minutes", "_seconds"]:
+                if getattr(new, attribute) is None:
+                    setattr(new, attribute, 0)
+            new._days = new.weeks * CALENDAR.DAYS_IN_WEEK
+            new._weeks = None
+            return new
+        return self
 
     def to_weeks(self):
-        """Convert to week representation (warning: use with caution)."""
+        """Return a new Duration in week representation (warning: use with
+        caution)."""
         if not self.get_is_in_weeks():
-            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
-            self.years, self.months, self.days = (None, None, None)
-            self.hours, self.minutes, self.seconds = (None, None, None)
+            weeks = self.days // CALENDAR.DAYS_IN_WEEK
+            return Duration(weeks=weeks)
+        return self
 
     def __abs__(self):
-        new = self.copy()
+        new = self._copy()
         for attribute in new.DATA_ATTRIBUTES:
             attr_value = getattr(new, attribute)
             if attr_value is not None:
@@ -477,22 +499,21 @@ class Duration(object):
         return new
 
     def __add__(self, other):
-        new = self.copy()
+        new = self._copy()
         if isinstance(other, Duration):
             if new.get_is_in_weeks():
                 if other.get_is_in_weeks():
-                    new.weeks += other.weeks
+                    new._weeks += other.weeks
                     return new
-                new.to_days()
+                new = new.to_days()
             elif other.get_is_in_weeks():
-                other = other.copy()
-                other.to_days()
-            new.years += other.years
-            new.months += other.months
-            new.days += other.days
-            new.hours += other.hours
-            new.minutes += other.minutes
-            new.seconds += other.seconds
+                other = other.to_days()
+            new._years += other.years
+            new._months += other.months
+            new._days += other.days
+            new._hours += other.hours
+            new._minutes += other.minutes
+            new._seconds += other.seconds
             return new
         if isinstance(other, TimePoint):
             return other + new
@@ -513,7 +534,7 @@ class Duration(object):
                 "'%s' should be integer." %
                 type(other).__name__
             )
-        new = self.copy()
+        new = self._copy()
         for attr in new.DATA_ATTRIBUTES:
             value = getattr(new, attr)
             if value is not None:
@@ -531,19 +552,20 @@ class Duration(object):
                 "'%s' should be integer." %
                 type(other).__name__
             )
-        new = self.copy()
+        new = self._copy()
         if self.get_is_in_weeks():
-            new.weeks //= other
+            new._weeks //= other
             return new
-        new.years //= other
-        new.months //= other
-        new.days //= other
-        new.hours //= other
-        new.minutes //= other
-        new.seconds //= other
+        new._years //= other
+        new._months //= other
+        new._days //= other
+        new._hours //= other
+        new._minutes //= other
+        new._seconds //= other
         return new
 
     def __eq__(self, other: "Duration") -> bool:
+        # TODO: check instance of other
         my_data = self.get_days_and_seconds()
         other_data = other.get_days_and_seconds()
         return my_data == other_data
@@ -572,8 +594,7 @@ class Duration(object):
         return my_data >= other_data
 
     def __bool__(self):
-        for attr in ["years", "months", "weeks", "days", "hours",
-                     "minutes", "seconds"]:
+        for attr in self.DATA_ATTRIBUTES:
             if getattr(self, attr, None):
                 return True
         return False

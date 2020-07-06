@@ -314,8 +314,7 @@ class TestDataModel(unittest.TestCase):
     def test_duration_to_weeks(self):
         """Test that the duration does not lose precision when converted
         from days"""
-        duration_in_days = data.Duration(days=365)
-        duration_in_days.to_weeks()
+        duration_in_days = data.Duration(days=365).to_weeks()
         duration_in_weeks = data.Duration(weeks=52)
         self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
 
