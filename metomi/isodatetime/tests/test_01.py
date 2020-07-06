@@ -325,12 +325,9 @@ class TestDataModel(unittest.TestCase):
             self.assertEqual(dur.get_days_and_seconds()[0], expected_days)
 
     def test_duration_to_weeks(self):
-        """Test that the Duration does not lose precision when converted
-        from days"""
-        # FIXME - it does lose precision!
-        # https://github.com/metomi/isodatetime/issues/166
+        """Test converting Duration in days to Duration in weeks"""
         duration_in_days = data.Duration(days=365).to_weeks()
-        duration_in_weeks = data.Duration(weeks=52)
+        duration_in_weeks = data.Duration(weeks=52)  # 364 days (!)
         self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
 
     def test_duration_to_days(self):

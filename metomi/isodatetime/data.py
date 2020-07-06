@@ -483,10 +483,9 @@ class Duration(object):
         return self
 
     def to_weeks(self):
-        """Return a new Duration in week representation (warning: use with
-        caution)."""
-        # FIXME - this method loses precision
-        # https://github.com/metomi/isodatetime/issues/166
+        """Return a new Duration in week representation (use with caution -
+        this returns the floor of the decimal number of weeks, so might lose
+        precision)."""
         if not self.get_is_in_weeks():
             weeks = self.days // CALENDAR.DAYS_IN_WEEK
             return Duration(weeks=weeks)
