@@ -24,6 +24,7 @@ from . import timezone
 
 from functools import lru_cache
 from metomi.isodatetime.exceptions import BadInputError
+import warnings
 
 
 class Calendar(object):
@@ -316,7 +317,7 @@ class TimeRecurrence(object):
         return "R/?/?"
 
 
-class Duration(object):
+class Duration:
 
     """Represent a duration or period of time.
 
@@ -324,11 +325,19 @@ class Duration(object):
     exact length of time depends on their position in the calendar. E.g., a
     duration of 1 calendar year starts on a particular day of a particular
     month and ends on the same day of the same month in the following calendar
-    year, and may be equal to 365 or 366 days in the Gregorian calendar.
-    Another example: a duration of 1 calendar day starts at a particular time
-    of day and ends at the same time of day the following calendar day, and
-    might be different to 24 hours if the you're using a local time zone that
-    can change due to daylight saving.
+    year, and may be different to 365 days in the Gregorian calendar due to
+    leap years. Another example: a duration of 1 calendar day starts at a
+    particular time of day and ends at the same time of day the following
+    calendar day, and might be different to 24 hours if the you're using a
+    local time zone that can change due to daylight saving.
+
+    For this reason, be careful when using the comparison operators. For the
+    sake of `<`, `<=`, `>` and `>=`, the behaviour is: P1Y = P365D, P1M = P30D,
+    P1W = P7D and P1D = PT24H. However, these are not NOT true for the
+    equality operator (`==`).
+
+    Conversely, hours, minutes and seconds are exact units, so, for example,
+    PT1H == PT60M is always true.
 
     Keyword arguments:
 
@@ -430,6 +439,13 @@ class Duration(object):
             days=self.days, hours=self.hours, minutes=self.minutes,
             seconds=self.seconds)
 
+    def is_exact(self):
+        """Return True if the instance is defined in exact units (hours,
+        minutes or seconds) only."""
+        if self.years or self.months or self.weeks or self.days:
+            return False
+        return True
+
     def get_days_and_seconds(self):
         """Return a roughly-converted duration in days and seconds.
 
@@ -449,9 +465,7 @@ class Duration(object):
         new_days = (self.years * CALENDAR.ROUGH_DAYS_IN_YEAR +
                     self.months * CALENDAR.ROUGH_DAYS_IN_MONTH +
                     self.days)
-        new_seconds = (self.hours * CALENDAR.SECONDS_IN_HOUR +
-                       self.minutes * CALENDAR.SECONDS_IN_MINUTE +
-                       self.seconds)
+        new_seconds = self._get_non_nominal_seconds()
         diff_days, new_seconds = divmod(new_seconds, CALENDAR.SECONDS_IN_DAY)
         new_days += diff_days
         return new_days, new_seconds
@@ -464,6 +478,12 @@ class Duration(object):
         """
         days, seconds = self.get_days_and_seconds()
         return days * CALENDAR.SECONDS_IN_DAY + seconds
+
+    def _get_non_nominal_seconds(self):
+        """Return the length of time (in seconds) represented by the exact
+        units (hours, minutes and seconds) only, ignoring days, months etc."""
+        return (self.hours * CALENDAR.SECONDS_IN_HOUR +
+                self.minutes * CALENDAR.SECONDS_IN_MINUTE + self.seconds)
 
     def get_is_in_weeks(self):
         """Return whether we are in week representation."""
@@ -566,26 +586,67 @@ class Duration(object):
         return new
 
     def __hash__(self) -> int:
-        return hash(self.get_days_and_seconds())
+        return hash((self.years, self.months, self.weeks, self.days,
+                     self._get_non_nominal_seconds()))
 
     def __eq__(self, other: "Duration") -> bool:
-        # TODO: check instance of other
-        return self.get_days_and_seconds() == other.get_days_and_seconds()
+        if isinstance(other, Duration):
+            if self.get_is_in_weeks():
+                return other.get_is_in_weeks() and self.weeks == other.weeks
+            return (
+                not other.get_is_in_weeks() and self.years == other.years and
+                self.months == other.months and self.days == other.days and
+                self._get_non_nominal_seconds() ==
+                other._get_non_nominal_seconds()
+            )
+        return NotImplemented
 
-    def __ne__(self, other: "Duration") -> bool:
-        return not self.__eq__(other)
+    @staticmethod
+    def _comparison_warning():
+        warnings.warn(
+            "Comparing nominal durations (specified in years, months "
+            "etc.) may not lead to expected results.",
+            RuntimeWarning)
 
     def __lt__(self, other: "Duration") -> bool:
-        return self.get_days_and_seconds() < other.get_days_and_seconds()
+        if isinstance(other, Duration):
+            if not (self.is_exact() and other.is_exact()):
+                self._comparison_warning()
+                return (self.get_days_and_seconds() <
+                        other.get_days_and_seconds())
+            return (self._get_non_nominal_seconds() <
+                    other._get_non_nominal_seconds())
+        return NotImplemented
 
     def __le__(self, other: "Duration") -> bool:
-        return self.get_days_and_seconds() <= other.get_days_and_seconds()
+        if isinstance(other, Duration):
+            if not (self.is_exact() and other.is_exact()):
+                self._comparison_warning()
+                return (self.get_days_and_seconds() <=
+                        other.get_days_and_seconds())
+            return (self._get_non_nominal_seconds() <=
+                    other._get_non_nominal_seconds())
+        return NotImplemented
 
     def __gt__(self, other: "Duration") -> bool:
-        return self.get_days_and_seconds() > other.get_days_and_seconds()
+        if isinstance(other, Duration):
+            if not (self.is_exact() and other.is_exact()):
+                self._comparison_warning()
+                return (self.get_days_and_seconds() >
+                        other.get_days_and_seconds())
+            return (self._get_non_nominal_seconds() >
+                    other._get_non_nominal_seconds())
+        return NotImplemented
 
     def __ge__(self, other: "Duration") -> bool:
-        return self.get_days_and_seconds() >= other.get_days_and_seconds()
+        if isinstance(other, Duration):
+            if not (self.is_exact() and other.is_exact()):
+                self._comparison_warning()
+                return (self.get_days_and_seconds() >=
+                        other.get_days_and_seconds())
+            return (self._get_non_nominal_seconds() >=
+                    other._get_non_nominal_seconds())
+        return NotImplemented
 
     def __bool__(self):
         for attr in self.DATA_ATTRIBUTES:
@@ -1311,8 +1372,7 @@ class TimePoint(object):
                 "truncated TimePoint to TimePoint.")
         duration = other
         if duration.get_is_in_weeks():
-            duration = other.copy()
-            duration.to_days()
+            duration = duration.to_days()
         if no_copy:
             new = self
         else:
