@@ -564,6 +564,9 @@ class Duration(object):
         new._seconds //= other
         return new
 
+    def __hash__(self) -> int:
+        return hash(self.get_days_and_seconds())
+
     def __eq__(self, other: "Duration") -> bool:
         # TODO: check instance of other
         my_data = self.get_days_and_seconds()
