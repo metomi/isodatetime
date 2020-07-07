@@ -126,8 +126,7 @@ class DateTimeOperator(object):
         if time_point_str == self.STR_REF:
             time_point_str = self.ref_point_str
         if time_point_str is None or time_point_str == self.STR_NOW:
-            time_point = now2point()
-            time_point.set_time_zone_to_local()
+            time_point = now2point().to_local_time_zone()
             if self.utc_mode or time_point.get_time_zone_utc():  # is in UTC
                 parse_format = self.CURRENT_TIME_DUMP_FORMAT_Z
             else:
@@ -149,7 +148,7 @@ class DateTimeOperator(object):
                     dump_as_parsed=True)
                 parse_format = time_point.dump_format
         if self.utc_mode:
-            time_point.set_time_zone_to_utc()
+            time_point = time_point.to_utc()
         return time_point, parse_format
 
     def date_shift(self, time_point, offset=None):
@@ -249,7 +248,7 @@ class DateTimeOperator(object):
     @staticmethod
     def get_datetime_strftime(time_point, print_format):
         """Use the datetime library's strftime as a fallback."""
-        calendar_date = time_point.copy().to_calendar_date()
+        calendar_date = time_point.to_calendar_date()
         year, month, day = calendar_date.get_calendar_date()
         hour, minute, second = time_point.get_hour_minute_second()
         microsecond = int(1.0e6 * (second - int(second)))

@@ -21,12 +21,17 @@
 
 from . import dumpers
 from . import timezone
+from .exceptions import BadInputError
 
+import operator
 from functools import lru_cache
-from metomi.isodatetime.exceptions import BadInputError
 
 
-class Calendar(object):
+_operator_map = {op.__name__: op for op in [
+    operator.eq, operator.lt, operator.le, operator.gt, operator.ge]}
+
+
+class Calendar:
 
     """Store constants for Gregorian calendar date-time calculation."""
 
@@ -124,7 +129,8 @@ class Calendar(object):
             self.DAYS_IN_YEAR_LEAP * self.SECONDS_IN_DAY)
 
     def __repr__(self):
-        return "<%s-%s>" % (type(self).__name__, self.mode)
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, self.mode)
 
 
 CALENDAR = Calendar.default()
@@ -136,23 +142,38 @@ TIMEPOINT_DUMPER_MAP = {
 }
 
 
-class TimeRecurrence(object):
+class TimeRecurrence:
 
-    # TODO: Need arg descriptions in docstring!
     """Represent a recurring duration.
+
+    There are four possible formats for recurrences in ISO 8601:
+    1. Recur with a duration given by the difference between a start date-time
+        and a subsequent date-time.
+    2. (Not supported) Recur with a specified duration, starting at some
+        context date-time specified elsewhere.
+    3. Recur with a specified duration starting at a particular date-time.
+    4. Recur with a specified duration ending at a particular date-time (the
+        starting date-time is calculated from the duration).
+
+    The format of the TimeRecurrence instance is automatically chosen from the
+    arguments supplied.
 
     Keyword arguments:
 
-    repetitions
-    start_point
-    duration
-    end_point
-    min_point
-    max_point
+    repetitions (int): The number of repetitions in the recurrence. If omitted,
+        the number of repetitions is unbounded.
+    start_point (TimePoint): Start date-time of the recurrence.
+    duration (Duration): The duration of the recurrence.
+    end_point (TimePoint): End date-time of the recurrence, or if using
+        format 1, the end date-time of the first interval.
+    min_point (TimePoint): If specified, marks the start of a subset of 'valid'
+        date-times in the recurrence.
+    max_point (TimePoint): If specified, marks the end of a subset of 'valid'
+        date-times in the recurrence.
     """
 
-    __slots__ = ("repetitions", "start_point", "duration", "end_point",
-                 "min_point", "max_point", "format_number")
+    __slots__ = ["_repetitions", "_start_point", "_duration", "_end_point",
+                 "_min_point", "_max_point", "_format_number"]
 
     def __init__(self, repetitions=None, start_point=None,
                  duration=None, end_point=None, min_point=None,
@@ -166,21 +187,23 @@ class TimeRecurrence(object):
             (max_point, "max_point", None, TimePoint)
         )
         _type_checker(*inputs)
-        self.repetitions = repetitions
-        self.start_point = start_point
-        self.duration = duration
-        self.end_point = end_point
-        self.min_point = min_point
-        self.max_point = max_point
-        self.format_number = None
-        if self.duration is None:
+        self._repetitions = repetitions
+        self._start_point = start_point
+        self._duration = duration
+        self._end_point = end_point
+        self._min_point = min_point
+        self._max_point = max_point
+        self._format_number = None
+        if self._duration is None:
             # First form.
-            self.format_number = 1
-            start_year, start_days = self.start_point.get_ordinal_date()
-            start_seconds = self.start_point.get_second_of_day()
-            self.end_point.set_time_zone(self.start_point.time_zone)
-            end_year, end_days = self.end_point.get_ordinal_date()
-            end_seconds = self.end_point.get_second_of_day()
+            # FIXME: see issue #45
+            self._format_number = 1
+            start_year, start_days = self._start_point.get_ordinal_date()
+            start_seconds = self._start_point.get_second_of_day()
+            self._end_point = self._end_point.to_time_zone(
+                self._start_point._time_zone)
+            end_year, end_days = self._end_point.get_ordinal_date()
+            end_seconds = self._end_point.get_second_of_day()
             diff_days = end_days - start_days
             if end_year > start_year:
                 diff_days += get_days_in_year_range(start_year, end_year - 1)
@@ -191,71 +214,95 @@ class TimeRecurrence(object):
             if diff_seconds >= CALENDAR.SECONDS_IN_DAY:
                 diff_days += 1
                 diff_seconds -= CALENDAR.SECONDS_IN_DAY
-            if self.repetitions == 1:
-                self.duration = Duration(years=0)
+            if self._repetitions == 1:
+                self._duration = Duration(years=0)
             else:
                 diff_days_float = diff_days / float(
-                    self.repetitions - 1)
+                    self._repetitions - 1)
                 diff_seconds_float = diff_seconds / float(
-                    self.repetitions - 1)
+                    self._repetitions - 1)
                 diff_days = int(diff_days_float)
                 diff_seconds_float += (
                     diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
-                self.duration = Duration(
+                self._duration = Duration(
                     days=diff_days, seconds=diff_seconds_float)
-        elif self.end_point is None:
+        elif self._end_point is None:
             # Third form.
-            self.format_number = 3
-            if self.repetitions is not None:
-                self.end_point = (
-                    self.start_point + self.duration * (self.repetitions - 1))
-        elif self.start_point is None:
+            self._format_number = 3
+            # If repetitions == 1, duration is actually ignored. TODO: Can
+            # probably set to None or something for the purposes of __eq__()
+            if self._repetitions is not None:
+                self._end_point = (
+                    self._start_point +
+                    self._duration * (self._repetitions - 1))
+        elif self._start_point is None:
             # Fourth form.
-            self.format_number = 4
-            if self.repetitions is not None:
-                self.start_point = (
-                    self.end_point - self.duration * (self.repetitions - 1))
+            self._format_number = 4
+            if self._repetitions is not None:
+                self._start_point = (
+                    self._end_point - self._duration * (self._repetitions - 1))
         else:
             raise BadInputError(
                 BadInputError.RECURRENCE, [i[:2] for i in inputs])
 
-    def get_is_valid(self, timepoint):
+    @property
+    def repetitions(self): return self._repetitions
+
+    @property
+    def start_point(self): return self._start_point
+
+    @property
+    def duration(self): return self._duration
+
+    @property
+    def end_point(self): return self._end_point
+
+    @property
+    def min_point(self): return self._min_point
+
+    @property
+    def max_point(self): return self._max_point
+
+    @property
+    def format_number(self): return self._format_number
+
+    def get_is_valid(self, timepoint: "TimePoint") -> bool:
         """Return whether the timepoint is valid for this recurrence."""
         if not self._get_is_in_bounds(timepoint):
             return False
         for iter_timepoint in self.__iter__():
             if iter_timepoint == timepoint:
                 return True
-            if self.start_point is None and iter_timepoint < timepoint:
+            if self._start_point is None and iter_timepoint < timepoint:
                 return False
-            if self.end_point is None and iter_timepoint > timepoint:
+            if self._end_point is None and iter_timepoint > timepoint:
                 return False
         return False
 
-    def get_next(self, timepoint):
+    def get_next(self, timepoint: "TimePoint") -> "TimePoint":
         """Return the next timepoint after this timepoint, or None."""
-        if self.repetitions == 1 or timepoint is None:
+        if self._repetitions == 1 or timepoint is None:
             return None
-        next_timepoint = timepoint + self.duration
+        next_timepoint = timepoint + self._duration
         if self._get_is_in_bounds(next_timepoint):
             return next_timepoint
-        if self.format_number == 1 and next_timepoint > self.end_point:
-            diff = next_timepoint - self.end_point
-            if (2 * diff < self.duration and
-                    self._get_is_in_bounds(self.end_point)):
-                return self.end_point
+        if self._format_number == 1 and next_timepoint > self._end_point:
+            diff = next_timepoint - self._end_point
+            if (2 * diff < self._duration and
+                    self._get_is_in_bounds(self._end_point)):
+                return self._end_point
         return None
 
-    def get_prev(self, timepoint):
+    def get_prev(self, timepoint: "TimePoint") -> "TimePoint":
         """Return the previous timepoint before this timepoint, or None."""
-        if self.repetitions == 1 or timepoint is None:
+        if self._repetitions == 1 or timepoint is None:
             return None
-        prev_timepoint = timepoint - self.duration
+        prev_timepoint = timepoint - self._duration
         if self._get_is_in_bounds(prev_timepoint):
             return prev_timepoint
         return None
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> "TimePoint":
         if index < 0 or not isinstance(index, int):
             raise IndexError(
                 "Unsupported index for TimeRecurrence")
@@ -265,29 +312,29 @@ class TimeRecurrence(object):
         raise IndexError(
             "Invalid index for TimeRecurrence")
 
-    def _get_is_in_bounds(self, timepoint):
+    def _get_is_in_bounds(self, timepoint: "TimePoint") -> bool:
         """Return whether the timepoint is within this recurrence series."""
         if timepoint is None:
             return False
-        if self.start_point is not None and timepoint < self.start_point:
+        if self._start_point is not None and timepoint < self._start_point:
             return False
-        if self.min_point is not None and timepoint < self.min_point:
+        if self._min_point is not None and timepoint < self._min_point:
             return False
-        if self.max_point is not None and timepoint > self.max_point:
+        if self._max_point is not None and timepoint > self._max_point:
             return False
-        if self.end_point is not None and timepoint > self.end_point:
+        if self._end_point is not None and timepoint > self._end_point:
             return False
         return True
 
     def __iter__(self):
-        if self.start_point is None:
-            point = self.end_point
+        if self._start_point is None:
+            point = self._end_point
             in_reverse = True
         else:
-            point = self.start_point
+            point = self._start_point
             in_reverse = False
 
-        if self.repetitions == 1 or not self.duration:
+        if self._repetitions == 1 or not self._duration:
             if self._get_is_in_bounds(point):
                 yield point
             point = None
@@ -302,33 +349,58 @@ class TimeRecurrence(object):
             else:
                 point = self.get_next(point)
 
+    def __hash__(self) -> int:
+        # TODO: fix when fixing issue #45
+        return hash((self._repetitions, self._start_point, self._end_point,
+                     self._min_point, self._max_point))
+
+    def __eq__(self, other: "TimeRecurrence") -> bool:
+        if not isinstance(other, TimeRecurrence):
+            return NotImplemented
+        # TODO: fix when fixing issue #45
+        for attr in ["repetitions", "start_point", "end_point", "min_point",
+                     "max_point"]:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
+
     def __str__(self):
-        if self.repetitions is None:
+        if self._repetitions is None:
             prefix = "R/"
         else:
-            prefix = "R" + str(self.repetitions) + "/"
-        if self.format_number == 1:
-            return prefix + str(self.start_point) + "/" + str(self.end_point)
-        elif self.format_number == 3:
-            return prefix + str(self.start_point) + "/" + str(self.duration)
-        elif self.format_number == 4:
-            return prefix + str(self.duration) + "/" + str(self.end_point)
+            prefix = "R" + str(self._repetitions) + "/"
+        if self._format_number == 1:
+            return prefix + str(self._start_point) + "/" + str(self._end_point)
+        elif self._format_number == 3:
+            return prefix + str(self._start_point) + "/" + str(self._duration)
+        elif self._format_number == 4:
+            return prefix + str(self._duration) + "/" + str(self._end_point)
         return "R/?/?"
 
+    def __repr__(self):
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
-class Duration(object):
+
+class Duration:
 
     """Represent a duration or period of time.
 
-    Note that years, months, weeks and days are 'nominal' durations, whose
-    exact length of time depends on their position in the calendar. E.g., a
-    duration of 1 calendar year starts on a particular day of a particular
-    month and ends on the same day of the same month in the following calendar
-    year, and may be equal to 365 or 366 days in the Gregorian calendar.
-    Another example: a duration of 1 calendar day starts at a particular time
-    of day and ends at the same time of day the following calendar day, and
-    might be different to 24 hours if the you're using a local time zone that
-    can change due to daylight saving.
+    Note that years and months are 'nominal' durations, whose exact length of
+    time depends on their position in the calendar. E.g., a duration of
+    1 calendar year starts on a particular day of a particular month and ends
+    on the same day of the same month in the following calendar year, and may
+    be different to 365 days in the Gregorian calendar due to leap years.
+
+    For this reason, be careful when using the comparison operators. For the
+    sake of `<`, `<=`, `>` and `>=`, the behaviour is: P1Y = P365D and
+    P1M = P30D. However, these are not NOT true for the equality operator
+    (`==`).
+
+    Conversely, weeks, days, hours, minutes and seconds are exact units, so
+    P1W == P7D, P1D == PT24H and PT1H == PT60M etc. are always true. (Although
+    ISO 8601 states that weeks and days are nominal durations, there is no case
+    where they are not exact in our implementation.)
 
     Keyword arguments:
 
@@ -347,15 +419,18 @@ class Duration(object):
         small units have minimal values. For example, 3664.4 seconds would
         become 1 hour, 1 minute, and 4.4 seconds. Attributes will not adjust
         for units that are inexact (months and years).
+    _is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation.
     """
 
-    DATA_ATTRIBUTES = [
-        "years", "months", "weeks", "days", "hours", "minutes", "seconds"]
-
-    __slots__ = DATA_ATTRIBUTES
+    __slots__ = ["_years", "_months", "_weeks", "_days",
+                 "_hours", "_minutes", "_seconds"]
 
     def __init__(self, years=0, months=0, weeks=0, days=0,
-                 hours=0.0, minutes=0.0, seconds=0.0, standardize=False):
+                 hours=0.0, minutes=0.0, seconds=0.0, standardize=False,
+                 _is_empty_instance=False):
+        if _is_empty_instance:
+            return
         _type_checker(
             (years, "years", int, None),
             (months, "months", int, None),
@@ -365,50 +440,77 @@ class Duration(object):
             (minutes, "minutes", int, float, None),
             (seconds, "seconds", int, float, None)
         )
-        self.years = years
-        self.months = months
-        self.weeks = None
-        self.days = days
+        self._years = years
+        self._months = months
+        self._weeks = None
+        self._days = days
         if weeks is not None:
             if days is None:
-                self.days = CALENDAR.DAYS_IN_WEEK * weeks
+                self._days = CALENDAR.DAYS_IN_WEEK * weeks
             else:
-                self.days += CALENDAR.DAYS_IN_WEEK * weeks
-        self.hours = hours
-        self.minutes = minutes
-        self.seconds = seconds
-        if (not self.years and not self.months and not self.hours and
-                not self.minutes and not self.seconds and
-                weeks and not days):
-            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
-            self.years, self.months, self.days = (None, None, None)
-            self.hours, self.minutes, self.seconds = (None, None, None)
+                self._days += CALENDAR.DAYS_IN_WEEK * weeks
+        self._hours = hours
+        self._minutes = minutes
+        self._seconds = seconds
+        if (weeks and not years and not months and not days and
+                not hours and not minutes and not seconds):
+            self._weeks = self._days // CALENDAR.DAYS_IN_WEEK
+            self._years, self._months, self._days = (None, None, None)
+            self._hours, self._minutes, self._seconds = (None, None, None)
         if standardize:
-            if self.seconds:
-                num_minutes, self.seconds = divmod(
-                    self.seconds, CALENDAR.SECONDS_IN_MINUTE)
-                if self.minutes is None:
-                    self.minutes = 0
-                self.minutes += num_minutes
-            if self.minutes:
-                num_hours, self.minutes = divmod(
-                    self.minutes, CALENDAR.MINUTES_IN_HOUR)
-                if self.hours is None:
-                    self.hours = 0
-                self.hours += num_hours
-            if self.hours:
-                num_days, self.hours = divmod(
-                    self.hours, CALENDAR.HOURS_IN_DAY)
-                if self.days is None:
-                    self.days = 0
-                self.days += num_days
+            if self._seconds:
+                num_minutes, self._seconds = divmod(
+                    self._seconds, CALENDAR.SECONDS_IN_MINUTE)
+                if self._minutes is None:
+                    self._minutes = 0
+                self._minutes += num_minutes
+            if self._minutes:
+                num_hours, self._minutes = divmod(
+                    self._minutes, CALENDAR.MINUTES_IN_HOUR)
+                if self._hours is None:
+                    self._hours = 0
+                self._hours += num_hours
+            if self._hours:
+                num_days, self._hours = divmod(
+                    self._hours, CALENDAR.HOURS_IN_DAY)
+                if self._days is None:
+                    self._days = 0
+                self._days += num_days
 
-    def copy(self):
-        """Return an unlinked copy of this instance."""
-        return Duration(
-            years=self.years, months=self.months, weeks=self.weeks,
-            days=self.days, hours=self.hours, minutes=self.minutes,
-            seconds=self.seconds)
+    @property
+    def years(self): return self._years
+
+    @property
+    def months(self): return self._months
+
+    @property
+    def weeks(self): return self._weeks
+
+    @property
+    def days(self): return self._days
+
+    @property
+    def hours(self): return self._hours
+
+    @property
+    def minutes(self): return self._minutes
+
+    @property
+    def seconds(self): return self._seconds
+
+    def _copy(self):
+        """Return an (unlinked) copy of this instance."""
+        new = self.__class__(_is_empty_instance=True)
+        for attr in self.__slots__:
+            setattr(new, attr, getattr(self, attr))
+        return new
+
+    def is_exact(self):
+        """Return True if the instance is defined in non-nominal/exact units
+        (weeks, days, hours, minutes or seconds) only."""
+        if self._years or self._months:
+            return False
+        return True
 
     def get_days_and_seconds(self):
         """Return a roughly-converted duration in days and seconds.
@@ -422,17 +524,16 @@ class Duration(object):
         Duration which has self.seconds = CALENDAR.SECONDS_IN_DAY +
         100 will return 1 day, 100 seconds or (1, 100) from this
         method.
-
         """
+        if self.get_is_in_weeks():
+            return self._weeks * CALENDAR.DAYS_IN_WEEK, 0
         # TODO: Implement error calculation for the below quantities.
-        new = self.copy()
-        new.to_days()
-        new_days = (new.years * CALENDAR.ROUGH_DAYS_IN_YEAR +
-                    new.months * CALENDAR.ROUGH_DAYS_IN_MONTH +
-                    new.days)
-        new_seconds = (new.hours * CALENDAR.SECONDS_IN_HOUR +
-                       new.minutes * CALENDAR.SECONDS_IN_MINUTE +
-                       new.seconds)
+        new_days = (self._years * CALENDAR.ROUGH_DAYS_IN_YEAR +
+                    self._months * CALENDAR.ROUGH_DAYS_IN_MONTH +
+                    self._days)
+        new_seconds = (self._hours * CALENDAR.SECONDS_IN_HOUR +
+                       self._minutes * CALENDAR.SECONDS_IN_MINUTE +
+                       self._seconds)
         diff_days, new_seconds = divmod(new_seconds, CALENDAR.SECONDS_IN_DAY)
         new_days += diff_days
         return new_days, new_seconds
@@ -442,57 +543,73 @@ class Duration(object):
 
         This is not rigorous when converting from non-uniform units
         such as years and months.
-
         """
+        if self.is_exact():
+            return self._get_non_nominal_seconds()
         days, seconds = self.get_days_and_seconds()
         return days * CALENDAR.SECONDS_IN_DAY + seconds
 
+    def _get_non_nominal_seconds(self):
+        """Return the length of time (in seconds) represented by the exact
+        units (weeks, days, hours, minutes and seconds) only, ignoring
+        years and months."""
+        if self.get_is_in_weeks():
+            return (self._weeks * CALENDAR.DAYS_IN_WEEK *
+                    CALENDAR.SECONDS_IN_DAY)
+        return (self._days * CALENDAR.SECONDS_IN_DAY +
+                self._hours * CALENDAR.SECONDS_IN_HOUR +
+                self._minutes * CALENDAR.SECONDS_IN_MINUTE + self._seconds)
+
     def get_is_in_weeks(self):
         """Return whether we are in week representation."""
-        return self.weeks is not None
+        return self._weeks is not None
 
     def to_days(self):
-        """Convert to day representation rather than weeks."""
+        """Return a new Duration in day representation rather than weeks."""
         if self.get_is_in_weeks():
-            for attribute in ["years", "months", "hours",
-                              "minutes", "seconds"]:
-                if getattr(self, attribute) is None:
-                    setattr(self, attribute, 0)
-            self.days = self.weeks * CALENDAR.DAYS_IN_WEEK
-            self.weeks = None
+            new = self._copy()
+            for attribute in ["_years", "_months", "_hours",
+                              "_minutes", "_seconds"]:
+                if getattr(new, attribute) is None:
+                    setattr(new, attribute, 0)
+            new._days = new._weeks * CALENDAR.DAYS_IN_WEEK
+            new._weeks = None
+            return new
+        return self
 
     def to_weeks(self):
-        """Convert to week representation (warning: use with caution)."""
+        """Return a new Duration in week representation (use with caution -
+        this returns the floor of the decimal number of weeks, so might lose
+        precision)."""
         if not self.get_is_in_weeks():
-            self.weeks = self.days // CALENDAR.DAYS_IN_WEEK
-            self.years, self.months, self.days = (None, None, None)
-            self.hours, self.minutes, self.seconds = (None, None, None)
+            weeks = self._days // CALENDAR.DAYS_IN_WEEK
+            return Duration(weeks=weeks)
+        return self
 
     def __abs__(self):
-        new = self.copy()
-        for attribute in new.DATA_ATTRIBUTES:
+        new = self._copy()
+        for attribute in new.__slots__:
             attr_value = getattr(new, attribute)
             if attr_value is not None:
                 setattr(new, attribute, abs(attr_value))
         return new
 
     def __add__(self, other):
-        new = self.copy()
+        new = self._copy()
         if isinstance(other, Duration):
             if new.get_is_in_weeks():
                 if other.get_is_in_weeks():
-                    new.weeks += other.weeks
+                    new._weeks += other._weeks
                     return new
-                new.to_days()
+                new = new.to_days()
             elif other.get_is_in_weeks():
-                other = other.copy()
-                other.to_days()
-            new.years += other.years
-            new.months += other.months
-            new.days += other.days
-            new.hours += other.hours
-            new.minutes += other.minutes
-            new.seconds += other.seconds
+                other = other.to_days()
+            new._years += other._years
+            new._months += other._months
+            new._days += other._days
+            new._hours += other._hours
+            new._minutes += other._minutes
+            new._seconds += other._seconds
             return new
         if isinstance(other, TimePoint):
             return other + new
@@ -513,8 +630,8 @@ class Duration(object):
                 "'%s' should be integer." %
                 type(other).__name__
             )
-        new = self.copy()
-        for attr in new.DATA_ATTRIBUTES:
+        new = self._copy()
+        for attr in new.__slots__:
             value = getattr(new, attr)
             if value is not None:
                 setattr(new, attr, value * other)
@@ -531,60 +648,76 @@ class Duration(object):
                 "'%s' should be integer." %
                 type(other).__name__
             )
-        new = self.copy()
+        new = self._copy()
         if self.get_is_in_weeks():
-            new.weeks //= other
+            new._weeks //= other
             return new
-        new.years //= other
-        new.months //= other
-        new.days //= other
-        new.hours //= other
-        new.minutes //= other
-        new.seconds //= other
+        new._years //= other
+        new._months //= other
+        new._days //= other
+        new._hours //= other
+        new._minutes //= other
+        new._seconds //= other
         return new
 
-    def __eq__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data == other_data
+    def __hash__(self) -> int:
+        # TODO: alt calendar modes
+        if self.get_is_in_weeks():
+            return hash((0, 0, self._get_non_nominal_seconds()))
+        return hash(
+            (self._years, self._months, self._get_non_nominal_seconds()))
 
-    def __ne__(self, other: "Duration") -> bool:
-        return not self.__eq__(other)
+    def __eq__(self, other: "Duration") -> bool:
+        if isinstance(other, Duration):
+            if self.is_exact():
+                if other.is_exact():
+                    return (self._get_non_nominal_seconds() ==
+                            other._get_non_nominal_seconds())
+                return False
+            return (
+                self._years == other._years and
+                self._months == other._months and
+                self._get_non_nominal_seconds() ==
+                other._get_non_nominal_seconds()
+            )
+        return NotImplemented
 
     def __lt__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data < other_data
+        if isinstance(other, Duration):
+            return self.get_days_and_seconds() < other.get_days_and_seconds()
+        return NotImplemented
 
     def __le__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data <= other_data
+        if isinstance(other, Duration):
+            return self.get_days_and_seconds() <= other.get_days_and_seconds()
+        return NotImplemented
 
     def __gt__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data > other_data
+        if isinstance(other, Duration):
+            return self.get_days_and_seconds() > other.get_days_and_seconds()
+        return NotImplemented
 
     def __ge__(self, other: "Duration") -> bool:
-        my_data = self.get_days_and_seconds()
-        other_data = other.get_days_and_seconds()
-        return my_data >= other_data
+        if isinstance(other, Duration):
+            return self.get_days_and_seconds() >= other.get_days_and_seconds()
+        return NotImplemented
 
     def __bool__(self):
-        for attr in ["years", "months", "weeks", "days", "hours",
-                     "minutes", "seconds"]:
+        for attr in self.__slots__:
             if getattr(self, attr, None):
                 return True
         return False
 
     def __str__(self):
+        if not self:
+            return "P0Y"
+
         start_string = "P"
         content_string = ""
 
         # Handle negative durations.
         is_fully_negative = False
-        for attribute in self.DATA_ATTRIBUTES:
+        for attribute in self.__slots__:
             attr_value = getattr(self, attribute)
             if attr_value is not None:
                 if attr_value > 0:
@@ -598,7 +731,7 @@ class Duration(object):
 
         # Weeks are not combined with any other unit.
         if self.get_is_in_weeks():
-            return (start_string + str(self.weeks) + "W").replace(".", ",")
+            return (start_string + str(self._weeks) + "W").replace(".", ",")
 
         for prop_, unit in [("years", "Y"), ("months", "M"), ("days", "D"),
                             ("hours", "H"), ("minutes", "M"),
@@ -612,15 +745,16 @@ class Duration(object):
             if prop_ == "days":
                 content_string += "T"
 
-        if content_string == "T":
-            # No content, zero duration.
-            content_string = "0Y"
-        elif content_string.endswith("T"):
+        if content_string.endswith("T"):
             # No time unit information, so strip the delimiter.
             content_string = content_string[:-1]
 
         total_string = start_string + content_string
         return total_string.replace(".", ",")
+
+    def __repr__(self):
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
 
 class TimeZone(Duration):
@@ -629,41 +763,70 @@ class TimeZone(Duration):
 
     Keyword arguments:
 
-    hours, minutes: integers (default 0) denoting the hour and minute
-        component of the offset from UTC. These may be positive, zero, or
-        negative, as required. Note that a negative UTC offset should have
-        both hours and minutes as zero or negative integers.
-    unknown: a boolean that represents an unknown TimeZone. Some
-        operations and comparisons may fail when this is True.
+    hours (int): The hour component of the offset from UTC. May be positive,
+        zero, or negative, as required.
+    minutes (int): The minute component offset from UTC. If the UTC offset is
+        negative, this should be negative if non-zero.
+    unknown (bool): If True, the returned instance represents an unknown
+        TimeZone. Some operations and comparisons may fail when this is True.
+    _is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation.
     """
 
-    __slots__ = ['unknown'] + Duration.__slots__
+    __slots__ = [*Duration.__slots__, "_unknown"]
 
-    def __init__(self, hours=0, minutes=0, unknown=False):
-        self.unknown = unknown
-        super(TimeZone, self).__init__(hours=hours, minutes=minutes)
+    to_weeks = property(doc='Unavailable/not inherited')
 
-    def copy(self):
-        """Return an unlinked copy of this instance."""
-        return TimeZone(hours=self.hours, minutes=self.minutes,
-                        unknown=self.unknown)
+    def __init__(self, hours=0, minutes=0, unknown=False,
+                 _is_empty_instance=False):
+        if _is_empty_instance:
+            return
+        if hours is None:
+            hours = 0
+        else:
+            hours = _int_caster(hours, "TimeZone hours")
+            _bounds_checker(hours, "TimeZone hours",
+                            min_val=-99, max_val=99)
+        if minutes is None:
+            minutes = 0
+        else:
+            minutes = _int_caster(minutes, "TimeZone minutes")
+            min_minutes = 1 - CALENDAR.MINUTES_IN_HOUR
+            max_minutes = CALENDAR.MINUTES_IN_HOUR - 1
+            if hours > 0:
+                min_minutes = 0
+            elif hours < 0:
+                max_minutes = 0
+            _bounds_checker(minutes, "TimeZone minutes",
+                            min_val=min_minutes, max_val=max_minutes)
+        self._unknown = unknown
+        self._hours = hours
+        self._minutes = minutes
+        for attr in ["_years", "_months", "_days", "_seconds"]:
+            setattr(self, attr, 0)
+        self._weeks = None
+
+    @property
+    def unknown(self): return self._unknown
+
+    def __hash__(self) -> int:
+        # TODO: Do we have to worry about the possibility of a hash collision
+        # between instances of two different classes?
+        return hash((self._unknown, self._hours, self._minutes))
 
     def __str__(self):
-        if self.unknown:
+        if self._unknown:
             return ""
-        if self.hours == 0 and self.minutes == 0:
+        if self._hours == 0 and self._minutes == 0:
             return "Z"
         else:
             time_string = "+%02d:%02d"
-            if self.hours < 0 or (self.hours == 0 and self.minutes < 0):
+            if self._hours < 0 or (self._hours == 0 and self._minutes < 0):
                 time_string = "-%02d:%02d"
-            return time_string % (abs(self.hours), abs(self.minutes))
-
-    def __repr__(self):
-        return "<isodatetime.data.TimeZone:" + repr(str(self)) + ">"
+            return time_string % (abs(self._hours), abs(self._minutes))
 
 
-class TimePoint(object):
+class TimePoint:
 
     """Represent an instant in time.
 
@@ -692,68 +855,65 @@ class TimePoint(object):
     expanded_year_digits (default 0) - an agreed-upon number of extra
         digits to represent the year, beyond the default of 4. For example,
         a value of 2 would suggest representing the year 2000 as 002000.
-    year - a positive or negative integer. Note that ISO 8601 implies
+    year (int): A positive or negative integer. Note that ISO 8601 implies
         using non-zero expanded_year_digits when using negative integers.
         Remember we are using the proleptic Gregorian calendar, with a year
         zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
         should be represented as -1.
-    month_of_year - an integer between 1 and 12 inclusive, if using the
+    month_of_year (int): An integer between 1 and 12 inclusive, if using the
         calendar date representation.
-    week_of_year - an integer between 1 and 52/53 (depending on the
+    week_of_year (int): An integer between 1 and 52/53 (depending on the
         year), if using the week date representation.
-    day_of_year - an integer between 1 and 365/366 (depending on the
+    day_of_year (int): An integer between 1 and 365/366 (depending on the
         year), if using the ordinal date representation.
-    day_of_month - an integer between 1 and 28/29/30/31 (depending on
+    day_of_month (int): An integer between 1 and 28/29/30/31 (depending on
         the month and year), if using the calendar date representation.
-    day_of_week - an integer between 1 and 7, if using the week date
+    day_of_week (int): An integer between 1 and 7, if using the week date
         representation.
-    hour_of_day - an integer between 0 and 24 (note: 24 represents midnight at
-        the end of the day, which is equivalent to 00/midnight the next day. If
-        24 is given, minute_of_hour must be 0)
-    hour_of_day_decimal - a float between 0 and 1, if using decimal
+    hour_of_day (int): An integer between 0 and 24 (note: 24 represents
+        midnight at the end of the day, which is equivalent to 00/midnight
+        the next day. If 24 is given, minute_of_hour must be 0).
+    hour_of_day_decimal (float): A float between 0 and 1, if using decimal
         accuracy for hours. Note that you should not provide lower units
         such as minute_of_hour or second_of_minute when using this.
-    minute_of_hour - an integer between 0 and 59.
-    minute_of_hour_decimal - a float between 0 and 1, if using decimal
+    minute_of_hour (int): An integer between 0 and 59.
+    minute_of_hour_decimal (float): A float between 0 and 1, if using decimal
         accuracy for minutes. Note that you should not provide lower units
         such as second_of_minute when using this.
-    second_of_minute - an integer between 0 and 59 (note: no support
-        for leap seconds at 60 yet)
-    second_of_minute_decimal - a float between 0 and 1, if using decimal
+    second_of_minute (int): An integer between 0 and 59 (note: no support
+        for leap seconds yet).
+    second_of_minute_decimal (float): A float between 0 and 1, if using decimal
         accuracy for seconds.
-    time_zone_hour - (default 0) an integer denoting the hour time zone
-        offset from UTC. Note that unless this is a truncated
-        representation, 0 will be assumed if this is not provided.
-    time_zone_minute - (default 0) an integer between 0 and 59 denoting
-        the minute component of the time zone offset from UTC.
-    dump_format - a custom format string to control the stringification
+    time_zone_hour (int): The hour component of the time zone offset from UTC,
+        between -99 and 99. The default is 0 unless this is a truncated
+        TimePoint.
+    time_zone_minute (int): The minute component of the time zone offset from
+        UTC. If the hour component is negative, this should be negative too.
+    dump_format (str): A custom format string to control the stringification
         of the timepoint. See isodatetime.parser_spec for more details.
-    truncated - (default False) a boolean denoting whether the
-        date/time instant has purposefully incomplete information
-        (ISO 8601:2000 truncation).
-    truncated_dump_format - a custom format string to control the
-        stringification of the timepoint if it is truncated. See
-        isodatetime.parser_spec for more details.
-    truncated_property - a string that can either be "year_of_decade"
-        or "year_of_century". This is used for truncated representations to
+    truncated (bool): Whether the date-time instant has purposefully incomplete
+        information (ISO 8601:2000 truncation). Default is False.
+    truncated_dump_format (str): A custom format to control the stringification
+        of the timepoint if it is truncated. See isodatetime.parser_spec for
+        more details.
+    truncated_property (str): Can either be "year_of_decade" or
+        "year_of_century". This is used for truncated representations to
         distinguish between the two ways of truncating the year.
-    is_empty_instance - if True, do not set any properties yet. These
-        should be set as part of a copy operation.
-    is_duration - for datetime-like durations syntax. If True the datetime
-        will not be checked to make sure values are within bounds, and if the
-        values of month_of_year, day_of_month etc are not supplied they will be
-        assumed to be 0 instead of 1.
+    is_empty_instance (bool): If True, do not set any properties yet. These
+        should be set as part of a copy operation. Default is False.
+    is_duration (bool): For datetime-like durations syntax. If True the
+        args will not be checked to make sure values are within bounds, and if
+        the values of month_of_year, day_of_month etc are not supplied they
+        will be assumed to be 0 instead of 1. Default is False.
     """
 
-    DATA_ATTRIBUTES = [
-        "expanded_year_digits", "year", "month_of_year",
-        "day_of_year", "day_of_month", "day_of_week",
-        "week_of_year", "hour_of_day", "minute_of_hour",
-        "second_of_minute", "truncated", "truncated_property",
-        "truncated_dump_format", "dump_format", "time_zone"
+    __slots__ = [
+        "_expanded_year_digits", "_year", "_month_of_year",
+        "_day_of_year", "_day_of_month", "_day_of_week",
+        "_week_of_year", "_hour_of_day", "_minute_of_hour",
+        "_second_of_minute", "_truncated", "_truncated_property",
+        "_truncated_dump_format", "_dump_format", "_time_zone"
     ]
-
-    __slots__ = DATA_ATTRIBUTES
 
     def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
                  week_of_year=None, day_of_year=None, day_of_month=None,
@@ -767,13 +927,12 @@ class TimePoint(object):
         if is_empty_instance:
             # This has been created for a copy - set properties later.
             return
-        if (dump_format is not None and not
-                isinstance(dump_format, str)):
+        if dump_format is not None and not isinstance(dump_format, str):
             raise BadInputError(
                 BadInputError.TYPE,
                 "dump_format", repr(dump_format), type(dump_format))
-        if (truncated_dump_format is not None and not
-                isinstance(truncated_dump_format, str)):
+        if (truncated_dump_format is not None and
+                not isinstance(truncated_dump_format, str)):
             raise BadInputError(
                 BadInputError.TYPE,
                 "truncated_dump_format", repr(truncated_dump_format),
@@ -801,38 +960,37 @@ class TimePoint(object):
              float),
             (second_of_minute, "second_of_minute", None, int, float),
             (second_of_minute_decimal, "second_of_minute_decimal", None, int,
-             float),
-            (time_zone_hour, "time_zone_hour", None, int),
-            (time_zone_minute, "time_zone_minute", None, int)
+             float)
         )
-        self.dump_format = dump_format
-        self.expanded_year_digits = _int_caster(expanded_year_digits,
-                                                "expanded_year_digits")
-        self.truncated = truncated
-        self.truncated_dump_format = truncated_dump_format
-        self.truncated_property = truncated_property
-        self.year = _int_caster(year, "year", allow_none=True)
-        self.month_of_year = _int_caster(month_of_year, "year",
+        self._dump_format = dump_format
+        self._expanded_year_digits = _int_caster(expanded_year_digits,
+                                                 "expanded_year_digits")
+        self._truncated = truncated
+        self._truncated_dump_format = truncated_dump_format
+        self._truncated_property = truncated_property
+
+        self._year = _int_caster(year, "year", allow_none=True)
+        self._month_of_year = _int_caster(month_of_year, "year",
+                                          allow_none=True)
+        self._day_of_year = _int_caster(day_of_year, "day_of_year",
+                                        allow_none=True)
+        self._day_of_month = _int_caster(day_of_month, "day_of_month",
                                          allow_none=True)
-        self.day_of_year = _int_caster(day_of_year, "day_of_year",
-                                       allow_none=True)
-        self.day_of_month = _int_caster(day_of_month, "day_of_month",
+        self._day_of_week = _int_caster(day_of_week, "day_of_week",
                                         allow_none=True)
-        self.day_of_week = _int_caster(day_of_week, "day_of_week",
-                                       allow_none=True)
-        self.week_of_year = _int_caster(week_of_year, "week_of_year",
+        self._week_of_year = _int_caster(week_of_year, "week_of_year",
+                                         allow_none=True)
+        self._hour_of_day = _int_caster(hour_of_day, "hour_of_day",
                                         allow_none=True)
-        self.hour_of_day = _int_caster(hour_of_day, "hour_of_day",
-                                       allow_none=True)
         if hour_of_day_decimal is not None:
-            if self.hour_of_day is None:
+            if self._hour_of_day is None:
                 raise BadInputError(
                     BadInputError.MISSING, "hour_of_day_decimal",
                     "hour_of_day")
             hour_of_day_decimal = float(hour_of_day_decimal)
             _bounds_checker(hour_of_day_decimal, "hour_of_day_decimal",
                             min_val=0, upper_val=1)
-            self.hour_of_day += hour_of_day_decimal
+            self._hour_of_day += hour_of_day_decimal
             if minute_of_hour is not None:
                 raise BadInputError(
                     BadInputError.CONFLICT, "minute_of_hour",
@@ -846,18 +1004,18 @@ class TimePoint(object):
                 raise BadInputError(
                     BadInputError.MISSING, "minute_of_hour_decimal",
                     "minute_of_hour")
-            self.minute_of_hour = _int_caster(
+            self._minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour")
             minute_of_hour_decimal = float(minute_of_hour_decimal)
             _bounds_checker(minute_of_hour_decimal, "minute_of_hour_decimal",
                             min_val=0, upper_val=1)
-            self.minute_of_hour += minute_of_hour_decimal
+            self._minute_of_hour += minute_of_hour_decimal
             if second_of_minute is not None:
                 raise BadInputError(
                     BadInputError.CONFLICT, "second_of_minute",
                     "minute_of_hour_decimal")
         else:
-            self.minute_of_hour = _int_caster(
+            self._minute_of_hour = _int_caster(
                 minute_of_hour, "minute_of_hour", allow_none=True)
         if second_of_minute_decimal is not None:
             if second_of_minute is None:
@@ -865,94 +1023,135 @@ class TimePoint(object):
                     BadInputError.MISSING,
                     "second_of_minute_decimal",
                     "second_of_minute")
-            self.second_of_minute = _int_caster(second_of_minute,
-                                                "second_of_minute")
+            self._second_of_minute = _int_caster(second_of_minute,
+                                                 "second_of_minute")
             second_of_minute_decimal = float(second_of_minute_decimal)
             _bounds_checker(second_of_minute_decimal,
                             "second_of_minute_decimal", min_val=0, upper_val=1)
-            self.second_of_minute += second_of_minute_decimal
+            self._second_of_minute += second_of_minute_decimal
         else:
-            self.second_of_minute = _int_caster(second_of_minute,
-                                                "second_of_minute",
-                                                allow_none=True)
-        if not self.truncated:
-            if self.hour_of_day is None:
-                self.hour_of_day = 0
-            if hour_of_day_decimal is None and self.minute_of_hour is None:
-                self.minute_of_hour = 0
+            self._second_of_minute = _int_caster(
+                second_of_minute, "second_of_minute", allow_none=True)
+        if not self._truncated:
+            if self._hour_of_day is None:
+                self._hour_of_day = 0
+            if hour_of_day_decimal is None and self._minute_of_hour is None:
+                self._minute_of_hour = 0
             if (hour_of_day_decimal is None and
                     minute_of_hour_decimal is None and
-                    self.second_of_minute is None):
-                self.second_of_minute = 0
-        self.time_zone = TimeZone()
-        has_unknown_tz = True
-        if time_zone_hour is not None:
-            has_unknown_tz = False
-            self.time_zone.hours = _int_caster(time_zone_hour,
-                                               "time_zone_hour")
-        if time_zone_minute is not None:
-            has_unknown_tz = False
-            self.time_zone.minutes = _int_caster(time_zone_minute,
-                                                 "time_zone_minute")
-        self.time_zone.unknown = self.truncated and has_unknown_tz
+                    self._second_of_minute is None):
+                self._second_of_minute = 0
 
-        specified_month = self.month_of_year or self.day_of_month
-        specified_week = self.week_of_year or self.day_of_week
-        if specified_month is not None and specified_week is not None:
+        has_unknown_tz = self._truncated and not (
+            time_zone_hour is not None or time_zone_minute is not None)
+        self._time_zone = TimeZone(hours=time_zone_hour,
+                                   minutes=time_zone_minute,
+                                   unknown=has_unknown_tz)
+
+        month_is_specified = bool(self._month_of_year or self._day_of_month)
+        week_is_specified = bool(self._week_of_year or self._day_of_week)
+        if month_is_specified and week_is_specified:
             raise BadInputError(BadInputError.CONFLICT,
                                 "[week_of_year or day_of_week]",
                                 "[month_of_year or day_of_month]")
-        if specified_month is not None and self.day_of_year is not None:
+        if month_is_specified and self._day_of_year is not None:
             raise BadInputError(BadInputError.CONFLICT,
                                 "day_of_year",
                                 "[month_of_year or day_of_month]")
-        if specified_week is not None and self.day_of_year is not None:
+        if week_is_specified and self._day_of_year is not None:
             raise BadInputError(BadInputError.CONFLICT,
                                 "day_of_year",
                                 "[week_of_year or day_of_week]")
         if not is_duration:
-            if not self.truncated and self.day_of_year is None:
-                if specified_week is None:
-                    if self.month_of_year is None:
-                        self.month_of_year = 1
-                    if self.day_of_month is None:
-                        self.day_of_month = 1
+            if not self._truncated and self._day_of_year is None:
+                if not week_is_specified:
+                    if self._month_of_year is None:
+                        self._month_of_year = 1
+                    if self._day_of_month is None:
+                        self._day_of_month = 1
                 else:
-                    if self.week_of_year is None:
-                        self.week_of_year = 1
-                    if self.day_of_week is None:
-                        self.day_of_week = 1
-            self.check_bounds()
+                    if self._week_of_year is None:
+                        self._week_of_year = 1
+                    if self._day_of_week is None:
+                        self._day_of_week = 1
+            self._check_bounds()
+
+    @property
+    def expanded_year_digits(self): return self._expanded_year_digits
+
+    @property
+    def year(self): return self._year
+
+    @property
+    def month_of_year(self): return self._month_of_year
+
+    @property
+    def week_of_year(self): return self._week_of_year
+
+    @property
+    def day_of_year(self): return self._day_of_year
+
+    @property
+    def day_of_month(self): return self._day_of_month
+
+    @property
+    def day_of_week(self): return self._day_of_week
+
+    @property
+    def hour_of_day(self): return self._hour_of_day
+
+    @property
+    def minute_of_hour(self): return self._minute_of_hour
+
+    @property
+    def second_of_minute(self): return self._second_of_minute
+
+    @property
+    def time_zone(self): return self._time_zone
+    # NOTE: returns linked instance of TimeZone, but it shouldn't matter
+    # because TimeZone is immutable
+
+    @property
+    def truncated(self): return self._truncated
+
+    @property
+    def truncated_property(self): return self._truncated_property
+
+    @property
+    def truncated_dump_format(self): return self._truncated_dump_format
+
+    @property
+    def dump_format(self): return self._dump_format
 
     def get_is_calendar_date(self):
         """Return whether this is in years, month-of-year, day-of-month."""
-        return self.month_of_year is not None
+        return self._month_of_year is not None
 
     def get_is_ordinal_date(self):
         """Return whether this is in years, day-of-the year format."""
-        return self.day_of_year is not None
+        return self._day_of_year is not None
 
     def get_is_week_date(self):
         """Return whether this is in years, week-of-year, day-of-week."""
-        return self.week_of_year is not None
+        return self._week_of_year is not None
 
     def get_calendar_date(self):
         """Return the year, month-of-year and day-of-month for this date."""
         if self.get_is_calendar_date():
-            return self.year, self.month_of_year, self.day_of_month
+            return self._year, self._month_of_year, self._day_of_month
         if self.get_is_ordinal_date():
-            return get_calendar_date_from_ordinal_date(self.year,
-                                                       self.day_of_year)
+            return get_calendar_date_from_ordinal_date(self._year,
+                                                       self._day_of_year)
         if self.get_is_week_date():
-            return get_calendar_date_from_week_date(self.year,
-                                                    self.week_of_year,
-                                                    self.day_of_week)
+            return get_calendar_date_from_week_date(self._year,
+                                                    self._week_of_year,
+                                                    self._day_of_week)
 
     def get_hour_minute_second(self):
         """Return the time of day expressed in hours, minutes, seconds."""
-        hour_of_day = self.hour_of_day
-        minute_of_hour = self.minute_of_hour
-        second_of_minute = self.second_of_minute
+        hour_of_day = self._hour_of_day
+        minute_of_hour = self._minute_of_hour
+        second_of_minute = self._second_of_minute
         if second_of_minute is None:
             if minute_of_hour is None:
                 hour_decimals = hour_of_day - int(hour_of_day)
@@ -966,86 +1165,86 @@ class TimePoint(object):
     def get_ordinal_date(self):
         """Return the year, day-of-year for this date."""
         if self.get_is_calendar_date():
-            return get_ordinal_date_from_calendar_date(self.year,
-                                                       self.month_of_year,
-                                                       self.day_of_month)
+            return get_ordinal_date_from_calendar_date(self._year,
+                                                       self._month_of_year,
+                                                       self._day_of_month)
         if self.get_is_ordinal_date():
-            return self.year, self.day_of_year
+            return self._year, self._day_of_year
         if self.get_is_week_date():
-            return get_ordinal_date_from_week_date(self.year,
-                                                   self.week_of_year,
-                                                   self.day_of_week)
+            return get_ordinal_date_from_week_date(self._year,
+                                                   self._week_of_year,
+                                                   self._day_of_week)
 
     def get(self, property_name):
         """Return a calculated value for property name."""
         if property_name == "expanded_year_digits":
-            return abs(self.year) / 10000
+            return abs(self._year) / 10000  # FIXME: what's the meaning of this
         if property_name == "year_sign":
-            return "+" if self.year >= 0 else "-"
+            return "+" if self._year >= 0 else "-"
         if property_name == "century":
-            return (abs(self.year) % 10000) // 100
+            return (abs(self._year) % 10000) // 100
         if property_name == "year_of_century":
-            return abs(self.year) % 100
+            return abs(self._year) % 100
         if property_name == "month_of_year":
-            if self.month_of_year is not None:
-                return self.month_of_year
+            if self._month_of_year is not None:
+                return self._month_of_year
             return self.get_calendar_date()[1]
         if property_name == "day_of_year":
-            if self.day_of_year is not None:
-                return self.day_of_year
+            if self._day_of_year is not None:
+                return self._day_of_year
             return self.get_ordinal_date()[1]
         if property_name == "day_of_month":
-            if self.day_of_month is not None:
-                return self.day_of_month
+            if self._day_of_month is not None:
+                return self._day_of_month
             return self.get_calendar_date()[2]
         if property_name == "week_of_year":
-            if self.week_of_year is not None:
-                return self.week_of_year
+            if self._week_of_year is not None:
+                return self._week_of_year
             return self.get_week_date()[1]
         if property_name == "day_of_week":
-            if self.day_of_week is not None:
-                return self.day_of_week
+            if self._day_of_week is not None:
+                return self._day_of_week
             return self.get_week_date()[2]
         if property_name == "year_of_decade":
-            return abs(self.year) % 10
+            return abs(self._year) % 10
         if property_name == "decade_of_century":
-            return (abs(self.year) % 100 - abs(self.year) % 10) // 10
+            return (abs(self._year) % 100 - abs(self._year) % 10) // 10
         if property_name == "minute_of_hour":
-            if self.minute_of_hour is None:
+            if self._minute_of_hour is None:
                 return self.get_hour_minute_second()[1]
-            return int(self.minute_of_hour)
+            return int(self._minute_of_hour)
         if property_name == "hour_of_day":
-            return int(self.hour_of_day)
+            return int(self._hour_of_day)
         if property_name == "hour_of_day_decimal_string":
-            string = "%f" % (float(self.hour_of_day) - int(self.hour_of_day))
+            string = "%f" % (float(self._hour_of_day) - int(self._hour_of_day))
             string = string.replace("0.", "", 1).rstrip("0")
             if not string:
                 return "0"
             return string
         if property_name == "minute_of_hour_decimal_string":
-            string = "%f" % (float(self.minute_of_hour) -
-                             int(self.minute_of_hour))
+            string = "%f" % (float(self._minute_of_hour) -
+                             int(self._minute_of_hour))
             string = string.replace("0.", "", 1).rstrip("0")
             if not string:
                 return "0"
             return string
         if property_name == "second_of_minute":
-            if self.second_of_minute is None:
+            if self._second_of_minute is None:
                 return self.get_hour_minute_second()[2]
-            return int(self.second_of_minute)
+            return int(self._second_of_minute)
         if property_name == "second_of_minute_decimal_string":
-            string = "%f" % (float(self.second_of_minute) -
-                             int(self.second_of_minute))
+            string = "%f" % (float(self._second_of_minute) -
+                             int(self._second_of_minute))
             string = string.replace("0.", "", 1).rstrip("0")
             if not string:
                 return "0"
             return string
         if property_name == "time_zone_minute_abs":
-            return abs(self.time_zone.minutes)
+            return abs(self._time_zone._minutes)
         if property_name == "time_zone_hour_abs":
-            return abs(self.time_zone.hours)
+            return abs(self._time_zone._hours)
         if property_name == "time_zone_sign":
-            if self.time_zone.hours < 0 or self.time_zone.minutes < 0:
+            if self._time_zone._hours < 0 or self._time_zone._minutes < 0:
                 return "-"
             return "+"
         if property_name == "seconds_since_unix_epoch":
@@ -1060,111 +1259,108 @@ class TimePoint(object):
     def get_second_of_day(self):
         """Return the seconds elapsed since the start of the day."""
         second_of_day = 0
-        if self.second_of_minute is not None:
-            second_of_day += self.second_of_minute
-        if self.minute_of_hour is not None:
-            second_of_day += self.minute_of_hour * CALENDAR.SECONDS_IN_MINUTE
-        second_of_day += self.hour_of_day * CALENDAR.SECONDS_IN_HOUR
+        if self._second_of_minute is not None:
+            second_of_day += self._second_of_minute
+        if self._minute_of_hour is not None:
+            second_of_day += self._minute_of_hour * CALENDAR.SECONDS_IN_MINUTE
+        second_of_day += self._hour_of_day * CALENDAR.SECONDS_IN_HOUR
         return second_of_day
 
-    def get_time_zone(self):
-        """Return the time_zone offset from UTC as a duration."""
-        return self.time_zone
-
-    def get_time_zone_utc(self):
+    def get_time_zone_utc(self) -> bool:
+        # FIXME: Misleading name
         """Return whether the time zone is explicitly in UTC."""
-        if self.time_zone.unknown:
+        if self._time_zone._unknown:
             return False
-        return self.time_zone.hours == 0 and self.time_zone.minutes == 0
+        return self._time_zone._hours == 0 and self._time_zone._minutes == 0
 
     def get_week_date(self):
         """Return the year, week-of-year, day-of-week for this date."""
         if self.get_is_calendar_date():
-            return get_week_date_from_calendar_date(self.year,
-                                                    self.month_of_year,
-                                                    self.day_of_month)
+            return get_week_date_from_calendar_date(self._year,
+                                                    self._month_of_year,
+                                                    self._day_of_month)
         if self.get_is_ordinal_date():
-            return get_week_date_from_ordinal_date(self.year,
-                                                   self.day_of_year)
+            return get_week_date_from_ordinal_date(self._year,
+                                                   self._day_of_year)
         if self.get_is_week_date():
-            return self.year, self.week_of_year, self.day_of_week
+            return self._year, self._week_of_year, self._day_of_week
 
-    def apply_time_zone_offset(self, offset):
-        """Apply a time zone shift represented by a Duration."""
-        if offset.minutes:
-            if self.minute_of_hour is None:
-                self.hour_of_day += (
-                    offset.minutes / float(CALENDAR.MINUTES_IN_HOUR))
-            else:
-                self.minute_of_hour += offset.minutes
-            self.tick_over()
-        if offset.hours:
-            self.hour_of_day += offset.hours
-            self.tick_over()
+    def get_time_zone_offset(self, other: "TimePoint") -> "Duration":
+        """Get the difference in hours and minutes between time zones.
 
-    def get_time_zone_offset(self, other):
-        """Get the difference in hours and minutes between time zones."""
-        if other.get_time_zone().unknown or self.get_time_zone().unknown:
-            return Duration()
-        return other.get_time_zone() - self.get_time_zone()
-
-    def set_time_zone(self, dest_time_zone):
-        """Adjust to the new time zone.
-
-        dest_time_zone should be a TimeZone instance expressing difference
-        from UTC, if any.
-
+        Args:
+            other (TimePoint): The TimePoint to get the offset with respect to.
         """
-        if dest_time_zone.unknown:
-            return
-        self.apply_time_zone_offset(dest_time_zone - self.get_time_zone())
-        self.time_zone = dest_time_zone
+        # TODO: unit test?
+        if other._time_zone._unknown or self._time_zone._unknown:
+            return Duration()
+        return other._time_zone - self._time_zone
 
-    def set_time_zone_to_local(self):
-        """Set the time zone to the local time zone, if it's not already."""
+    def to_time_zone(self, dest_time_zone: "TimeZone") -> "TimePoint":
+        """Return a copy of this TimePoint in the specified time zone.
+
+        Args:
+            dest_time_zone (TimeZone): The new time zone (a TimeZone instance).
+        """
+        if dest_time_zone._unknown:
+            return self
+        new = self + (dest_time_zone - self._time_zone)
+        new._time_zone = dest_time_zone
+        return new
+
+    def to_local_time_zone(self) -> "TimePoint":
+        """Return a copy of this TimePoint in the local time zone."""
         local_hours, local_minutes = timezone.get_local_time_zone()
-        self.set_time_zone(TimeZone(hours=local_hours, minutes=local_minutes))
+        return self.to_time_zone(
+            TimeZone(hours=local_hours, minutes=local_minutes))
 
-    def set_time_zone_to_utc(self):
-        """Set the time zone to UTC, if it's not already."""
-        self.set_time_zone(TimeZone(hours=0, minutes=0))
+    def to_utc(self) -> "TimePoint":
+        """Return a copy of this TimePoint in the UTC time zone."""
+        return self.to_time_zone(TimeZone(hours=0, minutes=0))
 
-    def to_calendar_date(self):
-        """Reformat the date in years, month-of-year, day-of-month."""
-        year, month, day = self.get_calendar_date()
-        self.year, self.month_of_year, self.day_of_month = year, month, day
-        self.day_of_year = None
-        self.week_of_year = None
-        self.day_of_week = None
-        return self
+    def to_calendar_date(self) -> "TimePoint":
+        """Return a copy of this TimePoint reformatted in years, month-of-year
+        and day-of-month."""
+        if self.get_is_calendar_date():
+            return self
+        new = self._copy()
+        new._year, new._month_of_year, new._day_of_month = (
+            self.get_calendar_date())
+        new._day_of_year = None
+        new._week_of_year, new._day_of_week = (None, None)
+        return new
 
-    def to_hour_minute_second(self):
-        """Expand time fractions into hours, minutes, seconds."""
-        hour, minute, second = self.get_hour_minute_second()
-        self.hour_of_day = hour
-        self.minute_of_hour = minute
-        self.second_of_minute = second
+    def to_hour_minute_second(self) -> "TimePoint":
+        """Return a copy of this TimePoint with any time fractions expanded
+        into hours, minutes and seconds."""
+        new = self._copy()
+        new._hour_of_day, new._minute_of_hour, new._second_of_minute = (
+            self.get_hour_minute_second())
+        return new
 
-    def to_week_date(self):
-        """Reformat the date in years, week-of-year, day-of-week."""
-        self.year, self.week_of_year, self.day_of_week = self.get_week_date()
-        self.day_of_year = None
-        self.month_of_year = None
-        self.day_of_month = None
-        return self
+    def to_week_date(self) -> "TimePoint":
+        """Return a copy of this TimePoint reformatted in years, week-of-year
+        and day-of-week."""
+        if self.get_is_week_date():
+            return self
+        new = self._copy()
+        new._year, new._week_of_year, new._day_of_week = self.get_week_date()
+        new._day_of_year = None
+        new._month_of_year, new._day_of_month = (None, None)
+        return new
 
-    def to_ordinal_date(self):
-        """Reformat the date in years and day-of-the-year."""
-        self.year, self.day_of_year = self.get_ordinal_date()
-        self.month_of_year = None
-        self.day_of_month = None
-        self.week_of_year = None
-        self.day_of_week = None
-        return self
+    def to_ordinal_date(self) -> "TimePoint":
+        """Return a copy of this TimePoint reformatted in years and
+        day-of-the-year."""
+        new = self._copy()
+        new._year, new._day_of_year = self.get_ordinal_date()
+        new._month_of_year, new._day_of_month = (None, None)
+        new._week_of_year, new._day_of_week = (None, None)
+        return new
 
     def get_largest_truncated_property_name(self):
         """Return the largest unit in a truncated representation."""
-        if not self.truncated:
+        if not self._truncated:
             return None
         prop_dict = self.get_truncated_properties()
         for attr in ["year_of_century", "year_of_decade", "month_of_year",
@@ -1176,9 +1372,8 @@ class TimePoint(object):
         return None
 
     def get_smallest_missing_property_name(self):
-        """Return the smallest unit missing
-        from a truncated representation."""
-        if not self.truncated:
+        """Return the smallest unit missing from a truncated representation."""
+        if not self._truncated:
             return None
         prop_dict = self.get_truncated_properties()
         attr_list = (("year_of_century", "century"),
@@ -1198,13 +1393,13 @@ class TimePoint(object):
 
     def get_truncated_properties(self):
         """Return a map of properties if this is a truncated representation."""
-        if not self.truncated:
+        if not self._truncated:
             return None
         props = {}
-        if self.truncated_property == "year_of_decade":
-            props.update({"year_of_decade": self.year % 10})
-        if self.truncated_property == "year_of_century":
-            props.update({"year_of_century": self.year % 100})
+        if self._truncated_property == "year_of_decade":
+            props.update({"year_of_decade": self._year % 10})
+        if self._truncated_property == "year_of_century":
+            props.update({"year_of_century": self._year % 100})
         for attr in ["month_of_year", "week_of_year", "day_of_year",
                      "day_of_month", "day_of_week", "hour_of_day",
                      "minute_of_hour", "second_of_minute"]:
@@ -1217,314 +1412,222 @@ class TimePoint(object):
                       month_of_year=None, week_of_year=None, day_of_year=None,
                       day_of_month=None, day_of_week=None, hour_of_day=None,
                       minute_of_hour=None, second_of_minute=None):
-        """Combine this TimePoint with truncated time properties."""
-        new = self.copy()
+        """Returns a copy of this TimePoint with truncated time properties
+        added to it."""
+        new = self._copy()
         if hour_of_day is not None and minute_of_hour is None:
             minute_of_hour = 0
         if ((hour_of_day is not None or minute_of_hour is not None) and
                 second_of_minute is None):
             second_of_minute = 0
         if second_of_minute is not None or minute_of_hour is not None:
-            new.to_hour_minute_second()
+            new = new.to_hour_minute_second()
         if second_of_minute is not None:
-            while new.second_of_minute != second_of_minute:
-                new.second_of_minute += 1.0
-                new.tick_over()
+            while new._second_of_minute != second_of_minute:
+                new._second_of_minute += 1.0
+                new._tick_over()
         if minute_of_hour is not None:
-            while new.minute_of_hour != minute_of_hour:
-                new.minute_of_hour += 1.0
-                new.tick_over()
+            while new._minute_of_hour != minute_of_hour:
+                new._minute_of_hour += 1.0
+                new._tick_over()
         if hour_of_day is not None:
-            while new.hour_of_day != hour_of_day:
-                new.hour_of_day += 1.0
-                new.tick_over()
+            while new._hour_of_day != hour_of_day:
+                new._hour_of_day += 1.0
+                new._tick_over()
         if day_of_week is not None:
-            new.to_week_date()
-            while new.day_of_week != day_of_week:
-                new.day_of_week += 1
-                new.tick_over()
+            new = new.to_week_date()
+            while new._day_of_week != day_of_week:
+                new._day_of_week += 1
+                new._tick_over()
         if day_of_month is not None:
-            new.to_calendar_date()
-            while new.day_of_month != day_of_month:
-                new.day_of_month += 1
-                new.tick_over()
+            new = new.to_calendar_date()
+            while new._day_of_month != day_of_month:
+                new._day_of_month += 1
+                new._tick_over()
         if day_of_year is not None:
-            new.to_ordinal_date()
-            while new.day_of_year != day_of_year:
-                new.day_of_year += 1
-                new.tick_over()
+            new = new.to_ordinal_date()
+            while new._day_of_year != day_of_year:
+                new._day_of_year += 1
+                new._tick_over()
         if week_of_year is not None:
-            new.to_week_date()
-            while new.week_of_year != week_of_year:
-                new.week_of_year += 1
-                new.tick_over()
+            new = new.to_week_date()
+            while new._week_of_year != week_of_year:
+                new._week_of_year += 1
+                new._tick_over()
         if month_of_year is not None:
-            new.to_calendar_date()
-            while new.month_of_year != month_of_year:
-                new.month_of_year += 1
-                new.tick_over()
+            new = new.to_calendar_date()
+            while new._month_of_year != month_of_year:
+                new._month_of_year += 1
+                new._tick_over()
         if year_of_decade is not None:
-            new.to_calendar_date()
-            new_year_of_decade = new.year % 10
+            new = new.to_calendar_date()
+            new_year_of_decade = new._year % 10
             while new_year_of_decade != year_of_decade:
-                new.year += 1
-                new_year_of_decade = new.year % 10
+                new._year += 1
+                new_year_of_decade = new._year % 10
         if year_of_century is not None:
-            new.to_calendar_date()
-            new_year_of_century = new.year % 100
+            new = new.to_calendar_date()
+            new_year_of_century = new._year % 100
             while new_year_of_century != year_of_century:
-                new.year += 1
-                new_year_of_century = new.year % 100
+                new._year += 1
+                new_year_of_century = new._year % 100
         return new
 
-    def __add__(self, other, no_copy=False):
+    def __add__(self, other) -> "TimePoint":
         if isinstance(other, TimePoint):
-            if self.truncated and not other.truncated:
-                new = self.copy()
-                new_other = other.copy()
-                prev_time_zone = new_other.get_time_zone()
-                new_other.set_time_zone(new.get_time_zone())
-                new_other = new_other.add_truncated(
-                    **new.get_truncated_properties())
-                new_other.set_time_zone(prev_time_zone)
-                return new_other
-            if other.truncated and not self.truncated:
+            if self._truncated and not other._truncated:
+                new = other.to_time_zone(self._time_zone)
+                new = new.add_truncated(**self.get_truncated_properties())
+                return new.to_time_zone(other._time_zone)
+            if other._truncated and not self._truncated:
                 return other + self
         if not isinstance(other, Duration):
-            raise TypeError(
+            raise ValueError(
                 "Invalid addition: can only add Duration or "
                 "truncated TimePoint to TimePoint.")
         duration = other
         if duration.get_is_in_weeks():
-            duration = other.copy()
-            duration.to_days()
-        if no_copy:
-            new = self
-        else:
-            new = self.copy()
-        if duration.seconds:
-            if new.second_of_minute is None:
-                if new.minute_of_hour is None:
-                    new.hour_of_day += (
-                        duration.seconds / float(CALENDAR.SECONDS_IN_HOUR))
+            duration = duration.to_days()
+        new = self._copy()
+        if duration._seconds:
+            if new._second_of_minute is None:
+                if new._minute_of_hour is None:
+                    new._hour_of_day += (
+                        duration._seconds / float(CALENDAR.SECONDS_IN_HOUR))
                 else:
-                    new.minute_of_hour += (
-                        duration.seconds / float(CALENDAR.SECONDS_IN_MINUTE))
+                    new._minute_of_hour += (
+                        duration._seconds / float(CALENDAR.SECONDS_IN_MINUTE))
             else:
-                new.second_of_minute += duration.seconds
-            new.tick_over()
-        if duration.minutes:
-            if new.minute_of_hour is None:
-                new.hour_of_day += (
-                    duration.minutes / float(CALENDAR.MINUTES_IN_HOUR))
+                new._second_of_minute += duration._seconds
+            new._tick_over()
+        # FIXME: self._tick_over() broken for truncated TimePoints: issue #168
+        if duration._minutes:
+            if new._minute_of_hour is None:
+                new._hour_of_day += (
+                    duration._minutes / float(CALENDAR.MINUTES_IN_HOUR))
             else:
-                new.minute_of_hour += duration.minutes
-            new.tick_over()
-        if duration.hours:
-            new.hour_of_day += duration.hours
-            new.tick_over()
-        if duration.days:
+                new._minute_of_hour += duration._minutes
+            new._tick_over()
+        if duration._hours:
+            new._hour_of_day += duration._hours
+            new._tick_over()
+        if duration._days:
             if new.get_is_calendar_date():
-                new.day_of_month += duration.days
+                new._day_of_month += duration._days
             elif new.get_is_ordinal_date():
-                new.day_of_year += duration.days
+                new._day_of_year += duration._days
             else:
-                new.day_of_week += duration.days
-            new.tick_over()
-        if duration.months:
+                new._day_of_week += duration._days
+            new._tick_over()
+        if duration._months:
             # This is the dangerous one...
-            new.add_months(duration.months)
-        if duration.years:
-            new.year += duration.years
+            new = new.add_months(duration._months)
+        if duration._years:
+            new._year += duration._years
             if new.get_is_calendar_date():
                 month_index = (
-                    (new.month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR)
-                if get_is_leap_year(new.year):
+                    (new._month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR)
+                if get_is_leap_year(new._year):
                     max_day_in_new_month = (
                         CALENDAR.DAYS_IN_MONTHS_LEAP[month_index])
                 else:
                     max_day_in_new_month = (
                         CALENDAR.DAYS_IN_MONTHS[month_index])
-                if new.day_of_month > max_day_in_new_month:
+                if new._day_of_month > max_day_in_new_month:
                     # For example, when Feb 29 - 1 year = Feb 28.
-                    new.day_of_month = max_day_in_new_month
+                    new._day_of_month = max_day_in_new_month
             elif new.get_is_ordinal_date():
-                max_days_in_year = get_days_in_year(new.year)
-                if max_days_in_year < new.day_of_year:
-                    new.day_of_year = max_days_in_year
+                max_days_in_year = get_days_in_year(new._year)
+                if max_days_in_year < new._day_of_year:
+                    new._day_of_year = max_days_in_year
             elif new.get_is_week_date():
-                max_weeks_in_year = get_weeks_in_year(new.year)
-                if max_weeks_in_year < new.week_of_year:
-                    new.week_of_year = max_weeks_in_year
+                max_weeks_in_year = get_weeks_in_year(new._year)
+                if max_weeks_in_year < new._week_of_year:
+                    new._week_of_year = max_weeks_in_year
         return new
 
-    def copy(self):
-        """Copy this TimePoint without leaving references."""
-        dummy_timepoint = TimePoint(is_empty_instance=True)
-        for attr in self.DATA_ATTRIBUTES:
-            setattr(dummy_timepoint, attr, getattr(self, attr))
-        dummy_timepoint.time_zone = self.time_zone.copy()
-        return dummy_timepoint
+    def _copy(self) -> "TimePoint":
+        """Returns an unlinked copy of this instance."""
+        new_timepoint = TimePoint(is_empty_instance=True)
+        for attr in self.__slots__:
+            setattr(new_timepoint, attr, getattr(self, attr))
+        new_timepoint._time_zone = self._time_zone._copy()
+        return new_timepoint
 
-    def get_props(self):
-        """Return the data properties of this TimePoint."""
-        hash_ = []
-        for attr in self.DATA_ATTRIBUTES:
+    def get_props(self) -> list:
+        """Return the data properties of this TimePoint as a list of tuples."""
+        props = []
+        for attr in self.__slots__:
             value = getattr(self, attr, None)
-            if callable(getattr(value, "copy", None)):
-                value = value.copy()
-            hash_.append((attr, value))
-        return hash_
+            if callable(getattr(value, "_copy", None)):
+                value = value._copy()
+            props.append((attr[1:], value))
+            # Have sliced attr string to remove leading underscore
+        return props
+
+    def __hash__(self) -> int:
+        if self._truncated:
+            # TODO: Convert truncated TimePoints to UTC when not buggy
+            return hash(
+                tuple(getattr(self, attr) for attr in self.__slots__))
+        point = self.to_utc()
+        return hash((*point.get_calendar_date(),
+                     *point.get_hour_minute_second()))
+
+    def _cmp(self, other: "TimePoint", op: str) -> bool:
+        """Compare self with other, using the chosen operator.
+
+        Args:
+            op: The comparison operator/method, one of ["eq", "lt", "le",
+                "gt", "ge"].
+        """
+        if not isinstance(other, TimePoint):
+            return NotImplemented
+        if self._truncated != other._truncated:
+            raise ValueError(
+                "Cannot compare truncated to non-truncated "
+                "TimePoint: {0}, {1}".format(self, other))
+        if self.get_props() == other.get_props():
+            return True if op in ["eq", "le", "ge"] else False
+        if self._truncated:
+            # TODO: Convert truncated TimePoints to UTC when not buggy
+            for attribute in self.__slots__:
+                self_attr = getattr(self, attribute)
+                other_attr = getattr(other, attribute)
+                if self_attr != other_attr:
+                    return _operator_map[op](self_attr, other_attr)
+            return True
+        other = other.to_time_zone(self._time_zone)
+        if self.get_is_calendar_date():
+            my_date = self.get_calendar_date()
+            other_date = other.get_calendar_date()
+        else:
+            my_date = self.get_ordinal_date()
+            other_date = other.get_ordinal_date()
+        my_datetime = [*my_date, self.get_second_of_day()]
+        other_datetime = [*other_date, other.get_second_of_day()]
+        return _operator_map[op](my_datetime, other_datetime)
 
     def __eq__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return True
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr == other_attr
-            return True
-        other = other.copy()
-        other.set_time_zone(self.get_time_zone())
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime == other_datetime
-
-    def __ne__(self, other: "TimePoint") -> bool:
-        return not self.__eq__(other)
+        return self._cmp(other, "eq")
 
     def __lt__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return False
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr < other_attr
-            return True
-        other = other.copy()
-        other.set_time_zone(self.get_time_zone())
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime < other_datetime
+        return self._cmp(other, "lt")
 
     def __le__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return True
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr <= other_attr
-            return True
-        other = other.copy()
-        other.set_time_zone(self.get_time_zone())
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime <= other_datetime
+        return self._cmp(other, "le")
 
     def __gt__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return True
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return False
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr > other_attr
-            return True
-        other = other.copy()
-        other.set_time_zone(self.get_time_zone())
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime > other_datetime
+        return self._cmp(other, "gt")
 
     def __ge__(self, other: "TimePoint") -> bool:
-        if other is None:
-            return False
-        if self.truncated != other.truncated:
-            raise TypeError(
-                "Cannot compare truncated to non-truncated " +
-                "TimePoint: %s, %s" % (self, other))
-        if self.get_props() == other.get_props():
-            return True
-        if self.truncated:
-            for attribute in self.DATA_ATTRIBUTES:
-                other_attr = getattr(other, attribute)
-                self_attr = getattr(self, attribute)
-                if self_attr != other_attr:
-                    return self_attr >= other_attr
-            return True
-        other = other.copy()
-        other.set_time_zone(self.get_time_zone())
-        if self.get_is_calendar_date():
-            my_date = self.get_calendar_date()
-            other_date = other.get_calendar_date()
-        else:
-            my_date = self.get_ordinal_date()
-            other_date = other.get_ordinal_date()
-        my_datetime = list(my_date) + [self.get_second_of_day()]
-        other_datetime = list(other_date) + [other.get_second_of_day()]
-        return my_datetime >= other_datetime
+        return self._cmp(other, "ge")
 
     def __sub__(self, other):
         if isinstance(other, TimePoint):
             if other > self:
                 return -1 * (other - self)
-            other = other.copy()
-            other.set_time_zone(self.get_time_zone())
+            other = other.to_time_zone(self._time_zone)
             my_year, my_day_of_year = self.get_ordinal_date()
             other_year, other_day_of_year = other.get_ordinal_date()
             diff_day = my_day_of_year - other_day_of_year
@@ -1560,122 +1663,125 @@ class TimePoint(object):
         return self.__add__(duration * -1)
 
     def add_months(self, num_months):
-        """Add an amount of months to the representation."""
+        """Return a copy of this TimePoint with an amount of months added to
+        it."""
         if num_months == 0:
-            return
+            return self
+        new = self._copy()
         was_ordinal_date = False
         was_week_date = False
-        if not self.get_is_calendar_date():
-            if self.get_is_ordinal_date():
+        if not new.get_is_calendar_date():
+            if new.get_is_ordinal_date():
                 was_ordinal_date = True
-            if self.get_is_week_date():
+            if new.get_is_week_date():
                 was_week_date = True
-            self.to_calendar_date()
+            new = new.to_calendar_date()
         for _ in range(abs(num_months)):
             if num_months > 0:
-                self.month_of_year += 1
-                if self.month_of_year > CALENDAR.MONTHS_IN_YEAR:
-                    self.month_of_year -= CALENDAR.MONTHS_IN_YEAR
-                    self.year += 1
+                new._month_of_year += 1
+                if new._month_of_year > CALENDAR.MONTHS_IN_YEAR:
+                    new._month_of_year -= CALENDAR.MONTHS_IN_YEAR
+                    new._year += 1
             if num_months < 0:
-                self.month_of_year -= 1
-                if self.month_of_year < 1:
-                    self.month_of_year += CALENDAR.MONTHS_IN_YEAR
-                    self.year -= 1
-            month_index = (self.month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR
-            if get_is_leap_year(self.year):
+                new._month_of_year -= 1
+                if new._month_of_year < 1:
+                    new._month_of_year += CALENDAR.MONTHS_IN_YEAR
+                    new._year -= 1
+            month_index = (new._month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR
+            if get_is_leap_year(new._year):
                 max_day_in_new_month = (
                     CALENDAR.DAYS_IN_MONTHS_LEAP[month_index])
             else:
                 max_day_in_new_month = (
                     CALENDAR.DAYS_IN_MONTHS[month_index])
-            if self.day_of_month > max_day_in_new_month:
+            if new._day_of_month > max_day_in_new_month:
                 # For example, when 31 March + 1 month = 30 April.
-                self.day_of_month = max_day_in_new_month
-        self.tick_over()
+                new._day_of_month = max_day_in_new_month
+        new._tick_over()
         if was_ordinal_date:
-            self.to_ordinal_date()
+            new = new.to_ordinal_date()
         if was_week_date:
-            self.to_week_date()
+            new = new.to_week_date()
+        return new
 
-    def tick_over(self, check_changes=False):
+    def _tick_over(self, check_changes=False):
         """Correct all the units going from smallest to largest.
 
         Args:
-            check_changes (bool, optional):
-                If True tick_over will return a dict of any changed fields.
+            check_changes (bool, optional): If True tick_over will return a
+                dict of any changed fields.
 
         Returns:
             dict: Dictionary of changed fields with before and after values
-            if check_changes is True else None.
-
+                if check_changes is True else None.
         """
         if check_changes:
-            before = {key: getattr(self, key) for key in self.DATA_ATTRIBUTES}
-        if (self.hour_of_day is not None and
-                self.minute_of_hour is not None):
-            hours_remainder = self.hour_of_day - int(self.hour_of_day)
-            self.hour_of_day -= hours_remainder
-            self.minute_of_hour += (
+            before = {key: getattr(self, key) for key in self.__slots__}
+        if (self._hour_of_day is not None and
+                self._minute_of_hour is not None):
+            hours_remainder = self._hour_of_day - int(self._hour_of_day)
+            self._hour_of_day -= hours_remainder
+            self._minute_of_hour += (
                 hours_remainder * CALENDAR.MINUTES_IN_HOUR)
-        if (self.minute_of_hour is not None and
-                self.second_of_minute is not None):
-            minutes_remainder = self.minute_of_hour - int(self.minute_of_hour)
-            self.minute_of_hour -= minutes_remainder
-            self.second_of_minute += (
+        if (self._minute_of_hour is not None and
+                self._second_of_minute is not None):
+            minutes_remainder = (
+                self._minute_of_hour - int(self._minute_of_hour))
+            self._minute_of_hour -= minutes_remainder
+            self._second_of_minute += (
                 minutes_remainder * CALENDAR.SECONDS_IN_MINUTE)
-        if self.second_of_minute is not None:
-            num_minutes, seconds = divmod(self.second_of_minute,
+        if self._second_of_minute is not None:
+            num_minutes, seconds = divmod(self._second_of_minute,
                                           CALENDAR.SECONDS_IN_MINUTE)
-            self.minute_of_hour += num_minutes
-            self.second_of_minute = seconds
-        if self.minute_of_hour is not None:
-            num_hours, minutes = divmod(self.minute_of_hour,
+            self._minute_of_hour += num_minutes
+            self._second_of_minute = seconds
+        if self._minute_of_hour is not None:
+            num_hours, minutes = divmod(self._minute_of_hour,
                                         CALENDAR.MINUTES_IN_HOUR)
-            self.hour_of_day += num_hours
-            self.minute_of_hour = minutes
-        if self.hour_of_day is not None:
-            num_days, hours = divmod(self.hour_of_day, CALENDAR.HOURS_IN_DAY)
+            self._hour_of_day += num_hours
+            self._minute_of_hour = minutes
+        if self._hour_of_day is not None:
+            num_days, hours = divmod(self._hour_of_day, CALENDAR.HOURS_IN_DAY)
             num_days = int(num_days)
-            if self.day_of_week is not None:
-                self.day_of_week += num_days
-            elif self.day_of_month is not None:
-                self.day_of_month += num_days
-            elif self.day_of_year is not None:
-                self.day_of_year += num_days
-            self.hour_of_day = hours
-        if self.day_of_week is not None:
+            if self._day_of_week is not None:
+                self._day_of_week += num_days
+            elif self._day_of_month is not None:
+                self._day_of_month += num_days
+            elif self._day_of_year is not None:
+                self._day_of_year += num_days
+            self._hour_of_day = hours
+        if self._day_of_week is not None:
             num_weeks, days = divmod(
-                self.day_of_week - 1, CALENDAR.DAYS_IN_WEEK)
-            self.week_of_year += num_weeks
-            self.day_of_week = days + 1
-        if self.day_of_month is not None:
+                self._day_of_week - 1, CALENDAR.DAYS_IN_WEEK)
+            self._week_of_year += num_weeks
+            self._day_of_week = days + 1
+        if self._day_of_month is not None:
             self._tick_over_day_of_month()
-        if self.day_of_year is not None:
-            while self.day_of_year < 1:
-                days_in_last_year = get_days_in_year(self.year - 1)
-                self.day_of_year += days_in_last_year
-                self.year -= 1
-            while self.day_of_year > get_days_in_year(self.year):
-                days_in_next_year = get_days_in_year(self.year + 1)
-                self.day_of_year -= days_in_next_year
-                self.year += 1
-        if self.week_of_year is not None:
-            while self.week_of_year < 1:
-                weeks_in_last_year = get_weeks_in_year(self.year - 1)
-                self.week_of_year += weeks_in_last_year
-                self.year -= 1
-            while self.week_of_year > get_weeks_in_year(self.year):
-                weeks_in_this_year = get_weeks_in_year(self.year)
-                self.week_of_year -= weeks_in_this_year
-                self.year += 1
-        if self.month_of_year is not None:
-            while self.month_of_year < 1:
-                self.month_of_year += CALENDAR.MONTHS_IN_YEAR
-                self.year -= 1
-            while self.month_of_year > CALENDAR.MONTHS_IN_YEAR:
-                self.month_of_year -= CALENDAR.MONTHS_IN_YEAR
-                self.year += 1
+        if self._day_of_year is not None:
+            while self._day_of_year < 1:
+                days_in_last_year = get_days_in_year(self._year - 1)
+                self._day_of_year += days_in_last_year
+                self._year -= 1
+            while self._day_of_year > get_days_in_year(self._year):
+                days_in_next_year = get_days_in_year(self._year + 1)
+                self._day_of_year -= days_in_next_year
+                self._year += 1
+        if self._week_of_year is not None:
+            while self._week_of_year < 1:
+                weeks_in_last_year = get_weeks_in_year(self._year - 1)
+                self._week_of_year += weeks_in_last_year
+                self._year -= 1
+            while self._week_of_year > get_weeks_in_year(self._year):
+                weeks_in_this_year = get_weeks_in_year(self._year)
+                self._week_of_year -= weeks_in_this_year
+                self._year += 1
+        if self._month_of_year is not None:
+            while self._month_of_year < 1:
+                self._month_of_year += CALENDAR.MONTHS_IN_YEAR
+                self._year -= 1
+            while self._month_of_year > CALENDAR.MONTHS_IN_YEAR:
+                self._month_of_year -= CALENDAR.MONTHS_IN_YEAR
+                self._year += 1
         if check_changes:
             return {
                 key: (value, getattr(self, key))
@@ -1684,151 +1790,139 @@ class TimePoint(object):
             }
 
     def _tick_over_day_of_month(self):
-        if self.day_of_month < 1:
+        if self._day_of_month < 1:
             num_days = 2
             for month, day in iter_months_days(
-                    self.year,
-                    month_of_year=self.month_of_year,
+                    self._year,
+                    month_of_year=self._month_of_year,
                     day_of_month=1, in_reverse=True):
                 num_days -= 1
-                if num_days == self.day_of_month:
-                    self.month_of_year = month
-                    self.day_of_month = day
+                if num_days == self._day_of_month:
+                    self._month_of_year = month
+                    self._day_of_month = day
                     break
             else:  # no break
-                start_year = self.year
+                start_year = self._year
                 month = None
                 day = None
-                while num_days != self.day_of_month:
+                while num_days != self._day_of_month:
                     start_year -= 1
                     for month, day in iter_months_days(
                             start_year, in_reverse=True):
                         num_days -= 1
-                        if num_days == self.day_of_month:
+                        if num_days == self._day_of_month:
                             break
-                self.year = start_year
-                self.month_of_year = month
-                self.day_of_month = day
+                self._year = start_year
+                self._month_of_year = month
+                self._day_of_month = day
         else:
-            month_index = (self.month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR
-            if get_is_leap_year(self.year):
+            month_index = (self._month_of_year - 1) % CALENDAR.MONTHS_IN_YEAR
+            if get_is_leap_year(self._year):
                 max_day_in_month = CALENDAR.DAYS_IN_MONTHS_LEAP[month_index]
             else:
                 max_day_in_month = CALENDAR.DAYS_IN_MONTHS[month_index]
-            if self.day_of_month > max_day_in_month:
+            if self._day_of_month > max_day_in_month:
                 num_days = 0
                 for month, day in iter_months_days(
-                        self.year,
-                        month_of_year=self.month_of_year,
+                        self._year,
+                        month_of_year=self._month_of_year,
                         day_of_month=1):
                     num_days += 1
-                    if num_days == self.day_of_month:
-                        self.month_of_year = month
-                        self.day_of_month = day
+                    if num_days == self._day_of_month:
+                        self._month_of_year = month
+                        self._day_of_month = day
                         break
                 else:
-                    start_year = self.year
-                    while num_days != self.day_of_month:
+                    start_year = self._year
+                    while num_days != self._day_of_month:
                         start_year += 1
                         for month, day in iter_months_days(start_year):
                             num_days += 1
-                            if num_days == self.day_of_month:
-                                self.year = start_year
-                                self.month_of_year = month
-                                self.day_of_month = day
+                            if num_days == self._day_of_month:
+                                self._year = start_year
+                                self._month_of_year = month
+                                self._day_of_month = day
                                 return
 
-    def check_bounds(self):
+    def _check_bounds(self):
         """Check all values are within correct bounds."""
-        _bounds_checker(self.month_of_year, "month_of_year",
+        _bounds_checker(self._month_of_year, "month_of_year",
                         min_val=1, max_val=CALENDAR.MONTHS_IN_YEAR)
-        if self.month_of_year is not None:
-            if self.year is not None:
-                max_days_in_month = get_days_in_month(self.month_of_year,
-                                                      self.year)
+        if self._month_of_year is not None:
+            if self._year is not None:
+                max_days_in_month = get_days_in_month(self._month_of_year,
+                                                      self._year)
             else:
-                max_days_in_month = get_days_in_month(self.month_of_year,
+                max_days_in_month = get_days_in_month(self._month_of_year,
                                                       year="leap")
         else:
             max_days_in_month = CALENDAR.MAX_DAYS_IN_MONTH
-        _bounds_checker(self.day_of_month, "day_of_month",
+        _bounds_checker(self._day_of_month, "day_of_month",
                         min_val=1, max_val=max_days_in_month)
-        if self.year is not None:
-            _bounds_checker(self.week_of_year, "week_of_year",
-                            min_val=1, max_val=get_weeks_in_year(self.year))
-            _bounds_checker(self.day_of_year, "day_of_year",
-                            min_val=1, max_val=get_days_in_year(self.year))
+        if self._year is not None:
+            _bounds_checker(self._week_of_year, "week_of_year",
+                            min_val=1, max_val=get_weeks_in_year(self._year))
+            _bounds_checker(self._day_of_year, "day_of_year",
+                            min_val=1, max_val=get_days_in_year(self._year))
         else:
-            _bounds_checker(self.week_of_year, "week_of_year",
+            _bounds_checker(self._week_of_year, "week_of_year",
                             min_val=1, max_val=CALENDAR.MAX_WEEKS_IN_YEAR)
-            _bounds_checker(self.day_of_year, "day_of_year",
+            _bounds_checker(self._day_of_year, "day_of_year",
                             min_val=1, max_val=CALENDAR.DAYS_IN_YEAR_LEAP)
-        _bounds_checker(self.day_of_week, "day_of_week",
+        _bounds_checker(self._day_of_week, "day_of_week",
                         min_val=1, max_val=CALENDAR.DAYS_IN_WEEK)
 
-        _bounds_checker(self.hour_of_day, "hour_of_day",
+        _bounds_checker(self._hour_of_day, "hour_of_day",
                         min_val=0, max_val=CALENDAR.HOURS_IN_DAY)
-        if self.hour_of_day == CALENDAR.HOURS_IN_DAY:
-            _bounds_checker(self.minute_of_hour, "minute_of_hour",
+        if self._hour_of_day == CALENDAR.HOURS_IN_DAY:
+            _bounds_checker(self._minute_of_hour, "minute_of_hour",
                             min_val=0, max_val=0)
-            _bounds_checker(self.second_of_minute, "second_of_minute",
+            _bounds_checker(self._second_of_minute, "second_of_minute",
                             min_val=0, max_val=0)
         else:
-            _bounds_checker(self.minute_of_hour, "minute_of_hour",
+            _bounds_checker(self._minute_of_hour, "minute_of_hour",
                             min_val=0, upper_val=CALENDAR.MINUTES_IN_HOUR)
-            _bounds_checker(self.second_of_minute, "second_of_minute",
+            _bounds_checker(self._second_of_minute, "second_of_minute",
                             min_val=0, upper_val=CALENDAR.SECONDS_IN_MINUTE)
-        if self.time_zone.unknown is False:
-            _bounds_checker(self.time_zone.hours, "time zone hours",
-                            min_val=0-99, max_val=99)
-            if self.time_zone.hours <= 0:
-                min_tz_minute = 1 - CALENDAR.MINUTES_IN_HOUR
-            else:
-                min_tz_minute = 0
-            _bounds_checker(self.time_zone.minutes, "time zone minute",
-                            min_val=min_tz_minute,
-                            upper_val=CALENDAR.MINUTES_IN_HOUR)
 
     def __str__(self, override_custom_dump_format=False,
                 strftime_format=None):
-        if self.expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
-            TIMEPOINT_DUMPER_MAP[self.expanded_year_digits] = (
-                dumpers.TimePointDumper(
-                    self.expanded_year_digits))
-        dumper = TIMEPOINT_DUMPER_MAP[self.expanded_year_digits]
+        if self._expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
+            TIMEPOINT_DUMPER_MAP[self._expanded_year_digits] = (
+                dumpers.TimePointDumper(self._expanded_year_digits))
+        dumper = TIMEPOINT_DUMPER_MAP[self._expanded_year_digits]
         if strftime_format is not None:
             return dumper.strftime(self, strftime_format)
-        if self.truncated:
-            if self.truncated_dump_format and not override_custom_dump_format:
-                return dumper.dump(self, self.truncated_dump_format)
+        if self._truncated:
+            if self._truncated_dump_format and not override_custom_dump_format:
+                return dumper.dump(self, self._truncated_dump_format)
             return dumper.dump(self, self._get_truncated_dump_format())
-        if self.dump_format and not override_custom_dump_format:
-            return dumper.dump(self, self.dump_format)
+        if self._dump_format and not override_custom_dump_format:
+            return dumper.dump(self, self._dump_format)
         return dumper.dump(self, self._get_dump_format())
 
     def strftime(self, strftime_format):
         """Implement equivalent of Python 2's datetime.datetime.strftime.
 
         Dump based on the format given in the strftime_format string.
-
         """
         return self.__str__(strftime_format=strftime_format)
 
     def _get_dump_format(self):
-        year_digits = 4 + self.expanded_year_digits
+        year_digits = 4 + self._expanded_year_digits
         year_string = "%0" + str(year_digits) + "d"
-        if self.expanded_year_digits:
-            if self.year < 0:
-                year_string = "-" + year_string % abs(self.year)
+        if self._expanded_year_digits:
+            if self._year < 0:
+                year_string = "-" + year_string % abs(self._year)
             else:
-                year_string = "+" + year_string % abs(self.year)
-        elif self.year is not None and self.year < 0:
+                year_string = "+" + year_string % abs(self._year)
+        elif self._year is not None and self._year < 0:
             raise OverflowError(
                 "Year %s can only be represented in expanded format" %
-                self.year
+                self._year
             )
-        elif self.year is not None:
-            year_string = year_string % self.year
+        elif self._year is not None:
+            year_string = year_string % self._year
 
         if self.get_is_calendar_date():
             date_string = year_string + "-MM-DD"
@@ -1841,19 +1935,19 @@ class TimePoint(object):
                                "must conform to calendar, ordinal or week "
                                "dates.")
         time_string = "Thh"
-        if self.minute_of_hour is None:
+        if self._minute_of_hour is None:
             time_string += ",ii"
         else:
             time_string += ":mm"
-            if self.second_of_minute is None:
+            if self._second_of_minute is None:
                 time_string += ",nn"
             else:
-                seconds_int = int(self.second_of_minute)
+                seconds_int = int(self._second_of_minute)
                 time_string += ":ss"
-                if seconds_int != self.second_of_minute:
+                if seconds_int != self._second_of_minute:
                     time_string += ",tt"
         if time_string:
-            if self.time_zone.hours == 0 and self.time_zone.minutes == 0:
+            if self._time_zone._hours == 0 and self._time_zone._minutes == 0:
                 time_string += "Z"
             else:
                 time_string += "+hh:mm"
@@ -1861,71 +1955,71 @@ class TimePoint(object):
 
     def _get_truncated_dump_format(self):
         year_string = "-"
-        if self.truncated_property == "year_of_decade":
+        if self._truncated_property == "year_of_decade":
             year_string = "-" + "z"
-        elif self.truncated_property == "year_of_century":
-            if self.day_of_month is None and self.month_of_year is not None:
+        elif self._truncated_property == "year_of_century":
+            if self._day_of_month is None and self._month_of_year is not None:
                 year_string = "-YY"
             else:
                 year_string = "YY"
         date_string = year_string
-        if self.month_of_year is not None:
+        if self._month_of_year is not None:
             date_string = year_string + "-MM"
-            if self.day_of_month is not None:
+            if self._day_of_month is not None:
                 date_string += "-DD"
-        elif self.day_of_month is not None:
+        elif self._day_of_month is not None:
             if year_string == "-":
                 date_string = year_string + "--DD"
             else:
                 date_string = year_string + "-DD"
-        if self.day_of_year is not None:
+        if self._day_of_year is not None:
             day_string = "DDD"
             if year_string == "-":
                 date_string = year_string + day_string
             else:
                 date_string = year_string + "-" + day_string
-        if self.week_of_year is not None:
+        if self._week_of_year is not None:
             if year_string == "-":
                 date_string = year_string + "Www"
             else:
                 date_string = year_string + "-Www"
-            if self.day_of_week is not None:
+            if self._day_of_week is not None:
                 date_string += "-D"
-        elif self.day_of_week is not None:
+        elif self._day_of_week is not None:
             if year_string == "-":
                 date_string = year_string + "W-D"
             else:
                 date_string = year_string + "-W-D"
         time_string = ""
-        if (self.hour_of_day is None and
-                (self.minute_of_hour is not None or
-                 self.second_of_minute is not None)):
+        if (self._hour_of_day is None and
+                (self._minute_of_hour is not None or
+                 self._second_of_minute is not None)):
             time_string = "T-"
-        elif (self.hour_of_day is not None and
-              int(self.hour_of_day) != self.hour_of_day):
+        elif (self._hour_of_day is not None and
+              int(self._hour_of_day) != self._hour_of_day):
             time_string = "Thh,ii"
-        elif self.hour_of_day is not None:
+        elif self._hour_of_day is not None:
             time_string = "Thh"
-        if self.minute_of_hour is None and self.second_of_minute is not None:
+        if self._minute_of_hour is None and self._second_of_minute is not None:
             time_string += "-"
-        elif (self.minute_of_hour is not None and
-              int(self.minute_of_hour) != self.minute_of_hour):
-            if self.hour_of_day is not None:
+        elif (self._minute_of_hour is not None and
+              int(self._minute_of_hour) != self._minute_of_hour):
+            if self._hour_of_day is not None:
                 time_string += ":"
             time_string += "mm,nn"
-        elif self.minute_of_hour is not None:
-            if self.hour_of_day is not None:
+        elif self._minute_of_hour is not None:
+            if self._hour_of_day is not None:
                 time_string += ":"
             time_string += "mm"
-        if self.second_of_minute is not None:
-            seconds_int = int(self.second_of_minute)
-            if self.minute_of_hour is not None:
+        if self._second_of_minute is not None:
+            seconds_int = int(self._second_of_minute)
+            if self._minute_of_hour is not None:
                 time_string += ":"
             time_string += "ss"
-            if seconds_int != self.second_of_minute:
+            if seconds_int != self._second_of_minute:
                 time_string += ",tt"
         if time_string:
-            if self.time_zone.hours == 0 and self.time_zone.minutes == 0:
+            if self._time_zone._hours == 0 and self._time_zone._minutes == 0:
                 time_string += "Z"
             else:
                 time_string += "+hh:mm"
@@ -1936,7 +2030,9 @@ class TimePoint(object):
             date_string = ""
         return date_string + time_string
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "<{0}.{1}: {2}>".format(
+            self.__module__, self.__class__.__name__, str(self))
 
 
 def _format_remainder(float_time_number):
@@ -2326,7 +2422,7 @@ def get_timepoint_from_seconds_since_unix_epoch(num_seconds, utc=False):
     reference_timepoint = TimePoint(
         **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
     if not utc:
-        reference_timepoint.set_time_zone_to_local()
+        reference_timepoint = reference_timepoint.to_local_time_zone()
     return reference_timepoint + Duration(seconds=float(num_seconds))
 
 
@@ -2335,8 +2431,8 @@ def get_timepoint_properties_from_seconds_since_unix_epoch(num_seconds):
     properties = dict(
         get_timepoint_from_seconds_since_unix_epoch(num_seconds).get_props())
     time_zone = properties.pop("time_zone")
-    properties["time_zone_hour"] = time_zone.hours
-    properties["time_zone_minute"] = time_zone.minutes
+    properties["time_zone_hour"] = time_zone._hours
+    properties["time_zone_minute"] = time_zone._minutes
     return properties
 
 

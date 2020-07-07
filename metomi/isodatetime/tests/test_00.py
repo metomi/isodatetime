@@ -592,10 +592,7 @@ def get_timepointparser_tests(allow_only_basic=False,
 
 
 def get_truncated_property_tests():
-    """
-    Tests for largest truncated and
-    smallest missing property names
-    """
+    """Tests for largest truncated and smallest missing property names."""
     test_timepoints = {
         "-9001": {"year": 90,
                   "month_of_year": 1,
@@ -704,6 +701,22 @@ def get_timerecurrence_expansion_tests():
         ("R/-100024-02-10T17:00:00-12:30/PT5.5H",
          ["-100024-02-10T17:00:00-12:30", "-100024-02-10T22:30:00-12:30",
           "-100024-02-11T04:00:00-12:30"])
+    ]
+
+
+def get_timerecurrence_comparison_tests():
+    """Yield tests for executing the '==' operator and hash() on
+    TimeRecurrences."""
+    return [
+        ("R5/2020-036T00Z/PT15M", "R5/2020-036T00Z/PT15M", True),
+        *[("R5/2020-036T00Z/PT15M", rhs, False) for rhs in (
+            "R4/2020-036T00Z/PT15M",
+            "R5/2020-036T01Z/PT15M",
+            "R5/2020-036T00Z/PT14M")],
+        # Format 3 vs 4:
+        ("R4/2020-01-01T00Z/P1D", "R4/P1D/2020-01-04T00Z", True),
+        ("R/2020-01-01T00Z/P1D", "R/P1D/2020-01-04T00Z", False),
+        # TODO: Format 1 vs others after fixing issue #45
     ]
 
 
@@ -966,46 +979,36 @@ class TestSuite(unittest.TestCase):
 
     def test_timepoint_time_zone(self):
         """Test the time zone handling of timepoint instances."""
-        year = 2000
-        month_of_year = 1
-        day_of_month = 1
+        year, month_of_year, day_of_month = (2000, 1, 1)
         utc_offset_hours, utc_offset_minutes = (
             get_local_time_zone_hours_minutes()
         )
         for hour_of_day in range(24):
             for minute_of_hour in [0, 30]:
+                point = data.TimePoint(year=year, month_of_year=month_of_year,
+                                       day_of_month=day_of_month,
+                                       hour_of_day=hour_of_day,
+                                       minute_of_hour=minute_of_hour)
                 test_dates = [
-                    data.TimePoint(
-                        year=year,
-                        month_of_year=month_of_year,
-                        day_of_month=day_of_month,
-                        hour_of_day=hour_of_day,
-                        minute_of_hour=minute_of_hour
-                    )
+                    point.to_utc(),
+                    point.to_local_time_zone(),
+                    point.to_time_zone(data.TimeZone(hours=-13, minutes=-45)),
+                    point.to_time_zone(data.TimeZone(hours=8, minutes=30))
                 ]
-                test_dates.append(test_dates[0].copy())
-                test_dates.append(test_dates[0].copy())
-                test_dates.append(test_dates[0].copy())
-                test_dates[0].set_time_zone_to_utc()
                 self.assertEqual(test_dates[0].time_zone.hours, 0,
                                  test_dates[0])
                 self.assertEqual(test_dates[0].time_zone.minutes, 0,
                                  test_dates[0])
-                test_dates[1].set_time_zone_to_local()
+
                 self.assertEqual(test_dates[1].time_zone.hours,
                                  utc_offset_hours, test_dates[1])
-
                 self.assertEqual(test_dates[1].time_zone.minutes,
                                  utc_offset_minutes, test_dates[1])
-                test_dates[2].set_time_zone(
-                    data.TimeZone(hours=-13, minutes=-45))
 
-                test_dates[3].set_time_zone(
-                    data.TimeZone(hours=8, minutes=30))
                 for i_test_date in list(test_dates):
                     i_test_date_str = str(i_test_date)
-                    date_no_tz = i_test_date.copy()
-                    date_no_tz.time_zone = data.TimeZone(hours=0, minutes=0)
+                    date_no_tz = i_test_date._copy()
+                    date_no_tz._time_zone = data.TimeZone(hours=0, minutes=0)
                     if (i_test_date.time_zone.hours >= 0 or
                             i_test_date.time_zone.minutes >= 0):
                         utc_offset = date_no_tz - i_test_date
@@ -1026,6 +1029,7 @@ class TestSuite(unittest.TestCase):
                         self.assertEqual(
                             duration, data.Duration(days=0),
                             i_test_date_str + " - " + j_test_date_str)
+        # TODO: test truncated TimePoints
 
     def test_timepoint_dumper(self):
         """Test the dumping of TimePoint instances."""
@@ -1059,7 +1063,7 @@ class TestSuite(unittest.TestCase):
                 self.assertRaises(ctrl_exception, dumper.dump,
                                   ctrl_timepoint, format_)
         value_error_timepoint = data.TimePoint(minute_of_hour=10)
-        value_error_timepoint.minute_of_hour = "1O"
+        value_error_timepoint._minute_of_hour = "1O"
         self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
 
     def test_timepoint_dumper_bounds_error_message(self):
@@ -1067,6 +1071,7 @@ class TestSuite(unittest.TestCase):
         the_error = TimePointDumperBoundsError("TimePoint1", "year",
                                                10, 20)
         the_string = the_error.__str__()
+        # FIXME:
         self.assertTrue("TimePoint1" in the_string,
                         "Failed to find TimePoint1 in {}".format(the_string))
         self.assertTrue("year" in the_string,
@@ -1102,7 +1107,7 @@ class TestSuite(unittest.TestCase):
         been copied, see issue #102 for more information"""
         time_point = data.TimePoint(year=2000, truncated=True,
                                     truncated_dump_format='CCYY')
-        the_copy = time_point.copy()
+        the_copy = time_point._copy()
         self.assertEqual(str(time_point), str(the_copy))
 
     def test_timepoint_parser(self):
@@ -1212,10 +1217,10 @@ class TestSuite(unittest.TestCase):
             minute_of_hour=ctrl_date.minute,
             second_of_minute=ctrl_date.second
         )
-        test_date.set_time_zone_to_utc()
+        # test_date = test_date.to_utc()
 
-        for test_date in [test_date, test_date.copy().to_week_date(),
-                          test_date.copy().to_ordinal_date()]:
+        for test_date in [test_date, test_date.to_week_date(),
+                          test_date.to_ordinal_date()]:
             # Test strftime (dumping):
             ctrl_data = ctrl_date.strftime(strftime_string)
             test_data = test_date.strftime(strftime_string)
@@ -1235,7 +1240,7 @@ class TestSuite(unittest.TestCase):
                         ctrl_dump, strptime_string)
                 test_dump = test_date.strftime(strptime_string)
                 test_data = parser.strptime(test_dump, strptime_string)
-                test_data.set_time_zone_to_utc()
+                test_data = test_data.to_utc()
 
                 self.assertEqual(test_dump, ctrl_dump, strptime_string)
 
@@ -1364,6 +1369,26 @@ class TestSuite(unittest.TestCase):
             ctrl_data = str(data.TimeRecurrence(**test_info))
             self.assertEqual(test_data, ctrl_data, expression)
 
+    def test_timerecurrence_comparison(self):
+        """Test the '==' operator and hash() on TimeRecurrences."""
+        parser = parsers.TimeRecurrenceParser()
+        tests = get_timerecurrence_comparison_tests()
+        for lhs_str, rhs_str, expected in tests:
+            lhs = parser.parse(lhs_str)
+            rhs = parser.parse(rhs_str)
+            test = lhs == rhs
+            assert test is expected, "{0} == {1}".format(lhs_str, rhs_str)
+            test = rhs == lhs
+            assert test is expected, "{0} == {1}".format(rhs_str, lhs_str)
+            test = lhs != rhs
+            assert test is not expected, "{0} != {1}".format(lhs_str, rhs_str)
+            test = hash(lhs) == hash(rhs)
+            assert test is expected, (
+                "hash of {0} == hash of {1}".format(lhs_str, rhs_str))
+        test_recurrence = parser.parse(tests[0][0])
+        for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
+            self.assertFalse(test_recurrence == var)
+
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is
     # [tz_seconds, expected_hours, expected_minutes]]
@@ -1434,7 +1459,6 @@ class TestSuite(unittest.TestCase):
     # the format for the parameters is
     # [tz_seconds, tz_format_mode, expected_format]
     get_test_get_local_time_zone_format = [
-        # UTC
         # UTC, returns Z, flags are never used for UTC
         [0, timezone.TimeZoneFormatMode.normal, "Z"],
         # Positive values, some with minutes != 0
@@ -1488,11 +1512,12 @@ class TestSuite(unittest.TestCase):
     def test_timepoint_dump_format(self):
         """Test the timepoint format dump when values are programmatically
         set to None"""
+        # TODO: Get rid of this now that TimePoint is immutable?
         t = data.TimePoint(year="1984")
         # commenting out month_of_year here is enough to make the test pass
-        t.month_of_year = None
-        t.day_of_year = None
-        t.week_of_year = None
+        t._month_of_year = None
+        t._day_of_year = None
+        t._week_of_year = None
         with self.assertRaises(RuntimeError):
             self.assertEqual("1984-01-01T00:00:00Z", str(t))
         # QUESTION: What was this test meant to do exactly?

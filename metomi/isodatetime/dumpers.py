@@ -126,25 +126,22 @@ class TimePointDumper(object):
                         "day_of_month" in properties or
                         "day_of_year" in properties):
                     # We need the year to be in week years.
-                    timepoint = timepoint.copy().to_week_date()
+                    timepoint = timepoint.to_week_date()
             elif (timepoint.get_is_week_date() and (
                     "month_of_year" in properties or
                     "day_of_month" in properties or
                     "day_of_year" in properties)):
                 # We need the year to be in standard calendar years.
-                timepoint = timepoint.copy().to_calendar_date()
+                timepoint = timepoint.to_calendar_date()
 
         if custom_time_zone is not None:
-            timepoint = timepoint.copy()
             if custom_time_zone == (0, 0):
-                timepoint.set_time_zone_to_utc()
+                timepoint = timepoint.to_utc()
             else:
-                current_time_zone = timepoint.get_time_zone()
-                new_time_zone = current_time_zone.copy()
-                new_time_zone.hours = custom_time_zone[0]
-                new_time_zone.minutes = custom_time_zone[1]
-                new_time_zone.unknown = False
-                timepoint.set_time_zone(new_time_zone)
+                from .data import TimeZone
+                new_time_zone = TimeZone(hours=custom_time_zone[0],
+                                         minutes=custom_time_zone[1])
+                timepoint = timepoint.to_time_zone(new_time_zone)
         property_map = {}
         for property_ in properties:
             property_map[property_] = timepoint.get(property_)

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pragma pylint: disable=pointless-statement
 # ----------------------------------------------------------------------------
 # Copyright (C) British Crown (Met Office) & Contributors.
 #
@@ -87,6 +88,94 @@ def get_duration_subtract_tests():
             }
         },
     ]
+
+
+def get_duration_comparison_tests():
+    """Yield tests for executing comparison operators on Durations.
+
+    All True "==" tests will be carried out for "<=" & ">= too. Likewise
+    all True "<" & "> tests will be carried out for "<=" & ">=" respectively.
+
+    Tuple format --> test:
+    (args1, args2, bool1 [, bool2]) -->
+        Duration(**args1) <operator> Duration(**args2) is bool1
+    & the reverse:
+        Duration(**args2) <operator> Duration(**args1) is bool2 if
+            bool2 supplied else bool1
+    """
+    nominal_units = ["years", "months"]
+    # TODO: test in different calendars
+    return {
+        "==": [
+            # Durations of same type:
+            *[({prop: 1}, {prop: 1}, True) for prop in nominal_units],
+            *[(dur, dur, True) for dur in [
+                {"years": 1, "months": 1, "days": 1}]],
+            *[({prop: 1}, {prop: 2}, False) for prop in nominal_units],
+            # Nominal durations of different type unequal:
+            ({"years": 1}, {"months": 12}, False),
+            *[({"years": 1}, {"days": i}, False) for i in [365, 366]],
+            *[({"months": 1}, {"days": i}, False) for i in [28, 29, 30, 31]],
+            ({"months": 1, "days": 7}, {"weeks": 1}, False),
+            # Non-nominal/exact durations of different types equal:
+            ({"weeks": 1}, {"days": 7}, True),
+            ({"weeks": 1}, {"hours": 7 * 24}, True),
+            ({"days": 1}, {"hours": 24}, True),
+            ({"days": 1}, {"seconds": 24 * 60 * 60}, True),
+            ({"hours": 1}, {"minutes": 60}, True),
+            ({"hours": 1}, {"minutes": 30, "seconds": 30 * 60}, True),
+            ({"hours": 1.5}, {"minutes": 90}, True)
+        ],
+        "<": [
+            # Durations of same type:
+            *[({prop: 1}, {prop: 1}, False) for prop in nominal_units],
+            *[(dur, dur, False) for dur in [
+                {"years": 1, "months": 1, "days": 1}]],
+            *[({prop: 1}, {prop: 2}, True, False) for prop in nominal_units],
+            # Durations of different type:
+            ({"years": 1}, {"months": 12}, False, True),
+            ({"years": 1}, {"months": 12, "days": 10}, True, False),
+            ({"years": 1}, {"days": 364}, False, True),
+            ({"years": 1}, {"days": 365}, False),
+            ({"years": 1}, {"days": 366}, True, False),
+            ({"months": 1}, {"days": 29}, False, True),
+            ({"months": 1}, {"days": 30}, False),
+            ({"months": 1}, {"days": 31}, True, False),
+            ({"weeks": 1}, {"days": 6}, False, True),
+            ({"weeks": 1}, {"days": 7}, False),
+            ({"weeks": 1}, {"days": 8}, True, False),
+            ({"days": 1}, {"seconds": 24 * 60 * 60 - 1}, False, True),
+            ({"days": 1}, {"seconds": 24 * 60 * 60}, False),
+            ({"days": 1}, {"seconds": 24 * 60 * 60 + 1}, True, False),
+        ],
+        "<=": [
+            ({"years": 1}, {"days": 365}, True),
+            ({"months": 1}, {"days": 30}, True),
+        ],
+        ">": [
+            # Durations of same type:
+            *[({prop: 1}, {prop: 1}, False) for prop in nominal_units],
+            *[({prop: 2}, {prop: 1}, True, False) for prop in nominal_units],
+            # Ddurations of different type:
+            ({"years": 1}, {"months": 12}, True, False),
+            ({"years": 1}, {"days": 364}, True, False),
+            ({"years": 1}, {"days": 365}, False),
+            ({"years": 1}, {"days": 366}, False, True),
+            ({"months": 1}, {"days": 29}, True, False),
+            ({"months": 1}, {"days": 30}, False),
+            ({"months": 1}, {"days": 31}, False, True),
+            ({"weeks": 1}, {"days": 6}, True, False),
+            ({"weeks": 1}, {"days": 7}, False),
+            ({"weeks": 1}, {"days": 8}, False, True),
+            ({"days": 1}, {"seconds": 24 * 60 * 60 - 1}, True, False),
+            ({"days": 1}, {"seconds": 24 * 60 * 60}, False),
+            ({"days": 1}, {"seconds": 24 * 60 * 60 + 1}, False, True),
+        ],
+        ">=": [
+            ({"years": 1}, {"days": 365}, True),
+            ({"months": 1}, {"days": 30}, True),
+        ]
+    }
 
 
 def get_timepoint_subtract_tests():
@@ -188,6 +277,98 @@ def get_timepoint_subtract_tests():
     ]
 
 
+def get_timepoint_comparison_tests():
+    """Yield tests for executing comparison operators on TimePoints.
+
+    All True "==" tests will be carried out for "<=" & ">= too. Likewise
+    all True "<" & "> tests will be carried out for "<=" & ">=" respectively.
+
+    Tuple format --> test:
+    (args1, args2, bool1 [, bool2]) -->
+        TimePoint(**args1) <operator> TimePoint(**args2) is bool1
+    & the reverse:
+        TimePoint(**args2) <operator> TimePoint(**args1) is bool2 if
+            bool2 supplied else bool1
+    """
+    base_YMD = {"year": 2020, "month_of_year": 3, "day_of_month": 14}
+    trunc = {"truncated": True}
+    return {
+        "==": [
+            (base_YMD, base_YMD, True),
+            ({"year": 2020, "month_of_year": 2, "day_of_month": 5},
+             {"year": 2020, "day_of_year": 36},
+             True),
+            ({"year": 2019, "month_of_year": 12, "day_of_month": 30},
+             {"year": 2020, "week_of_year": 1, "day_of_week": 1},
+             True),
+            ({"year": 2019, "day_of_year": 364},
+             {"year": 2020, "week_of_year": 1, "day_of_week": 1},
+             True),
+            ({**base_YMD, "hour_of_day": 9, "time_zone_hour": 0},
+             {**base_YMD, "hour_of_day": 11, "minute_of_hour": 30,
+              "time_zone_hour": 2, "time_zone_minute": 30},
+             True),
+            ({"month_of_year": 3, "day_of_month": 14, **trunc},
+             {"month_of_year": 3, "day_of_month": 14, **trunc},
+             True),
+            # Truncated datetimes of different modes can't be equal:
+            ({"month_of_year": 2, "day_of_month": 5, **trunc},
+             {"day_of_year": 36, **trunc},
+             False),
+            ({"month_of_year": 12, "day_of_month": 30, **trunc},
+             {"week_of_year": 1, "day_of_week": 1, **trunc},
+             False),
+            ({"day_of_year": 364, **trunc},
+             {"week_of_year": 1, "day_of_week": 1, **trunc},
+             False)
+            # TODO: test equal truncated datetimes with different timezones
+            # when not buggy
+        ],
+        "<": [
+            (base_YMD, base_YMD, False),
+            ({"year": 2019}, {"year": 2020}, True, False),
+            ({"year": -1}, {"year": 1}, True, False),
+            ({"year": 2020, "month_of_year": 2},
+             {"year": 2020, "month_of_year": 3},
+             True, False),
+            ({"year": 2020, "month_of_year": 2, "day_of_month": 5},
+             {"year": 2020, "month_of_year": 2, "day_of_month": 6},
+             True, False),
+            ({**base_YMD, "hour_of_day": 9}, {**base_YMD, "hour_of_day": 10},
+             True, False),
+            ({**base_YMD, "hour_of_day": 9, "time_zone_hour": 0},
+             {**base_YMD, "hour_of_day": 7, "time_zone_hour": -3},
+             True, False),
+            ({"day_of_month": 3, **trunc}, {"day_of_month": 4, **trunc},
+             True, False),
+            ({"month_of_year": 1, "day_of_month": 3, **trunc},
+             {"month_of_year": 1, "day_of_month": 4, **trunc},
+             True, False)
+        ],
+        ">": [
+            (base_YMD, base_YMD, False),
+            ({"year": 2019}, {"year": 2020}, False, True),
+            ({"year": -1}, {"year": 1}, False, True),
+            ({"year": 2020, "month_of_year": 2},
+             {"year": 2020, "month_of_year": 3},
+             False, True),
+            ({"year": 2020, "month_of_year": 2, "day_of_month": 5},
+             {"year": 2020, "month_of_year": 2, "day_of_month": 6},
+             False, True),
+            ({**base_YMD, "hour_of_day": 9}, {**base_YMD, "hour_of_day": 10},
+             False, True),
+            ({**base_YMD, "hour_of_day": 9, "time_zone_hour": 0},
+             {**base_YMD, "hour_of_day": 7, "time_zone_hour": -3},
+             False, True),
+            ({"day_of_month": 3, **trunc}, {"day_of_month": 4, **trunc},
+             False, True),
+            ({"month_of_year": 1, "day_of_month": 3, **trunc},
+             {"month_of_year": 1, "day_of_month": 4, **trunc},
+             False, True)
+        ]
+    }
+
+
 def get_timepoint_bounds_tests():
     """Yield tests for checking out of bounds TimePoints."""
     return {
@@ -202,8 +383,8 @@ def get_timepoint_bounds_tests():
             {"year": 2019, "hour_of_day": 24},
             {"year": 2019, "time_zone_hour": 99},
             {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -1},
+            {"year": 2019, "time_zone_hour": 0, "time_zone_minute": 1},
             {"year": 2019, "time_zone_hour": -1, "time_zone_minute": -1},
-            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": 1},
         ],
         "out_of_bounds": [
             {"year": 2019, "month_of_year": 0},
@@ -250,7 +431,8 @@ def get_timepoint_bounds_tests():
             {"year": 2019, "time_zone_hour": 100},
             {"year": 2019, "time_zone_hour": 0, "time_zone_minute": -60},
             {"year": 2019, "time_zone_hour": 1, "time_zone_minute": -1},
-            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": 60}
+            {"year": 2019, "time_zone_hour": 1, "time_zone_minute": 60},
+            {"year": 2019, "time_zone_hour": -1, "time_zone_minute": 1}
         ]
     }
 
@@ -269,6 +451,60 @@ def get_timepoint_conflicting_input_tests():
         {"year": 2020, "day_of_month": 6, "week_of_year": 2},
         {"year": 2020, "day_of_month": 1, "day_of_week": 3}
     ]
+
+
+def run_comparison_tests(data_class, test_cases):
+    """
+    Args:
+        data_class: E.g. Duration or TimePoint
+        test_cases (dict): Of the form {"==": [...], "<": [...], ...}
+    """
+    for op in test_cases:
+        for case in test_cases[op]:
+            lhs = data_class(**case[0])
+            rhs = data_class(**case[1])
+            expected = {"forward": case[2],
+                        "reverse": case[3] if len(case) == 4 else case[2]}
+            if op == "==":
+                tests = [
+                    {"op": "==", "forward": lhs == rhs, "reverse": rhs == lhs}]
+                if True in expected.values():
+                    tests.append({"op": "<=", "forward": lhs <= rhs,
+                                  "reverse": rhs <= lhs})
+                    tests.append({"op": ">=", "forward": lhs >= rhs,
+                                  "reverse": rhs >= lhs})
+            if op == "<":
+                tests = [
+                    {"op": "<", "forward": lhs < rhs, "reverse": rhs < lhs}]
+                if True in expected.values():
+                    tests.append({"op": "<=", "forward": lhs <= rhs,
+                                  "reverse": rhs <= lhs})
+            if op == "<=":
+                tests = [
+                    {"op": "<=", "forward": lhs <= rhs, "reverse": rhs <= lhs}]
+            if op == ">":
+                tests = [
+                    {"op": ">", "forward": lhs > rhs, "reverse": rhs > lhs}]
+                if True in expected.values():
+                    tests.append({"op": ">=", "forward": lhs >= rhs,
+                                  "reverse": rhs >= lhs})
+            if op == ">=":
+                tests = [
+                    {"op": ">=", "forward": lhs >= rhs, "reverse": rhs >= lhs}]
+
+            for test in tests:
+                assert test["forward"] is expected["forward"], (
+                    "{0} {1} {2}".format(lhs, test["op"], rhs))
+                assert test["reverse"] is expected["reverse"], (
+                    "{0} {1} {2}".format(rhs, test["op"], lhs))
+
+            if op == "==":
+                test = lhs != rhs
+                assert test is not expected["forward"], (
+                    "{0} != {1}".format(lhs, rhs))
+                test = hash(lhs) == hash(rhs)
+                assert test is expected["forward"], (
+                    "hash of {0} == hash of {1}".format(rhs, lhs))
 
 
 class TestDataModel(unittest.TestCase):
@@ -290,7 +526,7 @@ class TestDataModel(unittest.TestCase):
                 )
 
     def test_timeduration(self):
-        """Test the duration class methods."""
+        """Test the Duration class methods."""
         for test_props, method, method_args, ctrl_results in (
                 get_timeduration_tests()):
             duration = data.Duration(**test_props)
@@ -311,16 +547,41 @@ class TestDataModel(unittest.TestCase):
             self.assertEqual(data.Duration(**{kwarg: 1.5}).get_seconds(),
                              expected_secs)
 
+    def test_duration_in_weeks(self):
+        """Test the Duration class when the week arg is supplied."""
+        dur = data.Duration(weeks=4)
+        self.assertEqual(dur.get_is_in_weeks(), True)
+
+        for kwarg, expected_days in [  # 1 unit of each property + 4 weeks
+                ("years", 365 + 28), ("months", 30 + 28), ("days", 1 + 28),
+                ("hours", 28), ("minutes", 28), ("seconds", 28)]:
+            dur = data.Duration(weeks=4, **{kwarg: 1})
+            self.assertFalse(dur.get_is_in_weeks())
+            self.assertIsNone(dur.weeks)
+            self.assertEqual(dur.get_days_and_seconds()[0], expected_days)
+
     def test_duration_to_weeks(self):
-        """Test that the duration does not lose precision when converted
-        from days"""
-        duration_in_days = data.Duration(days=365)
-        duration_in_days.to_weeks()
-        duration_in_weeks = data.Duration(weeks=52)
+        """Test converting Duration in days to Duration in weeks"""
+        duration_in_days = data.Duration(days=365).to_weeks()
+        duration_in_weeks = data.Duration(weeks=52)  # 364 days (!)
         self.assertEqual(duration_in_days.weeks, duration_in_weeks.weeks)
 
+    def test_duration_to_days(self):
+        """Test converting Duration in weeks to Duration in days"""
+        dur = data.Duration(weeks=4)
+        self.assertEqual(dur.to_days().days, 28)
+
+    def test_duration_comparison(self):
+        """Test the Duration rich comparison methods and hashing."""
+        run_comparison_tests(data.Duration, get_duration_comparison_tests())
+        dur = data.Duration(days=1)
+        for var in [7, 'foo', (1, 2), data.TimePoint(year=2000)]:
+            self.assertFalse(dur == var)
+            with self.assertRaises(TypeError):
+                dur < var
+
     def test_timeduration_add_week(self):
-        """Test the duration not in weeks add duration in weeks."""
+        """Test the Duration not in weeks add Duration in weeks."""
         self.assertEqual(
             str(data.Duration(days=7) + data.Duration(weeks=1)),
             "P14D")
@@ -330,13 +591,10 @@ class TestDataModel(unittest.TestCase):
         move to Python 3"""
         duration = data.Duration(years=4, months=4, days=4, hours=4,
                                  minutes=4, seconds=4)
+        expected = data.Duration(years=2, months=2, days=2, hours=2,
+                                 minutes=2, seconds=2)
         duration //= 2
-        self.assertEqual(2, duration.years)
-        self.assertEqual(2, duration.months)
-        self.assertEqual(2, duration.days)
-        self.assertEqual(2, duration.hours)
-        self.assertEqual(2, duration.minutes)
-        self.assertEqual(2, duration.seconds)
+        self.assertEqual(duration, expected)
 
     def test_duration_in_weeks_floordiv(self):
         """Test the existing dunder floordir, which will be removed when we
@@ -352,8 +610,23 @@ class TestDataModel(unittest.TestCase):
             test_duration = data.Duration(**test["duration"])
             end_point = data.TimePoint(**test["result"])
             test_subtract = (start_point - test_duration).to_calendar_date()
-            self.assertEqual(str(test_subtract), str(end_point),
+            self.assertEqual(test_subtract, end_point,
                              "%s - %s" % (start_point, test_duration))
+
+    def test_timepoint_comparison(self):
+        """Test the TimePoint rich comparison methods and hashing."""
+        run_comparison_tests(data.TimePoint, get_timepoint_comparison_tests())
+        point = data.TimePoint(year=2000)
+        for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
+            self.assertFalse(point == var)
+            with self.assertRaises(TypeError):
+                point < var
+        # Cannot use "<", ">=" etc truncated TimePoints of different modes:
+        day_month_point = data.TimePoint(month_of_year=2, day_of_month=5,
+                                         truncated=True)
+        ordinal_point = data.TimePoint(day_of_year=36, truncated=True)
+        with self.assertRaises(TypeError):  # TODO: should be ValueError?
+            day_month_point < ordinal_point
 
     def test_timepoint_plus_float_time_duration_day_of_month_type(self):
         """Test (TimePoint + Duration).day_of_month is an int."""

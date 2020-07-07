@@ -47,12 +47,12 @@ Python API:
 >>> duration.get_days_and_seconds()
 (365.0, 10800.0)
 >>> date_time + duration
-2001-01-01T03:00:00Z
+<metomi.isodatetime.data.TimePoint: 2001-01-01T03:00:00Z>
 
 # Recurrences
 >>> recurrence = parse.TimeRecurrenceParser().parse('R/1999/P1Y')
 >>> recurrence.get_next(date_time)
-2001-01-01T00:00:00Z
+<metomi.isodatetime.data.TimePoint: 2001-01-01T00:00:00Z>
 
 # Output
 >>> dump.TimePointDumper().strftime(date_time, '%d/%M/%Y %H:%M:%S')
@@ -92,9 +92,9 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License along
 with this program.  If not, see [GNU licenses](http://www.gnu.org/licenses/).
 
-## ISO8601
+## ISO 8601
 
-[ISO8601 (2004)](https://www.iso.org/standard/40874.html)
+[ISO 8601 (2004)](https://www.iso.org/standard/40874.html)
 is an international standard for writing down date/time information.
 
 It is the correct, internationally-friendly, computer-sortable way to
@@ -279,6 +279,20 @@ Syntax    | Example  | Meaning
 Combining any other unit with weeks is not allowed. Decimals may only be used
 for hours, minutes and seconds.
 
+Note that years and months are "nominal" durations, whose exact length of time
+depends on their position in the calendar. E.g., a duration of 1 calendar year
+starts on a particular day of a particular month and ends on the same day of
+the same month in the following calendar year, and may be different to 365 days
+in the Gregorian calendar due to leap years.
+
+Conversely, weeks, days, hours, minutes and seconds are exact units, so
+`P1W == P7D`, `P1D == PT24H` and `PT1H == PT60M` etc. are always true.
+(Although ISO 8601 specifies that weeks and days are nominal durations, there
+is no case where they are not exact in our implementation.)
+<!-- ...because TimePoints always have time zones assigned to them (apart
+from truncated TimePoints, but you can't add Durations to truncated
+TimePoints). Local time zones don't actually exist in our implementation. -->
+
 A supplementary format (which has to be agreed in advance) is to specify a
 date-time-like duration (`PCCYY-MM-DDThh:mm:ss`) where the numbers given for
 years, months, days, hours, minutes, and seconds are used literally
@@ -286,16 +300,15 @@ years, months, days, hours, minutes, and seconds are used literally
 
 ### Recurring date-time series
 
-#### 1 - Recur with a duration given by the difference between a start date
-and a subsequent date, starting at the start date
+#### 1. Recur with a duration given by the difference between a start date and a subsequent date
 
-Example Syntax           | Example                 | Meaning
- ----------------------- | ----------------------- | ------------------------------------------------------------------
-R/CCYY/CCYY              | R/2010/2014             | Repeat every 4 years, starting at 2010-01-01.
-R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045      | Repeat every 2 years and 44 days, starting at 2010-01-01
-R5/CCYY-Www-D/CCYY-Www-D | R/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
+Example Syntax           | Example                  | Meaning
+ ----------------------- | ------------------------ | ------------------------------------------------------------------
+R/CCYY/CCYY              | R/2010/2014              | Repeat every 4 years, starting at 2010-01-01.
+R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045       | Repeat every 2 years and 44 days, starting at 2010-01-01
+Rn/CCYY-Www-D/CCYY-Www-D | R5/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
 
-#### 2 - Recur with a given duration, starting at a context date-time
+#### 2. Recur with a specified duration, starting at a context date-time
 
 (You have to supply the context somewhere else)
 
@@ -304,7 +317,7 @@ Example Syntax        | Example          | Meaning
 R/PnMnDTnM            | R/P10M3DT45M     | Repeat every 10 months, 3 days, and 45 minutes from a context start date-time.
 Rn/PnY                | R2/P4Y           | Repeat every 4 years, for a total of 2 times, from a context start date-time.
 
-#### 3 - Recur with a given duration starting at a particular date-time
+#### 3. Recur with a specified duration starting at a particular date-time
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------
@@ -313,14 +326,17 @@ R/CCYY-Www-D/PnW           | R/2012-W02-1/P1W         | Repeat weekly starting a
 R/CCYYDDDThhmm/PnD         | R/1996291T0630+0100/P2D  | Repeat every 2 days starting on the 291st day of 1996 at 06:30, UTC + 1
 Rn/CCYY-MM-DDThh:mm/PTnH   | R2/19900201T06Z/PT12H    | Repeat every 12 hours, for a total of 2 repetitions, starting at 1990-02-01T06Z
 Rn/CCYY-Www-D/PnW          | R5/2012-W02-1/P1W        | Repeat weekly, for a total of 5 repetitions, starting at Monday in the second ISO week of 2012
-Rn/CCYYDDDThhmm/PnD        | R1/1996291T0630+0100/P2D | Repeat once at the 291st day of 1996 at 06:30, UTC + 1
+Rn/CCYYDDDThhmm/PnD        | R1/1996291T0630+0100/P2D | Repeat once at the 291st day of 1996 at 06:30, UTC + 1 (note the duration is ignored)
 
-#### 4 - Recur with a given duration counting back from a particular date-time
+#### 4. Recur with a specified duration ending at a particular date-time
+
+The starting date-time of the recurrence is calculated from the specified
+duration.
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ---------------------------------------------------------------
-R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly counting back from 2012-01-02T00Z
-R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years counting back from 2000-01-01.
-R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds counting back from the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
-Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes counting back from 2012-01-02T00Z
-Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, counting back from 2000-05-01.
+R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly until 2012-01-02T00Z
+R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years until 2000-01-01.
+R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds until the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
+Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes, five times, until 2012-01-02T00Z
+Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, until 2000-05-01.
