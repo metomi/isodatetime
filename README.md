@@ -77,7 +77,8 @@ $ isodatetime R/2000/P1Y --max 3
 
 ## Copyright and Terms of Use
 
-Copyright (C) 2013-2020 British Crown (Met Office) & Contributors.
+Copyright (C) 2013-<span actions:bind='current-year'>2020</span> British Crown
+(Met Office) & Contributors.
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the Free
