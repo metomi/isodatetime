@@ -16,5 +16,6 @@ isodatetime.egg-info/
 metomi_isodatetime.egg-info/
 .eggs
 
-# text editor files
+# editor files
 .vscode/
+.idea/
