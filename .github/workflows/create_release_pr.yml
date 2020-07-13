@@ -1,0 +1,92 @@
+name: Release stage 1 - create release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number of the form 1.2.3'
+        required: true
+
+env:
+  # Best not to include the GH token here, only do it for the steps that need it
+  REPOSITORY: ${{ github.repository }}
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+  INIT_FILE: 'metomi/isodatetime/__init__.py'
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2.3.1
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Sanitise version input
+      shell: node {0}
+      env:
+        VERSION: ${{ github.event.inputs.version }}
+      run: | # TODO: check it matches the x.y.z pattern?
+        const versionStr = process.env.VERSION.trim();
+        console.log(`::set-env name=VERSION::${versionStr}`);
+
+    - name: Configure git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        BRANCH_NAME="prepare-${VERSION}"
+        git checkout -b "$BRANCH_NAME"
+
+        echo "::set-env name=BRANCH_NAME::$BRANCH_NAME"
+
+    - name: Update version in __init__.py
+      run: |
+        pattern="(__version__ ?= ?['\"]).*(['\"])"
+        sed -i -E "s/${pattern}/\1${VERSION}\2/" "$INIT_FILE"
+
+        if [[ -z $(git diff --stat -- "$INIT_FILE") ]]; then
+          echo "::error :: No changes to ${INIT_FILE} occurred"
+          exit 1
+        fi
+
+        git add "$INIT_FILE"
+
+    - name: Test the build
+      run: |
+        cd $( mktemp -d )
+        python3 "${{ github.workspace }}/setup.py" bdist_wheel
+        if ! grep -qF ".whl" <<< "$( ls dist/ )"; then
+          echo "::error:: Wheel file not built"
+          exit 1
+        fi
+
+    - name: Commit & push
+      id: push
+      run: |
+        git status; echo " "
+        git commit -m "Prepare release ${VERSION}" -m "Workflow: ${{ github.workflow}}, run: ${{ github.run_number }}"
+        git push origin "$BRANCH_NAME"
+
+    - name: Create pull request
+      id: create-pr
+      env:
+        WORKFLOW: ${{ github.workflow }}
+        AUTHOR: ${{ github.event.sender.login }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: node .github/create_release_pr.js
+
+    - name: (On fail) Delete failed PR branch on origin, if it was pushed
+      if: always() && steps.create-pr.outcome != 'success' && steps.push.outcome == 'success'
+        # Need status check function in if-condition otherwise won't run on fail
+      run: |
+        backup_sha=$( git rev-parse "origin/${BRANCH_NAME}" )
+        git push -d origin "$BRANCH_NAME"
+        echo "::warning :: Deleted the newly-pushed branch '${BRANCH_NAME}' because the workflow failed"
+        echo "If you need to recover the branch:"
+        echo "  git fetch origin ${backup_sha}"
+        echo "  git checkout -b ${BRANCH_NAME} ${backup_sha}"
