@@ -6,43 +6,52 @@ on:
       version:
         description: 'Version number of the form 1.2.3'
         required: true
+      branch:
+        description: 'The branch to open the PR against'
+        required: false
+        default: 'master'
 
 env:
   # Best not to include the GH token here, only do it for the steps that need it
   REPOSITORY: ${{ github.repository }}
-  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
   INIT_FILE: 'metomi/isodatetime/__init__.py'
+  CHANGELOG_FILE: CHANGES.md
 
 jobs:
   create-release-pr:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+    - name: Sanitise workflow inputs # Should be first step
+      shell: node {0}
+      env:
+        VERSION: ${{ github.event.inputs.version }}
+        BRANCH: ${{ github.event.inputs.branch }}
+      run: | # TODO: check it matches the x.y.z pattern?
+        const versionStr = process.env.VERSION.trim();
+        console.log(`::set-env name=VERSION::${versionStr}`);
+        const branchStr = process.env.BRANCH.trim();
+        console.log(`::set-env name=BASE_REF::${branchStr}`)
+
     - name: Checkout repo
       uses: actions/checkout@v2.3.1
+      with:
+        ref: ${{ env.BASE_REF }}
 
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
 
-    - name: Sanitise version input
-      shell: node {0}
-      env:
-        VERSION: ${{ github.event.inputs.version }}
-      run: | # TODO: check it matches the x.y.z pattern?
-        const versionStr = process.env.VERSION.trim();
-        console.log(`::set-env name=VERSION::${versionStr}`);
-
     - name: Configure git
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        BRANCH_NAME="prepare-${VERSION}"
-        git checkout -b "$BRANCH_NAME"
+        HEAD_REF="prepare-${VERSION}"
+        git checkout -b "$HEAD_REF"
 
-        echo "::set-env name=BRANCH_NAME::$BRANCH_NAME"
+        echo "::set-env name=HEAD_REF::$HEAD_REF"
 
     - name: Update version in __init__.py
       run: |
@@ -70,7 +79,7 @@ jobs:
       run: |
         git status; echo " "
         git commit -m "Prepare release ${VERSION}" -m "Workflow: ${{ github.workflow}}, run: ${{ github.run_number }}"
-        git push origin "$BRANCH_NAME"
+        git push origin "$HEAD_REF"
 
     - name: Create pull request
       id: create-pr
@@ -84,9 +93,9 @@ jobs:
       if: always() && steps.create-pr.outcome != 'success' && steps.push.outcome == 'success'
         # Need status check function in if-condition otherwise won't run on fail
       run: |
-        backup_sha=$( git rev-parse "origin/${BRANCH_NAME}" )
-        git push -d origin "$BRANCH_NAME"
-        echo "::warning :: Deleted the newly-pushed branch '${BRANCH_NAME}' because the workflow failed"
+        backup_sha=$( git rev-parse "origin/${HEAD_REF}" )
+        git push -d origin "$HEAD_REF"
+        echo "::warning :: Deleted the newly-pushed branch '${HEAD_REF}' because the workflow failed"
         echo "If you need to recover the branch:"
         echo "  git fetch origin ${backup_sha}"
-        echo "  git checkout -b ${BRANCH_NAME} ${backup_sha}"
+        echo "  git checkout -b ${HEAD_REF} ${backup_sha}"

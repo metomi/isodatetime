@@ -36,8 +36,8 @@ const bodyText = `
 
 const payload = JSON.stringify({
     title: `Prepare release: ${env.VERSION}`,
-    head: env.BRANCH_NAME,
-    base: env.DEFAULT_BRANCH,
+    head: env.HEAD_REF,
+    base: env.BASE_REF,
     body: bodyText
 });
 
@@ -64,7 +64,7 @@ function getMilestone() {
     try {
         response = JSON.parse(exec(request));
     } catch (err) {
-        console.log(`::warning :: Error getting milestones`);
+        console.log(`::warning:: Error getting milestones`);
         console.log(err, '\n');
         return;
     }
@@ -74,7 +74,7 @@ function getMilestone() {
             return milestone;
         }
     }
-    console.log(`::warning :: Could not find milestone matching "${env.VERSION}"`);
+    console.log(`::warning:: Could not find milestone matching "${env.VERSION}"`);
     return;
 }
 
@@ -100,12 +100,14 @@ function exec(cmd) {
     try {
         stdout = execSync(cmd, {stdio: 'pipe', encoding: 'utf8'});
     } catch (err) {
-        console.log(`::error :: ${err.stderr ? err.stderr : 'Error executing command'}`);
+        console.log(`::error:: ${err.stderr ? err.stderr : 'Error executing command'}`);
         throw err.message;
     }
+    console.log('::group name=exec_debug_info::')
     console.log('=====================  cmd  ======================');
     console.log(cmd);
     console.log('===================== stdout =====================');
-    console.log(stdout, '\n');
+    console.log(stdout);
+    console.log('::endgroup::')
     return stdout;
 }
