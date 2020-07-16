@@ -1,0 +1,82 @@
+name: Release stage 2 - auto draft release
+
+on:
+  pull_request:  # types AND paths
+    types: [closed]
+    paths: ['metomi/isodatetime/__init__.py']
+    # Don't use branches as we might create release on any branch
+
+env:
+  # Best not to include the GH token here, only do it for the steps that need it
+  REPOSITORY: ${{ github.repository }}
+  MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+
+jobs:
+  draft-release:
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'prepare-') # Can't use top-level env here
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PR_BRANCH_PREFIX: 'prepare-'
+    steps:
+    - name: Get the version number
+      run: |
+        VERSION=$( grep -oP "(?<=${PR_BRANCH_PREFIX}).*" <<< '${{ github.head_ref }}' )
+        if [[ -z "$VERSION" ]]; then
+          echo "::error:: Could not get version name from PR branch name '${{ github.head_ref }}'"
+          exit 1
+        fi
+        echo "::set-env name=VERSION::$VERSION"
+
+    - name: Create draft release
+      id: create-release
+      uses: actions/create-release@v1.1.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        commitish: ${{ env.MERGE_SHA }}
+        tag_name: ${{ env.VERSION }}
+        release_name: isodatetime ${{ env.VERSION }}
+        body: Insert text here # TODO: get release number; add description field in the create-release-pr workflow input? Possibly preview this info in the PR?
+        draft: true
+
+    - name: Comment on the release PR with the results
+      if: always()
+      shell: node {0}
+      env:
+        RELEASE_STATUS: ${{ steps.create-release.outcome }}
+        RELEASE_URL: ${{ steps.create-release.outputs.html_url }}
+        ASSIGNEE: ${{ github.event.pull_request.assignees[0].login }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        const {exec} = require('child_process');
+        const {env} = process;
+
+        const bodyText = () => {
+          let icon = '✔️';
+          let note = `Next step for @${env.ASSIGNEE}: [edit & publish the release](${env.RELEASE_URL})`;
+          if (env.RELEASE_STATUS !== 'success') {
+            icon = '❌';
+            note = `[Check the run](${{ github.event.pull_request.html_url }}/checks)`;
+          }
+          const title = `**Workflow \`${{ github.workflow }}\` result: ${icon} \`${env.RELEASE_STATUS}\`**`;
+          return `${title}\n\n${note}`;
+        };
+        const payload = JSON.stringify({
+          body: bodyText()
+        });
+        const request = `curl -X POST \
+          ${{ github.event.pull_request.comments_url }} \
+          -H "authorization: Bearer $GITHUB_TOKEN" \
+          -H "content-type: application/json" \
+          --data '${payload}' \
+          --fail --silent --show-error`;
+        exec(request, (err, stdout, stderr) => {
+          if (err) {
+            console.log(`::error:: ${stderr}`);
+            throw err.message;
+          }
+          console.log(`::group::exec ${request.slice(0, 15)}...`);
+          console.log(request, '\n\n', stdout);
+          console.log('::endgroup::');
+        });

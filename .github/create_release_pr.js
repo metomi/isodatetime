@@ -1,5 +1,5 @@
 const {execSync} = require('child_process');
-const env = process.env;
+const {env} = process;
 const curlOpts = '--silent --fail --show-error'
 
 const milestone = getMilestone();
@@ -27,6 +27,7 @@ const bodyText = `
 
 - [ ] Changelog up-to-date?
   Examine pull requests made since the last release
+  "Released on" date automatically set: ${env.CHANGELOG_DATE ? `✔️ \`${env.CHANGELOG_DATE}\`` : '⚠️ failed'}
 
 - [ ] All contributors listed?
 
@@ -108,6 +109,6 @@ function exec(cmd) {
     console.log(cmd);
     console.log('===================== stdout =====================');
     console.log(stdout);
-    console.log('::endgroup::')
+    console.log('::endgroup::');
     return stdout;
 }

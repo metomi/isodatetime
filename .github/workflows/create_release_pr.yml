@@ -16,6 +16,7 @@ env:
   REPOSITORY: ${{ github.repository }}
   INIT_FILE: 'metomi/isodatetime/__init__.py'
   CHANGELOG_FILE: CHANGES.md
+  PR_BRANCH_PREFIX: 'prepare-'
 
 jobs:
   create-release-pr:
@@ -48,7 +49,7 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-        HEAD_REF="prepare-${VERSION}"
+        HEAD_REF="${PR_BRANCH_PREFIX}${VERSION}"
         git checkout -b "$HEAD_REF"
 
         echo "::set-env name=HEAD_REF::$HEAD_REF"
@@ -59,23 +60,27 @@ jobs:
         sed -i -E "s/${pattern}/\1${VERSION}\2/" "$INIT_FILE"
 
         if [[ -z $(git diff --stat -- "$INIT_FILE") ]]; then
-          echo "::error :: No changes to ${INIT_FILE} occurred"
+          echo "::error:: No changes to ${INIT_FILE} occurred"
           exit 1
         fi
 
         git add "$INIT_FILE"
 
     - name: Update "released on" date in changelog
+      continue-on-error: true
       run: |
         pattern="(<span actions:bind='release-date'>).*(<\/span>)"
-        replacement="Released $( date '+%Y-%m-%d' --utc )"
+        date_now=$( date '+%Y-%m-%d' --utc )
+        replacement="Released $date_now"
         sed -i -E "0,/${pattern}/s//\1${replacement}\2/" "$CHANGELOG_FILE"  # Only replaces 1st match
 
         if [[ -z $(git diff --stat -- "$CHANGELOG_FILE") ]]; then
-          echo ":warning:: Couldn't update release date in ${CHANGELOG_FILE}"
-        else
-          git add "$CHANGELOG_FILE"
+          echo "::error:: Couldn't update release date in ${CHANGELOG_FILE}"
+          exit 1
         fi
+
+        git add "$CHANGELOG_FILE"
+        echo "::set-env name=CHANGELOG_DATE::$date_now"
 
     - name: Test the build
       run: |
@@ -107,7 +112,7 @@ jobs:
       run: |
         backup_sha=$( git rev-parse "origin/${HEAD_REF}" )
         git push -d origin "$HEAD_REF"
-        echo "::warning :: Deleted the newly-pushed branch '${HEAD_REF}' because the workflow failed"
+        echo "::warning:: Deleted the newly-pushed branch '${HEAD_REF}' because the workflow failed"
         echo "If you need to recover the branch:"
         echo "  git fetch origin ${backup_sha}"
         echo "  git checkout -b ${HEAD_REF} ${backup_sha}"
