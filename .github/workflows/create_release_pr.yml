@@ -65,6 +65,18 @@ jobs:
 
         git add "$INIT_FILE"
 
+    - name: Update "released on" date in changelog
+      run: |
+        pattern="(<span actions:bind='release-date'>).*(<\/span>)"
+        replacement="Released $( date '+%Y-%m-%d' --utc )"
+        sed -i -E "0,/${pattern}/s//\1${replacement}\2/" "$CHANGELOG_FILE"  # Only replaces 1st match
+
+        if [[ -z $(git diff --stat -- "$CHANGELOG_FILE") ]]; then
+          echo ":warning:: Couldn't update release date in ${CHANGELOG_FILE}"
+        else
+          git add "$CHANGELOG_FILE"
+        fi
+
     - name: Test the build
       run: |
         cd $( mktemp -d )
