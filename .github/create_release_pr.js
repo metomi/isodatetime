@@ -23,6 +23,7 @@ This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUT
 
 #### Tests:
 ✔️ \`setup.py\` bdist build test
+✔️ Version number valid for PyPI.org
 
 #### Checklist:
 - ${milestoneText()}

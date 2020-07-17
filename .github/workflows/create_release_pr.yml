@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number of the form 1.2.3'
+        description: 'Version number (PEP 440 compliant e.g., 1.12.4, 5.0a2 etc)'
         required: true
       branch:
         description: 'The branch to open the PR against'
@@ -13,6 +13,7 @@ on:
 
 env:
   # Best not to include the GH token here, only do it for the steps that need it
+  PYPI_PACKAGE_NAME: 'metomi-isodatetime'
   REPOSITORY: ${{ github.repository }}
   INIT_FILE: 'metomi/isodatetime/__init__.py'
   CHANGELOG_FILE: CHANGES.md
@@ -28,11 +29,11 @@ jobs:
       env:
         VERSION: ${{ github.event.inputs.version }}
         BRANCH: ${{ github.event.inputs.branch }}
-      run: | # TODO: check it matches the x.y.z pattern?
+      run: |
         const versionStr = process.env.VERSION.trim();
         console.log(`::set-env name=VERSION::${versionStr}`);
         const branchStr = process.env.BRANCH.trim();
-        console.log(`::set-env name=BASE_REF::${branchStr}`)
+        console.log(`::set-env name=BASE_REF::${branchStr}`);
 
     - name: Checkout repo
       uses: actions/checkout@v2.3.1
@@ -65,6 +66,41 @@ jobs:
         fi
 
         git add "$INIT_FILE"
+
+    - name: Check setup.py version is valid
+      # Usually needs to be after updating version in __init__.py
+      run: |
+        pip install -q packaging
+
+        SETUP_PY_VERSION=$( python setup.py --version )
+        echo "::set-env name=SETUP_PY_VERSION::$SETUP_PY_VERSION"
+        python -c "
+        import os
+        import packaging.version
+        packaging.version.Version(os.getenv('SETUP_PY_VERSION'))
+        "
+
+    - name: Check setup.py version against PyPI.org
+      shell: node {0}
+      run: |
+        const {exec} = require('child_process');
+        const {env} = process;
+        console.log(process.cwd());
+        const request = `curl -X GET https://pypi.org/pypi/${env.PYPI_PACKAGE_NAME}/json`;
+        exec(request, (err, stdout, stderr) => {
+          if (err) {
+            console.log(`::error:: ${stderr}`);
+            throw err.message;
+          }
+          console.log(`::group::exec ${request.slice(0, 15)}...`);
+          console.log(request, '\n\n', stdout);
+          console.log('::endgroup::');
+
+          const releases = JSON.parse(stdout).releases;
+          if (env.SETUP_PY_VERSION in releases) {
+            throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
+          }
+        });
 
     - name: Update "released on" date in changelog
       continue-on-error: true
