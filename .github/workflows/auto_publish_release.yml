@@ -29,7 +29,7 @@ jobs:
         fi
         echo "::set-env name=VERSION::$VERSION"
 
-    - name: Create draft release
+    - name: Publish release
       id: create-release
       uses: actions/create-release@v1.1.2
       env:
@@ -83,3 +83,12 @@ jobs:
           console.log('::endgroup::');
         });
 
+    - name: Delete the PR branch
+      if: always()
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -X DELETE \
+          https://api.github.com/repos/${{ github.repository }}/git/refs/heads/${{ github.event.pull_request.head.ref }} \
+          -H "authorization: Bearer $GITHUB_TOKEN"

@@ -30,7 +30,7 @@ This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUT
 
 - [ ] Changelog up-to-date?
   Examine pull requests made since the last release
-  "Released on" date automatically set: ${env.CHANGELOG_DATE ? `✔️ \`${env.CHANGELOG_DATE}\`` : '⚠️ failed'}
+  "Released on" date updated? ${env.CHANGELOG_DATE ? `✔️ \`${env.CHANGELOG_DATE}\`` : `⚠️ couldn't automatically set date`}
 
 - [ ] All contributors listed?
 

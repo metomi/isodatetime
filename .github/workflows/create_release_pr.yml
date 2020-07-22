@@ -93,7 +93,7 @@ jobs:
             throw err.message;
           }
           console.log(`::group::exec ${request.slice(0, 15)}...`);
-          console.log(request, '\n\n', JSON.stringify(stdout, null, 2));
+          console.log(request, '\n\n', JSON.stringify(JSON.parse(stdout), null, 2));
           console.log('::endgroup::');
 
           const releases = JSON.parse(stdout).releases;
