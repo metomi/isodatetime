@@ -1,4 +1,4 @@
-name: Release stage 2 - auto draft release
+name: Release stage 2 - auto publish
 
 on:
   pull_request:  # types AND paths
@@ -10,9 +10,10 @@ env:
   # Best not to include the GH token here, only do it for the steps that need it
   REPOSITORY: ${{ github.repository }}
   MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+  CHANGELOG_FILE: CHANGES.md
 
 jobs:
-  draft-release:
+  publish:
     if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'prepare-') # Can't use top-level env here
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -37,8 +38,8 @@ jobs:
         commitish: ${{ env.MERGE_SHA }}
         tag_name: ${{ env.VERSION }}
         release_name: isodatetime ${{ env.VERSION }}
-        body: Insert text here # TODO: get release number; add description field in the create-release-pr workflow input? Possibly preview this info in the PR?
-        draft: true
+        body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail. # TODO: preview this info in the PR? Posibly get release number; add description field in the create-release-pr workflow input?
+        draft: false
 
     - name: Comment on the release PR with the results
       if: always()
@@ -54,13 +55,14 @@ jobs:
 
         const bodyText = () => {
           let icon = '✔️';
-          let note = `Next step for @${env.ASSIGNEE}: [edit & publish the release](${env.RELEASE_URL})`;
+          let note = `Next step for @${env.ASSIGNEE}: [view/edit the release description](${env.RELEASE_URL}) as appropriate`;
           if (env.RELEASE_STATUS !== 'success') {
             icon = '❌';
             note = `[Check the run](${{ github.event.pull_request.html_url }}/checks)`;
           }
-          const title = `**Workflow \`${{ github.workflow }}\` result: ${icon} \`${env.RELEASE_STATUS}\`**`;
-          return `${title}\n\n${note}`;
+          const title = `### ${icon} \`${env.RELEASE_STATUS}\` `;
+          const footer = `Comment created by workflow: \`${{ github.workflow }}\`, run: \`${{ github.run_number }}\``;
+          return `${title}\n\n${note}\n___\n${footer}`;
         };
         const payload = JSON.stringify({
           body: bodyText()
@@ -80,3 +82,4 @@ jobs:
           console.log(request, '\n\n', stdout);
           console.log('::endgroup::');
         });
+

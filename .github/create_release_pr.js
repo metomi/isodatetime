@@ -17,7 +17,7 @@ const milestoneText = () => {
 };
 
 const bodyText = `
-#### ⚡ Merging this PR will automatically create a draft GitHub Release
+### ⚡ Merging this PR will automatically create a GitHub Release ⚡
 
 This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUTHOR}
 
@@ -40,7 +40,7 @@ This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUT
 #### Next steps:
 - @${env.AUTHOR} should request 1 or 2 reviews
 - If any further changes are needed, push to this PR branch
-- After merging, the bot will comment below with a link to the draft release (if not, look at the PR checks tab)
+- After merging, the bot will comment below with a link to the release (if not, look at the PR checks tab)
 `;
 
 const payload = JSON.stringify({
