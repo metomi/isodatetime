@@ -84,24 +84,16 @@ jobs:
     - name: Check setup.py version against PyPI.org
       shell: node {0}
       run: |
-        const {exec} = require('child_process');
+        const {execSync, curlOpts} = require('${{ github.workspace }}/.github/bin/util');
         const {env} = process;
-        console.log(process.cwd());
-        const request = `curl -X GET https://pypi.org/pypi/${env.PYPI_PACKAGE_NAME}/json`;
-        exec(request, (err, stdout, stderr) => {
-          if (err) {
-            console.log(`::error:: ${stderr}`);
-            throw err.message;
-          }
-          console.log(`::group::exec ${request.slice(0, 15)}...`);
-          console.log(request, '\n\n', JSON.stringify(JSON.parse(stdout), null, 2));
-          console.log('::endgroup::');
 
-          const releases = JSON.parse(stdout).releases;
-          if (env.SETUP_PY_VERSION in releases) {
-            throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
-          }
-        });
+        const request = `curl -X GET \
+          https://pypi.org/pypi/${env.PYPI_PACKAGE_NAME}/json \
+          ${curlOpts}`
+        const {releases} = JSON.parse(execSync(request));
+        if (env.SETUP_PY_VERSION in releases) {
+          throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
+        }
 
     - name: Update "released on" date in changelog
       continue-on-error: true
@@ -141,7 +133,7 @@ jobs:
         WORKFLOW: ${{ github.workflow }}
         AUTHOR: ${{ github.event.sender.login }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: node .github/create_release_pr.js
+      run: node .github/bin/create_release_pr.js
 
     - name: (On fail) Delete failed PR branch on origin, if it was pushed
       if: always() && steps.create-pr.outcome != 'success' && steps.push.outcome == 'success'
