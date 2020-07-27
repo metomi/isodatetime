@@ -17,7 +17,7 @@ const milestoneText = () => {
 };
 
 const bodyText = `
-### ⚡ Merging this PR will automatically create a GitHub Release ⚡
+### ⚡ Merging this PR will automatically create a GitHub Release & publish to PyPI ⚡
 
 This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUTHOR}
 

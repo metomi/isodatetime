@@ -20,6 +20,7 @@ jobs:
     env:
       PR_BRANCH_PREFIX: 'prepare-'
     steps:
+
     - name: Get the version number
       run: |
         VERSION=$( grep -oP "(?<=${PR_BRANCH_PREFIX}).*" <<< '${{ github.head_ref }}' )
@@ -29,7 +30,31 @@ jobs:
         fi
         echo "::set-env name=VERSION::$VERSION"
 
-    - name: Publish release
+    - name: Checkout repo
+      uses: actions/checkout@v2.3.1
+      with:
+        ref: ${{ env.MERGE_SHA }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Build
+      run: |
+        python3 setup.py bdist_wheel sdist
+        if ! grep -qF ".whl" <<< "$( ls dist/ )"; then
+          echo "::error:: Wheel file not built"
+          exit 1
+        fi
+
+    - name: Publish distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@v1.3.1
+      with:
+        user: __token__ # uses the API token feature of PyPI - least permissions possible
+        password: ${{ secrets.PYPI_TOKEN }}
+
+    - name: Publish GitHub release
       id: create-release
       uses: actions/create-release@v1.1.2
       env:
@@ -45,7 +70,7 @@ jobs:
       if: always()
       shell: node {0}
       env:
-        RELEASE_STATUS: ${{ steps.create-release.outcome }}
+        JOB_STATUS: ${{ job.status }}
         RELEASE_URL: ${{ steps.create-release.outputs.html_url }}
         ASSIGNEE: ${{ github.event.pull_request.assignees[0].login }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,12 +80,22 @@ jobs:
 
         const bodyText = () => {
           let icon = '✔️';
-          let note = `Next step for @${env.ASSIGNEE}: [view/edit the release description](${env.RELEASE_URL}) as appropriate`;
-          if (env.RELEASE_STATUS !== 'success') {
+          let note = `Next step for @${env.ASSIGNEE}: [view/edit the GitHub release description](${env.RELEASE_URL}) as appropriate`;
+          if (env.JOB_STATUS !== 'success') {
             icon = '❌';
-            note = `[Check the run](${{ github.event.pull_request.html_url }}/checks)`;
+            note = [
+              `[Check the run](${{ github.event.pull_request.html_url }}/checks) \n`,
+              `If you need to publish the dist to PyPI manually: \n`,
+              `(Make sure you have commit \`${env.MERGE_SHA}\` checked out)`,
+              "```shell",
+              `# Create the build`,
+              `python3 setup.py bdist_wheel sdist`,
+              `# Upload your build to PyPI`,
+              `twine upload dist/*`,
+              "```"
+            ].join('\n');
           }
-          const title = `### ${icon} \`${env.RELEASE_STATUS}\` `;
+          const title = `### ${icon} \`${env.JOB_STATUS}\` `;
           const footer = `Comment created by workflow: \`${{ github.workflow }}\`, run: \`${{ github.run_number }}\``;
           return `${title}\n\n${note}\n___\n${footer}`;
         };

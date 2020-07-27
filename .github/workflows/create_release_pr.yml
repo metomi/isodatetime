@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+
     - name: Sanitise workflow inputs # Should be first step
       shell: node {0}
       env:
