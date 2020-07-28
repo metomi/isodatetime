@@ -6,7 +6,7 @@ const milestone = getMilestone();
 
 const milestoneText = () => {
     let checkbox = "[ ]";
-    let note = `⚠️ Could not find milestone matching "${env.VERSION}"`;
+    let note = `⚠️ Could not find milestone matching \`${env.VERSION}\``;
     if (milestone) {
         if (parseInt(milestone.open_issues) === 0) {
             checkbox = "[x]";
@@ -17,7 +17,9 @@ const milestoneText = () => {
 };
 
 const bodyText = `
-**This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUTHOR}**
+#### ⚡ Merging this PR will automatically create a draft GitHub Release
+
+This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUTHOR}
 
 #### Tests:
 ✔️ \`setup.py\` bdist build test
@@ -33,6 +35,11 @@ const bodyText = `
 
 - [ ] \`.mailmap\` file correct?
   In particular, check for duplication
+
+#### Next steps:
+- @${env.AUTHOR} should request 1 or 2 reviews
+- If any further changes are needed, push to this PR branch
+- After merging, the bot will comment below with a link to the draft release (if not, look at the PR checks tab)
 `;
 
 const payload = JSON.stringify({
@@ -104,7 +111,7 @@ function exec(cmd) {
         console.log(`::error:: ${err.stderr ? err.stderr : 'Error executing command'}`);
         throw err.message;
     }
-    console.log('::group name=exec_debug_info::')
+    console.log(`::group::exec ${cmd.slice(0, 15)}...`);
     console.log('=====================  cmd  ======================');
     console.log(cmd);
     console.log('===================== stdout =====================');

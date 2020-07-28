@@ -94,7 +94,7 @@ jobs:
     - name: Commit & push
       id: push
       run: |
-        git status; echo " "
+        git status
         git commit -m "Prepare release ${VERSION}" -m "Workflow: ${{ github.workflow}}, run: ${{ github.run_number }}"
         git push origin "$HEAD_REF"
 
