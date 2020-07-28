@@ -4,8 +4,13 @@ const {execSync} = require('child_process');
 
 exports.curlOpts = '--silent --fail --show-error';
 
+exports.stringify = (obj) => {
+    // JSON.stringify() but escapes single quotes as HTML chars
+    return JSON.stringify(obj).replace(/'/g, "&apos;");
+}
+
 exports.execSync = (cmd) => {
-    // Node's execSync but with improved logging
+    // Node's execSync() but with improved logging
     let stdout;
     try {
         stdout = execSync(cmd, {stdio: 'pipe', encoding: 'utf8'});

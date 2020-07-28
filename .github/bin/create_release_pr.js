@@ -1,11 +1,11 @@
-const {execSync, curlOpts} = require('./util');
+const {execSync, stringify, curlOpts} = require('./util');
 const {env} = process;
 
 const milestone = getMilestone();
 
 const milestoneText = () => {
     let checkbox = "[ ]";
-    let note = `⚠️ Could not find milestone matching \`${env.VERSION}\``;
+    let note = `⚠️ Couldn't find milestone matching \`${env.VERSION}\` `;
     if (milestone) {
         if (parseInt(milestone.open_issues) === 0) {
             checkbox = "[x]";
@@ -42,18 +42,18 @@ This PR was created by the \`${env.WORKFLOW}\` workflow, triggered by @${env.AUT
 - After merging, the bot will comment below with a link to the release (if not, look at the PR checks tab)
 `;
 
-const payload = JSON.stringify({
+const payload = {
     title: `Prepare release: ${env.VERSION}`,
     head: env.HEAD_REF,
     base: env.BASE_REF,
     body: bodyText
-});
+};
 
 const request = `curl -X POST \
     https://api.github.com/repos/${env.REPOSITORY}/pulls \
     -H "authorization: Bearer $GITHUB_TOKEN" \
     -H "content-type: application/json" \
-    --data '${payload}' \
+    --data '${stringify(payload)}' \
     ${curlOpts}`;
     // Don't use env.GITHUB_TOKEN above as that might print in log.
 
@@ -88,16 +88,16 @@ function getMilestone() {
 
 function setMilestoneAndAssignee(prNumber) {
     // Cannot set them when creating the PR unfortunately
-    const payload = JSON.stringify({
+    const payload = {
         milestone: milestone ? milestone.number : undefined,
         assignees: [env.AUTHOR]
-    });
+    };
 
     execSync(`curl -X PATCH \
         https://api.github.com/repos/${env.REPOSITORY}/issues/${prNumber} \
         -H "authorization: Bearer $GITHUB_TOKEN" \
         -H "content-type: application/json" \
-        --data '${payload}' \
+        --data '${stringify(payload)}' \
         ${curlOpts}`
     );
 }

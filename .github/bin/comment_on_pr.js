@@ -1,4 +1,4 @@
-const {execSync, curlOpts} = require('./util');
+const {execSync, stringify, curlOpts} = require('./util');
 const {env} = process;
 const pr_event = JSON.parse(env.PR_EVENT);
 
@@ -36,14 +36,14 @@ const bodyText = () => {
     return [title, content, footer].join('');
 };
 
-const payload = JSON.stringify({
+const payload = {
     body: bodyText()
-});
+};
 
 execSync(`curl -X POST \
     ${pr_event.comments_url} \
     -H "authorization: Bearer $GITHUB_TOKEN" \
     -H "content-type: application/json" \
-    --data '${payload}' \
+    --data '${stringify(payload)}' \
     ${curlOpts}`
 );
