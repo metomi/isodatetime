@@ -10,7 +10,7 @@ const milestoneText = () => {
         if (parseInt(milestone.open_issues) === 0) {
             checkbox = "[x]";
         }
-        note = `ℹ️ ${milestone.open_issues} other open issues/PRs on [milestone ${milestone.title}](https://github.com/${env.REPOSITORY}/milestone/${milestone.number}) at time of PR creation`;
+        note = `\`${milestone.open_issues}\` other open issues/PRs on [milestone ${milestone.title}](https://github.com/${env.REPOSITORY}/milestone/${milestone.number}) at time of PR creation`;
     }
     return `${checkbox} Milestone complete?\n  ${note}`;
 };

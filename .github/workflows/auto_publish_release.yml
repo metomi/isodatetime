@@ -66,7 +66,7 @@ jobs:
         body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail. # TODO: preview this info in the PR? Posibly get release number; add description field in the create-release-pr workflow input?
         draft: false
 
-    - name: Comment on the release PR with the results
+    - name: Comment on the release PR with the results; close milestone if possible
       if: always()
       env:
         WORKFLOW: ${{ github.workflow }}
