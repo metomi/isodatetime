@@ -2123,7 +2123,7 @@ def _get_days_in_month(month_of_year, year, _):
     """Return the number of days in the month of this particular year.
     Year can also be "leap", or None for non-leap."""
     month_index = month_of_year - 1
-    if year is not None and (year is "leap" or get_is_leap_year(year)):
+    if year is not None and (year == "leap" or get_is_leap_year(year)):
         return CALENDAR.DAYS_IN_MONTHS_LEAP[month_index]
     return CALENDAR.DAYS_IN_MONTHS[month_index]
 
