@@ -136,7 +136,9 @@ def get_timepoint_dumper_tests():
               "+000044-01-04T05:01:02+00:00"),
              ("DD/MM/CCYY is a silly format", "04/01/0044 is a silly format"),
              ("ThhZ", "T05Z"),
-             ("%Y-%m-%dT%H:%M", "0044-01-04T05:01")]
+             ("%Y-%m-%dT%H:%M", "0044-01-04T05:01"),
+             ("CCYYMMDD00.T+3", "0044010400.T+3"),
+             ("T+3", "T+3")]
         ),
         (
             {"year": 500200, "month_of_year": 7, "day_of_month": 28,

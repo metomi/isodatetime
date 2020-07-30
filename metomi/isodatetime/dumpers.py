@@ -164,12 +164,13 @@ class TimePointDumper(object):
     @lru_cache(maxsize=100000)
     def _get_expression_and_properties(self, formatting_string):
         date_time_strings = formatting_string.split(
-            self._time_designator)
+            self._time_designator)  # if no T then hh:mm etc doesn't work
         date_string = date_time_strings[0]
         time_string = ""
         time_zone_string = ""
         custom_time_zone = None
-        if len(date_time_strings) > 1:
+        has_time_string = len(date_time_strings) > 1
+        if has_time_string:
             time_string = date_time_strings[1]
             if time_string.endswith("Z"):
                 time_string = time_string[:-1]
@@ -198,9 +199,9 @@ class TimePointDumper(object):
                 string = new_string
             string_map[key] = string
         expression = string_map["date"]
-        if string_map["time"]:
-            expression += self._time_designator + string_map["time"]
-        expression += string_map["time_zone"]
+        if has_time_string:
+            expression += self._time_designator + string_map["time"] + \
+                string_map["time_zone"]
         return expression, tuple(point_prop_list), custom_time_zone
 
     @lru_cache(maxsize=100000)
