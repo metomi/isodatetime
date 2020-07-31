@@ -115,10 +115,6 @@ jobs:
       run: |
         cd $( mktemp -d )
         python3 "${{ github.workspace }}/setup.py" bdist_wheel
-        if ! grep -qF ".whl" <<< "$( ls dist/ )"; then
-          echo "::error:: Wheel file not built"
-          exit 1
-        fi
 
     - name: Commit & push
       id: push
@@ -131,6 +127,7 @@ jobs:
       id: create-pr
       env:
         WORKFLOW: ${{ github.workflow }}
+        RUN_NUMBER: ${{ github.run_number }}
         AUTHOR: ${{ github.event.sender.login }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: node .github/bin/create_release_pr.js

@@ -4,21 +4,23 @@ on:
   pull_request:  # types AND paths
     types: [closed]
     paths: ['metomi/isodatetime/__init__.py']
-    # Don't use branches as we might create release on any branch
+    # NOTE: While this is too generic, we use the `if` condition of the job to narrow it down
+    # NOTE: Don't use `branches` as we might create release on any branch
 
 env:
   # Best not to include the GH token here, only do it for the steps that need it
   REPOSITORY: ${{ github.repository }}
   MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
   CHANGELOG_FILE: CHANGES.md
+  PR_BRANCH_PREFIX: 'prepare-'
 
 jobs:
   publish:
-    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'prepare-') # Can't use top-level env here
+    if: >-  # NOTE: Can't use top-level env here unfortunately
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'release')
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      PR_BRANCH_PREFIX: 'prepare-'
     steps:
 
     - name: Get the version number
@@ -26,6 +28,7 @@ jobs:
         VERSION=$( grep -oP "(?<=${PR_BRANCH_PREFIX}).*" <<< '${{ github.head_ref }}' )
         if [[ -z "$VERSION" ]]; then
           echo "::error:: Could not get version name from PR branch name '${{ github.head_ref }}'"
+          echo "Note: PR branch name must begin with $PR_BRANCH_PREFIX"
           exit 1
         fi
         echo "::set-env name=VERSION::$VERSION"
@@ -41,12 +44,7 @@ jobs:
         python-version: '3.x'
 
     - name: Build
-      run: |
-        python3 setup.py bdist_wheel sdist
-        if ! grep -qF ".whl" <<< "$( ls dist/ )"; then
-          echo "::error:: Wheel file not built"
-          exit 1
-        fi
+      run: python3 setup.py bdist_wheel sdist
 
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@v1.3.1
@@ -63,7 +61,8 @@ jobs:
         commitish: ${{ env.MERGE_SHA }}
         tag_name: ${{ env.VERSION }}
         release_name: isodatetime ${{ env.VERSION }}
-        body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail. # TODO: preview this info in the PR? Posibly get release number; add description field in the create-release-pr workflow input?
+        body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail.
+        # TODO: Get topmost changelog section somehow and use that as the body?
         draft: false
 
     - name: Comment on the release PR with the results; close milestone if possible
