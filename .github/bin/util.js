@@ -40,7 +40,7 @@ exports.execSync = (cmd) => {
     console.log('===================== stdout =====================');
     try {
         console.log(JSON.stringify(JSON.parse(stdout), null, 2));
-    } catch {
+    } catch (err) {
         console.log(stdout);
     }
     console.log('::endgroup::');
