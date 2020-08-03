@@ -1,0 +1,144 @@
+name: Release stage 1 - create release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (PEP 440 compliant e.g., 1.12.4, 5.0a2 etc)'
+        required: true
+      branch:
+        description: 'The branch to open the PR against'
+        required: false
+        default: 'master'
+
+env:
+  # Best not to include the GH token here, only do it for the steps that need it
+  PYPI_PACKAGE_NAME: 'metomi-isodatetime'
+  REPOSITORY: ${{ github.repository }}
+  INIT_FILE: 'metomi/isodatetime/__init__.py'
+  CHANGELOG_FILE: CHANGES.md
+  PR_BRANCH_PREFIX: 'prepare-'
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+
+    - name: Sanitise workflow inputs # Should be first step
+      shell: node {0}
+      env:
+        VERSION: ${{ github.event.inputs.version }}
+        BRANCH: ${{ github.event.inputs.branch }}
+      run: |
+        const versionStr = process.env.VERSION.trim();
+        console.log(`::set-env name=VERSION::${versionStr}`);
+        const branchStr = process.env.BRANCH.trim();
+        console.log(`::set-env name=BASE_REF::${branchStr}`);
+
+    - name: Checkout repo
+      uses: actions/checkout@v2.3.1
+      with:
+        ref: ${{ env.BASE_REF }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Configure git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        HEAD_REF="${PR_BRANCH_PREFIX}${VERSION}"
+        git checkout -b "$HEAD_REF"
+
+        echo "::set-env name=HEAD_REF::$HEAD_REF"
+
+    - name: Update version in __init__.py
+      run: |
+        pattern="(__version__ ?= ?['\"]).*(['\"])"
+        sed -i -E "s/${pattern}/\1${VERSION}\2/" "$INIT_FILE"
+
+        if [[ -z $(git diff --stat -- "$INIT_FILE") ]]; then
+          echo "::error:: No changes to ${INIT_FILE} occurred"
+          exit 1
+        fi
+
+        git add "$INIT_FILE"
+
+    - name: Check setup.py version is valid
+      # Usually needs to be after updating version in __init__.py
+      run: |
+        pip install -q packaging
+
+        export SETUP_PY_VERSION=$( python setup.py --version )
+        echo "::set-env name=SETUP_PY_VERSION::$SETUP_PY_VERSION"
+        python -c "
+        import os
+        import packaging.version
+        packaging.version.Version(os.getenv('SETUP_PY_VERSION'))
+        "
+
+    - name: Check setup.py version against PyPI.org
+      shell: node {0}
+      run: |
+        const {execSync, curlOpts} = require('${{ github.workspace }}/.github/bin/util');
+        const {env} = process;
+
+        const request = `curl -X GET \
+          https://pypi.org/pypi/${env.PYPI_PACKAGE_NAME}/json \
+          ${curlOpts}`
+        const {releases} = JSON.parse(execSync(request));
+        if (env.SETUP_PY_VERSION in releases) {
+          throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
+        }
+
+    - name: Update "released on" date in changelog
+      continue-on-error: true
+      run: |
+        pattern="(<span actions:bind='release-date'>).*(<\/span>)"
+        date_now=$( date '+%Y-%m-%d' --utc )
+        replacement="Released $date_now"
+        sed -i -E "0,/${pattern}/s//\1${replacement}\2/" "$CHANGELOG_FILE"  # Only replaces 1st match
+
+        if [[ -z $(git diff --stat -- "$CHANGELOG_FILE") ]]; then
+          echo "::error:: Couldn't update release date in ${CHANGELOG_FILE}"
+          exit 1
+        fi
+
+        git add "$CHANGELOG_FILE"
+        echo "::set-env name=CHANGELOG_DATE::$date_now"
+
+    - name: Test the build
+      run: |
+        cd $( mktemp -d )
+        python3 "${{ github.workspace }}/setup.py" bdist_wheel
+
+    - name: Commit & push
+      id: push
+      run: |
+        git status
+        git commit -m "Prepare release ${VERSION}" -m "Workflow: ${{ github.workflow}}, run: ${{ github.run_number }}"
+        git push origin "$HEAD_REF"
+
+    - name: Create pull request
+      id: create-pr
+      env:
+        WORKFLOW: ${{ github.workflow }}
+        RUN_NUMBER: ${{ github.run_number }}
+        AUTHOR: ${{ github.event.sender.login }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: node .github/bin/create_release_pr.js
+
+    - name: (On fail) Delete failed PR branch on origin, if it was pushed
+      if: always() && steps.create-pr.outcome != 'success' && steps.push.outcome == 'success'
+        # Need status check function in if-condition otherwise won't run on fail
+      run: |
+        backup_sha=$( git rev-parse "origin/${HEAD_REF}" )
+        git push -d origin "$HEAD_REF"
+        echo "::warning:: Deleted the newly-pushed branch '${HEAD_REF}' because the workflow failed"
+        echo "If you need to recover the branch:"
+        echo "  git fetch origin ${backup_sha}"
+        echo "  git checkout -b ${HEAD_REF} ${backup_sha}"

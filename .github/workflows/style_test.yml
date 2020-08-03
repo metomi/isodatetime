@@ -1,0 +1,25 @@
+name: Style test for .github dir
+
+on:
+  pull_request:
+    paths:
+    - '.github/**'
+    - '!.github/workflows/**' # We don't have YAML linting
+
+jobs:
+
+  style-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+
+    - name: Checkout repo
+      uses: actions/checkout@v2.3.1
+
+    - name: Install (dev) dependencies
+      working-directory: .github
+      run: npm install
+
+    - name: Style test
+      working-directory: .github
+      run: npx eslint .

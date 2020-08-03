@@ -15,6 +15,8 @@ MANIFEST
 isodatetime.egg-info/
 metomi_isodatetime.egg-info/
 .eggs
+node_modules/
 
-# text editor files
+# editor files
 .vscode/
+.idea/
