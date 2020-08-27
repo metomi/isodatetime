@@ -46,6 +46,11 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Install/setup utils
+      run: |
+        pip install -q packaging
+        echo "::add-path::${{ github.workspace }}/.github/bin"
+
     - name: Configure git
       run: |
         git config --global user.name "github-actions[bot]"
@@ -68,20 +73,16 @@ jobs:
 
         git add "$INIT_FILE"
 
-    - name: Check setup.py version is valid
+    - name: Get setup.py version
       # Usually needs to be after updating version in __init__.py
       run: |
-        pip install -q packaging
-
-        export SETUP_PY_VERSION=$( python setup.py --version )
+        SETUP_PY_VERSION=$( python setup.py --version )
         echo "::set-env name=SETUP_PY_VERSION::$SETUP_PY_VERSION"
-        python -c "
-        import os
-        import packaging.version
-        packaging.version.Version(os.getenv('SETUP_PY_VERSION'))
-        "
+        # Check version number is valid:
+        cmp_py_versions "$SETUP_PY_VERSION" "$SETUP_PY_VERSION"
+        echo "Setup.py version: ${SETUP_PY_VERSION}"
 
-    - name: Check setup.py version against PyPI.org
+    - name: Check version doesn't already exist on PyPI.org
       shell: node {0}
       run: |
         const {execSync, curlOpts} = require('${{ github.workspace }}/.github/bin/util');
@@ -91,8 +92,11 @@ jobs:
           https://pypi.org/pypi/${env.PYPI_PACKAGE_NAME}/json \
           ${curlOpts}`
         const {releases} = JSON.parse(execSync(request));
-        if (env.SETUP_PY_VERSION in releases) {
-          throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
+        for (release in releases) {
+          const diff = execSync(`cmp_py_versions ${release} ${env.SETUP_PY_VERSION}`);
+          if (!diff) {
+            throw `${env.SETUP_PY_VERSION} already exists on PyPI.org`;
+          }
         }
 
     - name: Update "released on" date in changelog
