@@ -85,7 +85,7 @@ jobs:
     - name: Check version doesn't already exist on PyPI.org
       shell: node {0}
       run: |
-        const {execSync, curlOpts} = require('${{ github.workspace }}/.github/bin/util');
+        const {execSync, curlOpts} = require('${{ github.workspace }}/.github/lib/util');
         const {env} = process;
 
         const request = `curl -X GET \
@@ -134,7 +134,7 @@ jobs:
         RUN_NUMBER: ${{ github.run_number }}
         AUTHOR: ${{ github.event.sender.login }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: node .github/bin/create_release_pr.js
+      run: node .github/lib/create_release_pr.js
 
     - name: (On fail) Delete failed PR branch on origin, if it was pushed
       if: always() && steps.create-pr.outcome != 'success' && steps.push.outcome == 'success'
