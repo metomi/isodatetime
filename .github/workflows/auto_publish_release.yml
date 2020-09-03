@@ -74,7 +74,7 @@ jobs:
         RELEASE_URL: ${{ steps.create-release.outputs.html_url }}
         PR_EVENT: ${{ toJson(github.event.pull_request) }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: node .github/bin/comment_on_pr.js
+      run: node .github/lib/comment_on_pr.js
 
     - name: Delete the PR branch
       if: always()
