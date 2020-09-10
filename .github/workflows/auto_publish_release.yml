@@ -9,10 +9,8 @@ on:
 
 env:
   # Best not to include the GH token here, only do it for the steps that need it
-  REPOSITORY: ${{ github.repository }}
   MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
   CHANGELOG_FILE: CHANGES.md
-  PR_BRANCH_PREFIX: 'prepare-'
 
 jobs:
   publish:
@@ -24,17 +22,10 @@ jobs:
     steps:
 
     - name: Get the version number
-      run: |
-        VERSION=$( grep -oP "(?<=${PR_BRANCH_PREFIX}).*" <<< '${{ github.head_ref }}' )
-        if [[ -z "$VERSION" ]]; then
-          echo "::error:: Could not get version name from PR branch name '${{ github.head_ref }}'"
-          echo "Note: PR branch name must begin with $PR_BRANCH_PREFIX"
-          exit 1
-        fi
-        echo "::set-env name=VERSION::$VERSION"
+      uses: cylc/release-actions/stage-2/get-version-from-pr@v1
 
     - name: Checkout repo
-      uses: actions/checkout@v2.3.1
+      uses: actions/checkout@v2
       with:
         ref: ${{ env.MERGE_SHA }}
 
@@ -44,7 +35,7 @@ jobs:
         python-version: '3.x'
 
     - name: Build
-      run: python3 setup.py bdist_wheel sdist
+      uses: cylc/release-actions/build-python-package@v1
 
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@v1.3.1
@@ -54,7 +45,7 @@ jobs:
 
     - name: Publish GitHub release
       id: create-release
-      uses: actions/create-release@v1.1.2
+      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -63,25 +54,11 @@ jobs:
         release_name: isodatetime ${{ env.VERSION }}
         body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail.
         # TODO: Get topmost changelog section somehow and use that as the body?
-        draft: false
 
-    - name: Comment on the release PR with the results; close milestone if possible
+    - name: Comment on the release PR with the results & next steps
       if: always()
-      env:
-        WORKFLOW: ${{ github.workflow }}
-        RUN_NUMBER: ${{ github.run_number }}
-        JOB_STATUS: ${{ job.status }}
-        RELEASE_URL: ${{ steps.create-release.outputs.html_url }}
-        PR_EVENT: ${{ toJson(github.event.pull_request) }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: node .github/lib/comment_on_pr.js
-
-    - name: Delete the PR branch
-      if: always()
-      continue-on-error: true
+      uses: cylc/release-actions/stage-2/comment-on-pr@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        curl -X DELETE \
-          https://api.github.com/repos/${{ github.repository }}/git/refs/heads/${{ github.event.pull_request.head.ref }} \
-          -H "authorization: Bearer $GITHUB_TOKEN"
+      with:
+        release-url: ${{ steps.create-release.outputs.html_url }}
