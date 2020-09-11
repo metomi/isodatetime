@@ -160,12 +160,15 @@ class TimeRecurrence:
 
     Keyword arguments:
 
-    repetitions (int): The number of repetitions in the recurrence. If omitted,
-        the number of repetitions is unbounded.
+    repetitions (int): The number of repetitions in the recurrence. If set
+        to 1, the recurrence simply consists of one date-time, with no
+        duration (i.e., the number of repetitions is inclusive of the first
+        occurrence). If omitted, the number of repetitions is unbounded.
     start_point (TimePoint): Start date-time of the recurrence.
-    duration (Duration): The duration of the recurrence.
-    end_point (TimePoint): End date-time of the recurrence, or if using
-        format 1, the end date-time of the first interval.
+    duration (Duration): The duration of each repetition interval in the
+        recurrence.
+    end_point (TimePoint): End date-time of the recurrence (format 4), or if
+        using format 1, the end date-time of the first interval.
     min_point (TimePoint): If specified, marks the start of a subset of 'valid'
         date-times in the recurrence.
     max_point (TimePoint): If specified, marks the end of a subset of 'valid'
