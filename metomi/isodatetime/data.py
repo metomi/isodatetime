@@ -194,10 +194,24 @@ class TimeRecurrence:
         self._min_point = min_point
         self._max_point = max_point
         self._format_number = None
+        if self._repetitions is not None and self._repetitions <= 0:
+            raise BadInputError(BadInputError.RECURRENCE,
+                                "Number of repetitions cannot be <= 0")
+        if self._duration is not None and self._duration < Duration(years=0):
+            raise BadInputError(BadInputError.RECURRENCE,
+                                "Duration cannot be < P0Y")
         if self._duration is None:
             # First form.
             # FIXME: see issue #45
             self._format_number = 1
+            # Note: 1 repetition means the event only occurs on the start date
+            if self._repetitions == 1:
+                self._end_point = self._start_point
+                return
+            if self._start_point is None or self._end_point is None:
+                # TODO: add tests for invalid TimeRecurrences
+                raise BadInputError(
+                    BadInputError.RECURRENCE, [i[:2] for i in inputs])
             start_year, start_days = self._start_point.get_ordinal_date()
             start_seconds = self._start_point.get_second_of_day()
             self._end_point = self._end_point.to_time_zone(
@@ -211,34 +225,36 @@ class TimeRecurrence:
             if diff_seconds < 0:
                 diff_days -= 1
                 diff_seconds += CALENDAR.SECONDS_IN_DAY
-            if diff_seconds >= CALENDAR.SECONDS_IN_DAY:
+            elif diff_seconds >= CALENDAR.SECONDS_IN_DAY:
                 diff_days += 1
                 diff_seconds -= CALENDAR.SECONDS_IN_DAY
-            if self._repetitions == 1:
-                self._duration = Duration(years=0)
-            else:
-                diff_days_float = diff_days / float(
-                    self._repetitions - 1)
-                diff_seconds_float = diff_seconds / float(
-                    self._repetitions - 1)
-                diff_days = int(diff_days_float)
-                diff_seconds_float += (
-                    diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
-                self._duration = Duration(
-                    days=diff_days, seconds=diff_seconds_float)
+            diff_days_float = diff_days / float(self._repetitions - 1)
+            diff_seconds_float = diff_seconds / float(self._repetitions - 1)
+            diff_days = int(diff_days_float)
+            diff_seconds_float += (
+                diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
+            self._duration = Duration(
+                days=diff_days, seconds=diff_seconds_float)
+            # TODO: Try to handle floating point errors by rounding?
         elif self._end_point is None:
             # Third form.
             self._format_number = 3
-            # If repetitions == 1, duration is actually ignored. TODO: Can
-            # probably set to None or something for the purposes of __eq__()
-            if self._repetitions is not None:
+            if self._repetitions == 1 or self._duration == Duration(years=0):
+                self._end_point = self._start_point
+                self._repetitions = 1
+                self._duration = None
+            elif self._repetitions is not None:
                 self._end_point = (
                     self._start_point +
                     self._duration * (self._repetitions - 1))
         elif self._start_point is None:
             # Fourth form.
             self._format_number = 4
-            if self._repetitions is not None:
+            if self._repetitions == 1 or self._duration == Duration(years=0):
+                self._start_point = self._end_point
+                self._repetitions = 1
+                self._duration = None
+            elif self._repetitions is not None:
                 self._start_point = (
                     self._end_point - self._duration * (self._repetitions - 1))
         else:
@@ -386,12 +402,14 @@ class TimeRecurrence:
             prefix = "R/"
         else:
             prefix = "R" + str(self._repetitions) + "/"
+        duration_str = (
+            str(self._duration) if self._duration is not None else 'P0Y')
         if self._format_number == 1:
             return prefix + str(self._start_point) + "/" + str(self._end_point)
         elif self._format_number == 3:
-            return prefix + str(self._start_point) + "/" + str(self._duration)
+            return prefix + str(self._start_point) + "/" + duration_str
         elif self._format_number == 4:
-            return prefix + str(self._duration) + "/" + str(self._end_point)
+            return prefix + duration_str + "/" + str(self._end_point)
         return "R/?/?"
 
     def __repr__(self):
