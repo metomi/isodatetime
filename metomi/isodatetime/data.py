@@ -389,12 +389,17 @@ class TimeRecurrence:
                 "Invalid type for addition: '{0}' should be Duration."
                 .format(type(other).__name__)
             )
-        offset_start_point = self._start_point + other
-        # Note: we don't need to worry about the format number as the same
-        # TimeRecurrence can be defined in any of the formats
+        if self._format_number == 1:
+            kwargs = {"start_point": self._start_point + other,
+                      "end_point": self._end_point + other}
+        elif self._format_number == 3:
+            kwargs = {"start_point": self._start_point + other,
+                      "duration": self._duration}
+        elif self._format_number == 4:
+            kwargs = {"end_point": self._end_point + other,
+                      "duration": self._duration}
         return self.__class__(
-            repetitions=self._repetitions,
-            start_point=offset_start_point, duration=self._duration,
+            repetitions=self._repetitions, **kwargs,
             min_point=self._min_point, max_point=self._max_point)
 
     def __sub__(self, other: "Duration") -> "TimeRecurrence":
