@@ -364,6 +364,23 @@ class TimeRecurrence:
                 return False
         return True
 
+    def __add__(self, other: "Duration") -> "TimeRecurrence":
+        if not isinstance(other, Duration):
+            raise TypeError(
+                "Invalid type for addition: '{0}' should be Duration."
+                .format(type(other).__name__)
+            )
+        offset_start_point = self._start_point + other
+        # Note: we don't need to worry about the format number as the same
+        # TimeRecurrence can be defined in any of the formats
+        return self.__class__(
+            repetitions=self._repetitions,
+            start_point=offset_start_point, duration=self._duration,
+            min_point=self._min_point, max_point=self._max_point)
+
+    def __sub__(self, other: "Duration") -> "TimeRecurrence":
+        return self + -1 * other
+
     def __str__(self):
         if self._repetitions is None:
             prefix = "R/"

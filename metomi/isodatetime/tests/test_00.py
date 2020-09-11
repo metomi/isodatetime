@@ -1390,6 +1390,37 @@ class TestSuite(unittest.TestCase):
         for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
             self.assertFalse(test_recurrence == var)
 
+    def test_timerecurrence_add(self):
+        """Test adding/subtracting Duration to/from TimeRecurrence"""
+        rep = 4
+        start_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=13)
+        dur = data.Duration(days=7)
+        end_pt = start_pt + (rep - 1) * dur
+
+        recurrence_fmt1 = data.TimeRecurrence(
+            repetitions=rep, start_point=start_pt, end_point=end_pt)
+        recurrence_fmt3 = data.TimeRecurrence(
+            repetitions=rep, start_point=start_pt, duration=dur)
+        recurrence_fmt4 = data.TimeRecurrence(
+            repetitions=rep, duration=dur, end_point=end_pt)
+        assert recurrence_fmt3 == recurrence_fmt4
+
+        offset = data.Duration(hours=9)
+        new_start_pt = start_pt + offset
+        expected = data.TimeRecurrence(
+            repetitions=rep, start_point=new_start_pt, duration=dur)
+        assert recurrence_fmt3 + offset == expected
+        assert recurrence_fmt4 + offset == expected
+
+        new_start_pt = start_pt - offset
+        expected = data.TimeRecurrence(
+            repetitions=rep, start_point=new_start_pt, duration=dur)
+        assert recurrence_fmt3 - offset == expected
+        assert recurrence_fmt4 - offset == expected
+
+        with pytest.raises(TypeError):
+            recurrence_fmt3 + data.TimePoint(year=2049, month_of_year=2)
+
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is
     # [tz_seconds, expected_hours, expected_minutes]]
