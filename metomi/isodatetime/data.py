@@ -880,11 +880,11 @@ class TimePoint:
 
     Keyword arguments (usually default to None if not provided):
 
-    expanded_year_digits (default 0) - an agreed-upon number of extra
-        digits to represent the year, beyond the default of 4. For example,
+    num_expanded_year_digits (default 0) - an agreed-upon number of extra
+        digits to represent the year, beyond the normal 4. For example,
         a value of 2 would suggest representing the year 2000 as 002000.
     year (int): A positive or negative integer. Note that ISO 8601 implies
-        using non-zero expanded_year_digits when using negative integers.
+        using non-zero num_expanded_year_digits when using negative integers.
         Remember we are using the proleptic Gregorian calendar, with a year
         zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
         should be represented as -1.
@@ -936,16 +936,17 @@ class TimePoint:
     """
 
     __slots__ = [
-        "_expanded_year_digits", "_year", "_month_of_year",
+        "_num_expanded_year_digits", "_year", "_month_of_year",
         "_day_of_year", "_day_of_month", "_day_of_week",
         "_week_of_year", "_hour_of_day", "_minute_of_hour",
         "_second_of_minute", "_truncated", "_truncated_property",
         "_truncated_dump_format", "_dump_format", "_time_zone"
     ]
 
-    def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
-                 week_of_year=None, day_of_year=None, day_of_month=None,
-                 day_of_week=None, hour_of_day=None, hour_of_day_decimal=None,
+    def __init__(self, num_expanded_year_digits=0, year=None,
+                 month_of_year=None, week_of_year=None, day_of_year=None,
+                 day_of_month=None, day_of_week=None,
+                 hour_of_day=None, hour_of_day_decimal=None,
                  minute_of_hour=None, minute_of_hour_decimal=None,
                  second_of_minute=None, second_of_minute_decimal=None,
                  time_zone_hour=None, time_zone_minute=None,
@@ -974,7 +975,7 @@ class TimePoint:
                 repr(truncated_property),
                 "'year_of_decade' or 'year_of_century'")
         _type_checker(
-            (expanded_year_digits, "expanded_year_digits", int),
+            (num_expanded_year_digits, "num_expanded_year_digits", int),
             (year, "year", None, int),
             (month_of_year, "month_of_year", None, int),
             (week_of_year, "week_of_year", None, int),
@@ -991,8 +992,8 @@ class TimePoint:
              float)
         )
         self._dump_format = dump_format
-        self._expanded_year_digits = _int_caster(expanded_year_digits,
-                                                 "expanded_year_digits")
+        self._num_expanded_year_digits = _int_caster(
+            num_expanded_year_digits, "num_expanded_year_digits")
         self._truncated = truncated
         self._truncated_dump_format = truncated_dump_format
         self._truncated_property = truncated_property
@@ -1105,7 +1106,7 @@ class TimePoint:
             self._check_bounds()
 
     @property
-    def expanded_year_digits(self): return self._expanded_year_digits
+    def num_expanded_year_digits(self): return self._num_expanded_year_digits
 
     @property
     def year(self): return self._year
@@ -1203,10 +1204,14 @@ class TimePoint:
                                                    self._week_of_year,
                                                    self._day_of_week)
 
+    @property
+    def expanded_year_digits(self):
+        """The extra digits at the front of the expanded year, as opposed to
+        the number of such digits"""
+        return abs(self._year / 10000)
+
     def get(self, property_name):
         """Return a calculated value for property name."""
-        if property_name == "expanded_year_digits":
-            return abs(self._year) / 10000  # FIXME: what's the meaning of this
         if property_name == "year_sign":
             return "+" if self._year >= 0 else "-"
         if property_name == "century":
@@ -1915,10 +1920,10 @@ class TimePoint:
 
     def __str__(self, override_custom_dump_format=False,
                 strftime_format=None):
-        if self._expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
-            TIMEPOINT_DUMPER_MAP[self._expanded_year_digits] = (
-                dumpers.TimePointDumper(self._expanded_year_digits))
-        dumper = TIMEPOINT_DUMPER_MAP[self._expanded_year_digits]
+        if self._num_expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
+            TIMEPOINT_DUMPER_MAP[self._num_expanded_year_digits] = (
+                dumpers.TimePointDumper(self._num_expanded_year_digits))
+        dumper = TIMEPOINT_DUMPER_MAP[self._num_expanded_year_digits]
         if strftime_format is not None:
             return dumper.strftime(self, strftime_format)
         if self._truncated:
@@ -1937,9 +1942,9 @@ class TimePoint:
         return self.__str__(strftime_format=strftime_format)
 
     def _get_dump_format(self):
-        year_digits = 4 + self._expanded_year_digits
+        year_digits = 4 + self._num_expanded_year_digits
         year_string = "%0" + str(year_digits) + "d"
-        if self._expanded_year_digits:
+        if self._num_expanded_year_digits:
             if self._year < 0:
                 year_string = "-" + year_string % abs(self._year)
             else:
