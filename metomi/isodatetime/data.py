@@ -1287,11 +1287,14 @@ class TimePoint:
         # return getattr(self, property_name)
 
     def _decimal_string(self, attr):
-        """Return the decimal digits (after the '.') of the specified attribute
-        as a string. Rounds to 6 d.p."""
-        string = "%f" % (
-            float(getattr(self, attr)) - int(getattr(self, attr)))
-        # Note: 0.9999999 rounds up to 1.0; this is handled in TimePointDumper
+        """Return the decimal digits (after the decimal point) of the specified
+        attribute as a string. Rounds to 6 d.p."""
+        decimal = float(getattr(self, attr)) - int(getattr(self, attr))
+        if decimal >= 0.9999995:
+            # Truncate instead of rounding up because ticking over the higher
+            # quantities would be complicated
+            return "999999"
+        string = "%f" % decimal
         string = string.split(".", 1)[1].rstrip("0")
         if not string:
             return "0"

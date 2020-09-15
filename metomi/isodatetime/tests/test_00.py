@@ -166,7 +166,8 @@ def get_timepoint_dumper_tests():
              ("DD/MM/+XCCYY is a silly format",
               "28/07/+500200 is a silly format"),
              ("ThhmmZ", "T0856Z"),
-             ("%m-%dT%H:%M", "07-28T00:26")]
+             ("%m-%dT%H:%M", "07-28T00:26"),
+             ("+XCCYY-MM-DDThh,ii", "+500200-07-28T00,4356")]
         ),
         (
             {"year": -56, "day_of_year": 318, "num_expanded_year_digits": 2,
@@ -210,6 +211,13 @@ def get_timepoint_dumper_tests():
              ("CCYY-Www-DThhmm+0200", "1000-W01-1T0200+0200"),
              ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200"),
              ("%Y-%m-%dT%H:%M", "0999-12-30T00:00")]
+        ),
+        (
+            {"year": 2027, "month_of_year": 12, "day_of_month": 31,
+             "minute_of_hour": 59, "minute_of_hour_decimal": 0.99999999},
+            [("CCYY-MM-DDThh:mm,nnZ", "2027-12-31T00:59,999999Z"),
+             ("CCYY-MM-DDThh:mm.nnZ", "2027-12-31T00:59.999999Z"),
+             ("Thh:mm:ss,tt", "T00:59:59,999999")]
         )
     ]
 
