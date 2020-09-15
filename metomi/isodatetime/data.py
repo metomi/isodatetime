@@ -1112,28 +1112,49 @@ class TimePoint:
     def year(self): return self._year
 
     @property
-    def month_of_year(self): return self._month_of_year
+    def month_of_year(self):
+        if self._month_of_year is None:
+            return self.get_calendar_date()[1]
+        return self._month_of_year
 
     @property
-    def week_of_year(self): return self._week_of_year
+    def week_of_year(self):
+        if self._week_of_year is None:
+            return self.get_week_date()[1]
+        return self._week_of_year
 
     @property
-    def day_of_year(self): return self._day_of_year
+    def day_of_year(self):
+        if self._day_of_year is None:
+            return self.get_ordinal_date()[1]
+        return self._day_of_year
 
     @property
-    def day_of_month(self): return self._day_of_month
+    def day_of_month(self):
+        if self._day_of_month is None:
+            return self.get_calendar_date()[2]
+        return self._day_of_month
 
     @property
-    def day_of_week(self): return self._day_of_week
+    def day_of_week(self):
+        if self._day_of_week is None:
+            return self.get_week_date()[2]
+        return self._day_of_week
 
     @property
     def hour_of_day(self): return self._hour_of_day
 
     @property
-    def minute_of_hour(self): return self._minute_of_hour
+    def minute_of_hour(self):
+        if self._minute_of_hour is None:
+            return self.get_hour_minute_second()[1]
+        return self._minute_of_hour
 
     @property
-    def second_of_minute(self): return self._second_of_minute
+    def second_of_minute(self):
+        if self._second_of_minute is None:
+            return self.get_hour_minute_second()[2]
+        return self._second_of_minute
 
     @property
     def time_zone(self): return self._time_zone
@@ -1227,6 +1248,18 @@ class TimePoint:
         return (abs(self._year) % 100 - abs(self._year) % 10) // 10
 
     @property
+    def hour_of_day_decimal_string(self):
+        return self._decimal_string("hour_of_day")
+
+    @property
+    def minute_of_hour_decimal_string(self):
+        return self._decimal_string("minute_of_hour")
+
+    @property
+    def second_of_minute_decimal_string(self):
+        return self._decimal_string("second_of_minute")
+
+    @property
     def time_zone_minute_abs(self): return abs(self._time_zone._minutes)
 
     @property
@@ -1247,58 +1280,22 @@ class TimePoint:
         return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
 
     def get(self, property_name):
-        """Return a calculated value for property name."""
-        if property_name == "month_of_year":
-            if self._month_of_year is not None:
-                return self._month_of_year
-            return self.get_calendar_date()[1]
-        if property_name == "day_of_year":
-            if self._day_of_year is not None:
-                return self._day_of_year
-            return self.get_ordinal_date()[1]
-        if property_name == "day_of_month":
-            if self._day_of_month is not None:
-                return self._day_of_month
-            return self.get_calendar_date()[2]
-        if property_name == "week_of_year":
-            if self._week_of_year is not None:
-                return self._week_of_year
-            return self.get_week_date()[1]
-        if property_name == "day_of_week":
-            if self._day_of_week is not None:
-                return self._day_of_week
-            return self.get_week_date()[2]
-        if property_name == "minute_of_hour":
-            if self._minute_of_hour is None:
-                return self.get_hour_minute_second()[1]
-            return int(self._minute_of_hour)
-        if property_name == "hour_of_day":
-            return int(self._hour_of_day)
-        if property_name == "hour_of_day_decimal_string":
-            string = "%f" % (float(self._hour_of_day) - int(self._hour_of_day))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        if property_name == "minute_of_hour_decimal_string":
-            string = "%f" % (float(self._minute_of_hour) -
-                             int(self._minute_of_hour))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        if property_name == "second_of_minute":
-            if self._second_of_minute is None:
-                return self.get_hour_minute_second()[2]
-            return int(self._second_of_minute)
-        if property_name == "second_of_minute_decimal_string":  # FIXME: #184
-            string = "%f" % (float(self._second_of_minute) -
-                             int(self._second_of_minute))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        raise NotImplementedError(property_name)
+        """Obsolete method for returning calculated value for property name."""
+        raise NotImplementedError(
+            "The method TimePoint.get('{0}') is obsolete; use TimePoint.{0} "
+            "or getattr() instead".format(property_name))
+        # return getattr(self, property_name)
+
+    def _decimal_string(self, attr):
+        """Return the decimal digits (after the '.') of the specified attribute
+        as a string. Rounds to 6 d.p."""
+        string = "%f" % (
+            float(getattr(self, attr)) - int(getattr(self, attr)))
+        # Note: 0.9999999 rounds up to 1.0; this is handled in TimePointDumper
+        string = string.split(".", 1)[1].rstrip("0")
+        if not string:
+            return "0"
+        return string
 
     def get_second_of_day(self):
         """Return the seconds elapsed since the start of the day."""
@@ -1447,7 +1444,7 @@ class TimePoint:
         for attr in ["month_of_year", "week_of_year", "day_of_year",
                      "day_of_month", "day_of_week", "hour_of_day",
                      "minute_of_hour", "second_of_minute"]:
-            value = getattr(self, attr)
+            value = getattr(self, "_{0}".format(attr))
             if value is not None:
                 props.update({attr: value})
         return props

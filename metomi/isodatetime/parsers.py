@@ -590,17 +590,17 @@ class DurationParser(object):
             if timepoint.get_is_week_date():
                 raise ISO8601SyntaxError("duration", expression)
             result_map = {}
-            result_map["years"] = timepoint.year
+            result_map["years"] = timepoint._year
             if timepoint.get_is_calendar_date():
-                result_map["months"] = timepoint.month_of_year
-                result_map["days"] = timepoint.day_of_month
+                result_map["months"] = timepoint._month_of_year
+                result_map["days"] = timepoint._day_of_month
             if timepoint.get_is_ordinal_date():
-                result_map["days"] = timepoint.day_of_year
-            result_map["hours"] = timepoint.hour_of_day
-            if timepoint.minute_of_hour is not None:
-                result_map["minutes"] = timepoint.minute_of_hour
-            if timepoint.second_of_minute is not None:
-                result_map["seconds"] = timepoint.second_of_minute
+                result_map["days"] = timepoint._day_of_year
+            result_map["hours"] = timepoint._hour_of_day
+            if timepoint._minute_of_hour is not None:
+                result_map["minutes"] = timepoint._minute_of_hour
+            if timepoint._second_of_minute is not None:
+                result_map["seconds"] = timepoint._second_of_minute
             return data.Duration(**result_map)
         raise ISO8601SyntaxError("duration", expression)
 

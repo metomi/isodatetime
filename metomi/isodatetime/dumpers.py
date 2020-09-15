@@ -61,6 +61,8 @@ class TimePointDumper(object):
 
     """
 
+    FLOAT_DECIMAL_PLACES = 6
+
     def __init__(self, num_expanded_year_digits=2):
         self._timepoint_parser = None
         self._rec_formats = {"date": [], "time": [], "time_zone": []}
@@ -144,7 +146,7 @@ class TimePointDumper(object):
                 timepoint = timepoint.to_time_zone(new_time_zone)
         property_map = {}
         for property_ in properties:
-            property_map[property_] = timepoint.get(property_)
+            property_map[property_] = getattr(timepoint, property_)
             if (property_ == "century" and
                     ("expanded_year_digits" not in properties or
                      not self.num_expanded_year_digits)):
@@ -153,6 +155,15 @@ class TimePointDumper(object):
             elif property_ == "expanded_year_digits":
                 max_value = (10 ** (self.num_expanded_year_digits + 4)) - 1
                 min_value = -max_value
+            elif property_ in ("hour_of_day", "minute_of_hour",
+                               "second_of_minute"):
+                # Handle cases where decimal is rounded up
+                prop_decimal_str = "{0}_decimal_string".format(property_)
+                if prop_decimal_str in properties:
+                    fp_value = property_map[property_]
+                    rounded = int(round(fp_value, self.FLOAT_DECIMAL_PLACES))
+                    property_map[property_] = rounded
+                continue
             else:
                 continue
             value = timepoint.year
