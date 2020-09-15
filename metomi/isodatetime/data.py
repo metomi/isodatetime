@@ -1205,19 +1205,49 @@ class TimePoint:
                                                    self._day_of_week)
 
     @property
+    def year_sign(self): return "+" if self._year >= 0 else "-"
+
+    @property
     def expanded_year_digits(self):
         """The extra digits at the front of the expanded year, as opposed to
         the number of such digits"""
         return abs(self._year / 10000)
 
+    @property
+    def century(self): return (abs(self._year) % 10000) // 100
+
+    @property
+    def year_of_century(self): return abs(self._year) % 100
+
+    @property
+    def year_of_decade(self): return abs(self._year) % 10
+
+    @property
+    def decade_of_century(self):
+        return (abs(self._year) % 100 - abs(self._year) % 10) // 10
+
+    @property
+    def time_zone_minute_abs(self): return abs(self._time_zone._minutes)
+
+    @property
+    def time_zone_hour_abs(self): return abs(self._time_zone._hours)
+
+    @property
+    def time_zone_sign(self):
+        if self._time_zone._hours < 0 or self._time_zone._minutes < 0:
+            return "-"
+        return "+"
+
+    @property
+    def seconds_since_unix_epoch(self):
+        reference_timepoint = TimePoint(
+            **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
+        days, seconds = (self - reference_timepoint).get_days_and_seconds()
+        # N.B. This needs altering if we implement leap seconds.
+        return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
+
     def get(self, property_name):
         """Return a calculated value for property name."""
-        if property_name == "year_sign":
-            return "+" if self._year >= 0 else "-"
-        if property_name == "century":
-            return (abs(self._year) % 10000) // 100
-        if property_name == "year_of_century":
-            return abs(self._year) % 100
         if property_name == "month_of_year":
             if self._month_of_year is not None:
                 return self._month_of_year
@@ -1238,10 +1268,6 @@ class TimePoint:
             if self._day_of_week is not None:
                 return self._day_of_week
             return self.get_week_date()[2]
-        if property_name == "year_of_decade":
-            return abs(self._year) % 10
-        if property_name == "decade_of_century":
-            return (abs(self._year) % 100 - abs(self._year) % 10) // 10
         if property_name == "minute_of_hour":
             if self._minute_of_hour is None:
                 return self.get_hour_minute_second()[1]
@@ -1272,21 +1298,6 @@ class TimePoint:
             if not string:
                 return "0"
             return string
-        if property_name == "time_zone_minute_abs":
-            return abs(self._time_zone._minutes)
-        if property_name == "time_zone_hour_abs":
-            return abs(self._time_zone._hours)
-        if property_name == "time_zone_sign":
-            if self._time_zone._hours < 0 or self._time_zone._minutes < 0:
-                return "-"
-            return "+"
-        if property_name == "seconds_since_unix_epoch":
-            reference_timepoint = TimePoint(
-                **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
-            days, seconds = (
-                self - reference_timepoint).get_days_and_seconds()
-            # N.B. This needs altering if we implement leap seconds.
-            return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
         raise NotImplementedError(property_name)
 
     def get_second_of_day(self):
