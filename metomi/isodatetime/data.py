@@ -176,7 +176,7 @@ class TimeRecurrence:
     """
 
     __slots__ = ["_repetitions", "_start_point", "_duration", "_end_point",
-                 "_min_point", "_max_point", "_format_number"]
+                 "_second_point", "_format_number", "_min_point", "_max_point"]
 
     def __init__(self, repetitions=None, start_point=None,
                  duration=None, end_point=None, min_point=None,
@@ -205,40 +205,32 @@ class TimeRecurrence:
                                 "Duration cannot be < P0Y")
         if self._duration is None:
             # First form.
-            # FIXME: see issue #45
             self._format_number = 1
-            # Note: 1 repetition means the event only occurs on the start date
+            # One repetition means the event only occurs on the start date
             if self._repetitions == 1:
-                self._end_point = self._start_point
+                self._second_point = self._end_point = self._start_point
                 return
             if self._start_point is None or self._end_point is None:
                 # TODO: add tests for invalid TimeRecurrences
                 raise BadInputError(
                     BadInputError.RECURRENCE, [i[:2] for i in inputs])
-            start_year, start_days = self._start_point.get_ordinal_date()
-            start_seconds = self._start_point.get_second_of_day()
-            self._end_point = self._end_point.to_time_zone(
-                self._start_point._time_zone)
-            end_year, end_days = self._end_point.get_ordinal_date()
-            end_seconds = self._end_point.get_second_of_day()
-            diff_days = end_days - start_days
-            if end_year > start_year:
-                diff_days += get_days_in_year_range(start_year, end_year - 1)
-            diff_seconds = end_seconds - start_seconds
-            if diff_seconds < 0:
-                diff_days -= 1
-                diff_seconds += CALENDAR.SECONDS_IN_DAY
-            elif diff_seconds >= CALENDAR.SECONDS_IN_DAY:
-                diff_days += 1
-                diff_seconds -= CALENDAR.SECONDS_IN_DAY
-            diff_days_float = diff_days / float(self._repetitions - 1)
-            diff_seconds_float = diff_seconds / float(self._repetitions - 1)
-            diff_days = int(diff_days_float)
-            diff_seconds_float += (
-                diff_days_float - diff_days) * CALENDAR.SECONDS_IN_DAY
-            self._duration = Duration(
-                days=diff_days, seconds=diff_seconds_float)
-            # TODO: Try to handle floating point errors by rounding?
+            if self._start_point == self._end_point:
+                self._repetitions = 1
+                self._second_point = self._end_point
+                return
+            if self._end_point < self._start_point:
+                raise BadInputError(
+                    BadInputError.RECURRENCE, "Start point {0} cannot be "
+                    "earlier than end point of first interval {1}"
+                    .format(self._start_point, self._end_point))
+            self._second_point = self._end_point
+            self._duration = self._second_point - self._start_point
+            if self._repetitions is None:
+                self._end_point = None
+            else:
+                self._end_point = (
+                    self._start_point +
+                    self._duration * (self._repetitions - 1))
         elif self._end_point is None:
             # Third form.
             self._format_number = 3
@@ -299,21 +291,18 @@ class TimeRecurrence:
         return False
 
     def get_next(self, timepoint: "TimePoint") -> "TimePoint":
-        """Return the next timepoint after this timepoint, or None."""
+        """Return the next timepoint after this timepoint in the recurrence
+        series, or None."""
         if self._repetitions == 1 or timepoint is None:
             return None
         next_timepoint = timepoint + self._duration
         if self._get_is_in_bounds(next_timepoint):
             return next_timepoint
-        if self._format_number == 1 and next_timepoint > self._end_point:
-            diff = next_timepoint - self._end_point
-            if (2 * diff < self._duration and
-                    self._get_is_in_bounds(self._end_point)):
-                return self._end_point
         return None
 
     def get_prev(self, timepoint: "TimePoint") -> "TimePoint":
-        """Return the previous timepoint before this timepoint, or None."""
+        """Return the previous timepoint before this timepoint in the
+        recurrence series, or None."""
         if self._repetitions == 1 or timepoint is None:
             return None
         prev_timepoint = timepoint - self._duration
@@ -323,13 +312,11 @@ class TimeRecurrence:
 
     def __getitem__(self, index: int) -> "TimePoint":
         if index < 0 or not isinstance(index, int):
-            raise IndexError(
-                "Unsupported index for TimeRecurrence")
+            raise IndexError("Unsupported index for TimeRecurrence")
         for i, point in enumerate(self.__iter__()):
             if index == i:
                 return point
-        raise IndexError(
-            "Invalid index for TimeRecurrence")
+        raise IndexError("Invalid index for TimeRecurrence")
 
     def _get_is_in_bounds(self, timepoint: "TimePoint") -> bool:
         """Return whether the timepoint is within this recurrence series."""
@@ -369,16 +356,14 @@ class TimeRecurrence:
                 point = self.get_next(point)
 
     def __hash__(self) -> int:
-        # TODO: fix when fixing issue #45
         return hash((self._repetitions, self._start_point, self._end_point,
-                     self._min_point, self._max_point))
+                     self._duration, self._min_point, self._max_point))
 
     def __eq__(self, other: "TimeRecurrence") -> bool:
         if not isinstance(other, TimeRecurrence):
             return NotImplemented
-        # TODO: fix when fixing issue #45
-        for attr in ["repetitions", "start_point", "end_point", "min_point",
-                     "max_point"]:
+        for attr in ["_repetitions", "_start_point", "_end_point", "_duration",
+                     "_min_point", "_max_point"]:
             if getattr(self, attr) != getattr(other, attr):
                 return False
         return True
@@ -391,7 +376,7 @@ class TimeRecurrence:
             )
         if self._format_number == 1:
             kwargs = {"start_point": self._start_point + other,
-                      "end_point": self._end_point + other}
+                      "end_point": self._second_point + other}
         elif self._format_number == 3:
             kwargs = {"start_point": self._start_point + other,
                       "duration": self._duration}
@@ -413,7 +398,8 @@ class TimeRecurrence:
         duration_str = (
             str(self._duration) if self._duration is not None else 'P0Y')
         if self._format_number == 1:
-            return prefix + str(self._start_point) + "/" + str(self._end_point)
+            return (prefix + str(self._start_point) + "/" +
+                    str(self._second_point))
         elif self._format_number == 3:
             return prefix + str(self._start_point) + "/" + duration_str
         elif self._format_number == 4:
@@ -1275,7 +1261,7 @@ class TimePoint:
             if self._second_of_minute is None:
                 return self.get_hour_minute_second()[2]
             return int(self._second_of_minute)
-        if property_name == "second_of_minute_decimal_string":
+        if property_name == "second_of_minute_decimal_string":  # FIXME: #184
             string = "%f" % (float(self._second_of_minute) -
                              int(self._second_of_minute))
             string = string.replace("0.", "", 1).rstrip("0")

@@ -247,13 +247,13 @@ class TestMain(unittest.TestCase):
         """Test calling usage 4, sample bad arguments."""
         argv = sys.argv
         mock_print.reset_mock()
-        sys.argv = ['', 'R/2020/2025']
+        sys.argv = ['', 'R-1/2020/2025']
         try:
             with self.assertRaises(SystemExit) as ctxmgr:
                 isodatetime_main.main()
             mock_print.assert_not_called()
             self.assertEqual(
-                'Invalid ISO 8601 recurrence representation: R/2020/2025',
+                'Invalid ISO 8601 recurrence representation: R-1/2020/2025',
                 str(ctxmgr.exception))
         finally:
             sys.argv = argv
