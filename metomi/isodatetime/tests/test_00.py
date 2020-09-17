@@ -1413,28 +1413,32 @@ class TestSuite(unittest.TestCase):
         rep = 4
         start_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=13)
         dur = data.Duration(days=7)
-        end_pt = start_pt + (rep - 1) * dur
 
         recurrence_fmt1 = data.TimeRecurrence(
-            repetitions=rep, start_point=start_pt, end_point=end_pt)
+            repetitions=rep, start_point=start_pt,
+            end_point=data.TimePoint(year=2020, month_of_year=3,
+                                     day_of_month=20))
         recurrence_fmt3 = data.TimeRecurrence(
             repetitions=rep, start_point=start_pt, duration=dur)
         recurrence_fmt4 = data.TimeRecurrence(
-            repetitions=rep, duration=dur, end_point=end_pt)
+            repetitions=rep, duration=dur,
+            end_point=data.TimePoint(year=2020, month_of_year=4,
+                                     day_of_month=3))
         assert recurrence_fmt3 == recurrence_fmt4
 
-        offset = data.Duration(hours=9)
+        offset = data.Duration(hours=9, minutes=59)
         new_start_pt = start_pt + offset
         expected = data.TimeRecurrence(
             repetitions=rep, start_point=new_start_pt, duration=dur)
-        assert recurrence_fmt3 + offset == expected
-        assert recurrence_fmt4 + offset == expected
+        for recurrence in (recurrence_fmt1, recurrence_fmt3, recurrence_fmt4):
+            assert recurrence + offset == expected
+            assert offset + recurrence == expected
 
         new_start_pt = start_pt - offset
         expected = data.TimeRecurrence(
             repetitions=rep, start_point=new_start_pt, duration=dur)
-        assert recurrence_fmt3 - offset == expected
-        assert recurrence_fmt4 - offset == expected
+        for recurrence in (recurrence_fmt1, recurrence_fmt3, recurrence_fmt4):
+            assert recurrence - offset == expected
 
         with pytest.raises(TypeError):
             recurrence_fmt3 + data.TimePoint(year=2049, month_of_year=2)

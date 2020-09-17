@@ -640,7 +640,7 @@ class Duration:
             new._minutes += other._minutes
             new._seconds += other._seconds
             return new
-        if isinstance(other, TimePoint):
+        if isinstance(other, TimePoint) or isinstance(other, TimeRecurrence):
             return other + new
         raise TypeError(
             "Invalid type for addition: " +
