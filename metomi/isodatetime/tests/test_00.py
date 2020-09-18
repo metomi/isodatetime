@@ -21,7 +21,6 @@
 import copy
 import datetime
 from itertools import chain
-import pytest
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 

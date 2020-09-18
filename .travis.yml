@@ -43,11 +43,10 @@ install:
   # PyTest to use environment variables in its configuration (e.g. TZ=UTC).
   - pip install coverage pytest-cov pytest-env pytest-runner
   # Code style dependencies
-  - pip install pycodestyle
-  - pip install -e .
+  - pip install -e .[all]
 
 before_script:
-  - pycodestyle -v metomi/isodatetime
+  - flake8 -v metomi/isodatetime
 
 script:
   - |
