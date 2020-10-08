@@ -22,6 +22,7 @@ import copy
 import datetime
 from itertools import chain
 import unittest
+import pytest
 from unittest.mock import patch, MagicMock, Mock
 
 from metomi.isodatetime import data

@@ -46,7 +46,7 @@ install:
   - pip install -e .[all]
 
 before_script:
-  - flake8 -v metomi/isodatetime
+  - flake8 metomi/isodatetime
 
 script:
   - |
