@@ -211,7 +211,6 @@ class TimeRecurrence:
                 self._second_point = self._end_point = self._start_point
                 return
             if self._start_point is None or self._end_point is None:
-                # TODO: add tests for invalid TimeRecurrences
                 raise BadInputError(
                     BadInputError.RECURRENCE, [i[:2] for i in inputs])
             if self._start_point == self._end_point:
@@ -231,7 +230,7 @@ class TimeRecurrence:
                 self._end_point = (
                     self._start_point +
                     self._duration * (self._repetitions - 1))
-        elif self._end_point is None:
+        elif self._end_point is None and self._start_point is not None:
             # Third form.
             self._format_number = 3
             if self._repetitions == 1 or self._duration == Duration(years=0):
@@ -242,7 +241,7 @@ class TimeRecurrence:
                 self._end_point = (
                     self._start_point +
                     self._duration * (self._repetitions - 1))
-        elif self._start_point is None:
+        elif self._start_point is None and self._end_point is not None:
             # Fourth form.
             self._format_number = 4
             if self._repetitions == 1 or self._duration == Duration(years=0):

@@ -30,7 +30,7 @@ from metomi.isodatetime import parsers
 from metomi.isodatetime import parser_spec
 from metomi.isodatetime import timezone
 from metomi.isodatetime.exceptions import (
-    ISO8601SyntaxError, TimePointDumperBoundsError)
+    ISO8601SyntaxError, TimePointDumperBoundsError, BadInputError)
 
 
 def get_timedurationparser_tests():
@@ -732,7 +732,10 @@ def get_timerecurrence_comparison_tests():
         ("R5/2020-001T00Z/2020-005T00Z", "R5/P4D/2020-017T00Z", True),
         ("R/2020-02-07T09Z/2020-02-07T10Z", "R/PT1H/2020-02-07T10Z", False),
         # Mixed stuff:
-        ("R3/2020-05-01T16Z/PT3H", "R3/2020-W18-5T18:30+02:30/PT180M", True)
+        ("R3/2020-05-01T16Z/PT3H", "R3/2020-W18-5T18:30+02:30/PT180M", True),
+        # Start point == end point == one repetition:
+        ("R27/2020-10-08T00Z/2020-10-08T04+04",
+         "R1/2020-10-08T00Z/2020-10-08T00Z", True)
     ]
 
 
@@ -1404,6 +1407,11 @@ class TestSuite(unittest.TestCase):
             test = hash(lhs) == hash(rhs)
             assert test is expected, (
                 "hash of {0} == hash of {1}".format(lhs_str, rhs_str))
+            # If recurrences the same, list of timepoints must be equal:
+            if lhs.repetitions is not None and rhs.repetitions is not None:
+                # Note: don't list() unbounded recurrences!
+                test = list(lhs) == list(rhs)
+                assert test is expected
         test_recurrence = parser.parse(tests[0][0])
         for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
             self.assertFalse(test_recurrence == var)
@@ -1412,21 +1420,20 @@ class TestSuite(unittest.TestCase):
         """Test adding/subtracting Duration to/from TimeRecurrence"""
         rep = 4
         start_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=13)
+        second_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=20)
+        end_pt = data.TimePoint(year=2020, month_of_year=4, day_of_month=3)
         dur = data.Duration(days=7)
+        offset = data.Duration(hours=9, minutes=59)
 
         recurrence_fmt1 = data.TimeRecurrence(
-            repetitions=rep, start_point=start_pt,
-            end_point=data.TimePoint(year=2020, month_of_year=3,
-                                     day_of_month=20))
+            repetitions=rep, start_point=start_pt, end_point=second_pt)
         recurrence_fmt3 = data.TimeRecurrence(
             repetitions=rep, start_point=start_pt, duration=dur)
         recurrence_fmt4 = data.TimeRecurrence(
-            repetitions=rep, duration=dur,
-            end_point=data.TimePoint(year=2020, month_of_year=4,
-                                     day_of_month=3))
-        assert recurrence_fmt3 == recurrence_fmt4
+            repetitions=rep, duration=dur, end_point=end_pt)
+        # Quick check, make sure these equivalent recurrences evaluate as equal
+        assert recurrence_fmt1 == recurrence_fmt3 == recurrence_fmt4
 
-        offset = data.Duration(hours=9, minutes=59)
         new_start_pt = start_pt + offset
         expected = data.TimeRecurrence(
             repetitions=rep, start_point=new_start_pt, duration=dur)
@@ -1442,6 +1449,28 @@ class TestSuite(unittest.TestCase):
 
         with pytest.raises(TypeError):
             recurrence_fmt3 + data.TimePoint(year=2049, month_of_year=2)
+
+    def test_invalid_timerecurrence(self):
+        """Test that init'ing a TimeRecurrence with bad inputs raises error."""
+        start_pt = data.TimePoint(year=2020, day_of_month=9)
+        end_pt = data.TimePoint(year=2020, day_of_month=30)
+        dur = data.Duration(hours=36)
+        _tests = [{"repetitions": 0, "start_point": start_pt, "duration": dur}]
+        for reps in (4, None):
+            _tests += [
+                {"repetitions": reps, "start_point": start_pt,
+                 "end_point": end_pt, "duration": dur},
+                {"repetitions": reps, "start_point": start_pt},
+                {"repetitions": reps, "end_point": end_pt},
+                {"repetitions": reps, "duration": dur},
+                {"repetitions": reps, "start_point": start_pt,
+                 "duration": data.Duration(minutes=-20)},
+                {"repetitions": reps, "start_point": end_pt,
+                 "end_point": start_pt}
+            ]
+        for kwargs in _tests:
+            with pytest.raises(BadInputError):
+                data.TimeRecurrence(**kwargs)
 
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is
