@@ -336,8 +336,8 @@ duration.
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ---------------------------------------------------------------
-R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly, on the hour, ending at 2012-01-02T00Z
-R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years, on January 1st, ending at 2000-01-01
+R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly, ending at 2012-01-02T00Z (therefore repeats on the hour)
+R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years, ending at 2000-01-01 (therefore repeats at 00:00 January 1st)
 R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds, ending on the 12th day in 2501 BC at 18:00 (using 2 expanded year digits)
 Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes, five times, ending at 2012-01-02T00Z
-Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, on the first of the month, four times, ending at 2000-05-01
+Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, ending at 2000-05-01 (therefore repeats on the first of the month)

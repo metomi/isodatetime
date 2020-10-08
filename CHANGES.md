@@ -20,6 +20,11 @@ This is the 15th release of isodatetime. Requires Python 3.5+.
 [#165](https://github.com/metomi/isodatetime/pull/165):
 Data classes are now immutable and hashable.
 
+[#183](https://github.com/metomi/isodatetime/pull/183):
+**Fixed a longstanding mistake in the implementation of TimeRecurrence format
+number 1.** Also implemented support for adding/subtracting Duration instances
+to/from TimeRecurrence instances.
+
 --------------------------------------------------------------------------------
 
 ## isodatetime 2.0.2 (Released 2020-07-01)
