@@ -18,7 +18,7 @@
 
 [run]
 branch=True
-omit=s
+omit=
     metomi/isodatetime/tests
 source=
     metomi/isodatetime

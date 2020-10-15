@@ -21,8 +21,6 @@
 import datetime
 import pytest
 import random
-import unittest
-import concurrent.futures
 
 from metomi.isodatetime.data import TimePoint, Duration, get_days_since_1_ad
 

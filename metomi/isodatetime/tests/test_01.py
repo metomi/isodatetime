@@ -18,7 +18,6 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
-import pytest
 import unittest
 
 from metomi.isodatetime import data
