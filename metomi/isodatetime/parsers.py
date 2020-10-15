@@ -45,7 +45,7 @@ class TimeRecurrenceParser(object):
     """
 
     RECURRENCE_REGEXES = [
-        re.compile(r"^R(?P<reps>\d+)/(?P<start>[^P][^/]*)/(?P<end>[^P].*)$"),
+        re.compile(r"^R(?P<reps>\d+)?/(?P<start>[^P][^/]*)/(?P<end>[^P].*)$"),
         re.compile(r"^R(?P<reps>\d+)?/(?P<start>[^P][^/]*)/(?P<intv>P.+)$"),
         re.compile(r"^R(?P<reps>\d+)?/(?P<intv>P.+)/(?P<end>[^P].*)$")]
 

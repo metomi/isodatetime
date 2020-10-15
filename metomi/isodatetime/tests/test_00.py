@@ -22,6 +22,7 @@ import copy
 import datetime
 from itertools import chain
 import unittest
+import pytest
 from unittest.mock import patch, MagicMock, Mock
 
 from metomi.isodatetime import data
@@ -30,7 +31,7 @@ from metomi.isodatetime import parsers
 from metomi.isodatetime import parser_spec
 from metomi.isodatetime import timezone
 from metomi.isodatetime.exceptions import (
-    ISO8601SyntaxError, TimePointDumperBoundsError)
+    ISO8601SyntaxError, TimePointDumperBoundsError, BadInputError)
 
 
 def get_timedurationparser_tests():
@@ -680,11 +681,18 @@ def get_truncated_property_tests():
 
 
 def get_timerecurrence_expansion_tests():
-    """Return test expansion expressions for data.TimeRecurrence."""
+    """Return test expansion expressions for data.TimeRecurrence.
+
+    If no. of repetitions is unbounded, will test the first three.
+    """
     return [
+        ("R5/2020-01-01T00:00:00Z/2020-01-05T00:00:00Z",
+         ["2020-01-01T00:00:00Z", "2020-01-05T00:00:00Z",
+          "2020-01-09T00:00:00Z", "2020-01-13T00:00:00Z",
+          "2020-01-17T00:00:00Z"]),
         ("R3/1001-W01-1T00:00:00Z/1002-W52-6T00:00:00-05:30",
-         ["1001-W01-1T00:00:00Z", "1001-W53-3T14:45:00Z",
-          "1002-W52-6T05:30:00Z"]),
+         ["1001-W01-1T00:00:00Z", "1002-W52-6T05:30:00Z",
+          "1005-W01-4T11:00:00Z"]),
         ("R3/P700D/1957-W01-1T06,5Z",
          ["1953-W10-1T06,5Z", "1955-W05-1T06,5Z", "1957-W01-1T06,5Z"]),
         ("R3/P5DT2,5S/1001-W11-1T00:30:02,5-02:00",
@@ -717,7 +725,18 @@ def get_timerecurrence_comparison_tests():
         # Format 3 vs 4:
         ("R4/2020-01-01T00Z/P1D", "R4/P1D/2020-01-04T00Z", True),
         ("R/2020-01-01T00Z/P1D", "R/P1D/2020-01-04T00Z", False),
-        # TODO: Format 1 vs others after fixing issue #45
+        # Format 1 vs 3:
+        ("R5/2020-001T00Z/2020-005T00Z", "R5/2020-001T00Z/P4D", True),
+        ("R/2020-02-07T09Z/2020-02-07T10Z", "R/2020-02-07T09Z/PT1H", True),
+        # Format 1 vs 4:
+        ("R5/2020-001T00Z/2020-005T00Z", "R5/P4D/2020-005T00Z", False),
+        ("R5/2020-001T00Z/2020-005T00Z", "R5/P4D/2020-017T00Z", True),
+        ("R/2020-02-07T09Z/2020-02-07T10Z", "R/PT1H/2020-02-07T10Z", False),
+        # Mixed stuff:
+        ("R3/2020-05-01T16Z/PT3H", "R3/2020-W18-5T18:30+02:30/PT180M", True),
+        # Start point == end point == one repetition:
+        ("R27/2020-10-08T00Z/2020-10-08T04+04",
+         "R1/2020-10-08T00Z/2020-10-08T00Z", True)
     ]
 
 
@@ -840,15 +859,20 @@ def get_timerecurrence_expansion_tests_366():
 def get_timerecurrence_membership_tests():
     """Return test membership expressions for data.TimeRecurrence."""
     return [
+        ("R5/2020-01-01T00:00:00Z/2020-01-05T00:00:00Z",
+         [("2020-01-02T00:00:00Z", False),
+          ("2020-01-17T00:00:00Z", True),
+          ("2020-01-21T00:00:00Z", False)]),
         ("R3/1001-W01-1T00:00:00Z/1002-W52-6T00:00:00-05:30",
          [("1001-W01-1T00:00:00Z", True),
           ("1000-12-29T00:00:00Z", True),
           ("0901-07-08T12:45:00Z", False),
           ("1001-W01-2T00:00:00Z", False),
-          ("1001-W53-3T14:45:00Z", True),
+          ("1001-W53-3T14:45:00Z", False),
           ("1002-W52-6T05:30:00Z", True),
           ("1002-W52-6T03:30:00-02:00", True),
           ("1002-W52-6T07:30:00+02:00", True),
+          ("1005-W01-4T11:00:00Z", True),
           ("10030101T00Z", False)]),
         ("R3/P700D/1957-W01-1T06,5Z",
          [("1953-W10-1T06,5Z", True),
@@ -884,16 +908,13 @@ def get_timerecurrenceparser_tests():
                     continue
                 duration = duration_parser.parse(duration_expr)
                 end_point = start_point + duration
-                if reps is not None:
-                    expr_1 = ("R" + reps_string + "/" + str(start_point) +
-                              "/" + str(end_point))
-                    yield expr_1, {"repetitions": reps,
-                                   "start_point": start_point,
-                                   "end_point": end_point}
+                expr_1 = ("R" + reps_string + "/" + str(start_point) +
+                          "/" + str(end_point))
+                yield expr_1, {"repetitions": reps, "start_point": start_point,
+                               "end_point": end_point}
                 expr_3 = ("R" + reps_string + "/" + str(start_point) +
                           "/" + str(duration))
-                yield expr_3, {"repetitions": reps,
-                               "start_point": start_point,
+                yield expr_3, {"repetitions": reps, "start_point": start_point,
                                "duration": duration}
                 expr_4 = ("R" + reps_string + "/" + str(duration) + "/" +
                           str(end_point))
@@ -1317,9 +1338,10 @@ class TestSuite(unittest.TestCase):
                     expression
                 )
             test_results = []
+            reps = test_recurrence.repetitions or 3
             for i, time_point in enumerate(test_recurrence):
-                if i > 2:
-                    break
+                if i >= reps:
+                    break  # Unbounded repetitions, just test 3 of them
                 test_results.append(str(time_point))
             self.assertEqual(test_results, ctrl_results, expression)
             if test_recurrence.start_point is None:
@@ -1329,17 +1351,17 @@ class TestSuite(unittest.TestCase):
                 forward_method = test_recurrence.get_next
                 backward_method = test_recurrence.get_prev
             test_points = [test_recurrence[0]]
-            test_points.append(forward_method(test_points[-1]))
-            test_points.append(forward_method(test_points[-1]))
+            for i in range(1, reps):
+                test_points.append(forward_method(test_points[-1]))
             test_results = [str(point) for point in test_points]
             self.assertEqual(test_results, ctrl_results, expression)
-            if test_recurrence[2] is not None:
-                test_points = [test_recurrence[2]]
+            # Test that going backwards beyond 1st point results in None:
+            test_points = [test_recurrence[reps - 1]]
+            for i in range(0, reps):
                 test_points.append(backward_method(test_points[-1]))
-                test_points.append(backward_method(test_points[-1]))
-                test_points.append(backward_method(test_points[-1]))
-            self.assertEqual(test_points[3], None, expression)
-            test_points.pop(3)
+            self.assertEqual(test_points[reps], None, expression)
+            # Test backwards method == reverse of forward:
+            test_points.pop(-1)
             test_points.reverse()
             test_results = [str(point) for point in test_points]
             self.assertEqual(test_results, ctrl_results, expression)
@@ -1386,9 +1408,70 @@ class TestSuite(unittest.TestCase):
             test = hash(lhs) == hash(rhs)
             assert test is expected, (
                 "hash of {0} == hash of {1}".format(lhs_str, rhs_str))
+            # If recurrences the same, list of timepoints must be equal:
+            if lhs.repetitions is not None and rhs.repetitions is not None:
+                # Note: don't list() unbounded recurrences!
+                test = list(lhs) == list(rhs)
+                assert test is expected
         test_recurrence = parser.parse(tests[0][0])
         for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
             self.assertFalse(test_recurrence == var)
+
+    def test_timerecurrence_add(self):
+        """Test adding/subtracting Duration to/from TimeRecurrence"""
+        rep = 4
+        start_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=13)
+        second_pt = data.TimePoint(year=2020, month_of_year=3, day_of_month=20)
+        end_pt = data.TimePoint(year=2020, month_of_year=4, day_of_month=3)
+        dur = data.Duration(days=7)
+        offset = data.Duration(hours=9, minutes=59)
+
+        recurrence_fmt1 = data.TimeRecurrence(
+            repetitions=rep, start_point=start_pt, end_point=second_pt)
+        recurrence_fmt3 = data.TimeRecurrence(
+            repetitions=rep, start_point=start_pt, duration=dur)
+        recurrence_fmt4 = data.TimeRecurrence(
+            repetitions=rep, duration=dur, end_point=end_pt)
+        # Quick check, make sure these equivalent recurrences evaluate as equal
+        assert recurrence_fmt1 == recurrence_fmt3 == recurrence_fmt4
+
+        new_start_pt = start_pt + offset
+        expected = data.TimeRecurrence(
+            repetitions=rep, start_point=new_start_pt, duration=dur)
+        for recurrence in (recurrence_fmt1, recurrence_fmt3, recurrence_fmt4):
+            assert recurrence + offset == expected
+            assert offset + recurrence == expected
+
+        new_start_pt = start_pt - offset
+        expected = data.TimeRecurrence(
+            repetitions=rep, start_point=new_start_pt, duration=dur)
+        for recurrence in (recurrence_fmt1, recurrence_fmt3, recurrence_fmt4):
+            assert recurrence - offset == expected
+
+        with pytest.raises(TypeError):
+            recurrence_fmt3 + data.TimePoint(year=2049, month_of_year=2)
+
+    def test_invalid_timerecurrence(self):
+        """Test that init'ing a TimeRecurrence with bad inputs raises error."""
+        start_pt = data.TimePoint(year=2020, day_of_month=9)
+        end_pt = data.TimePoint(year=2020, day_of_month=30)
+        dur = data.Duration(hours=36)
+        _tests = [{"repetitions": 0, "start_point": start_pt, "duration": dur}]
+        for reps in (4, None):
+            _tests += [
+                {"repetitions": reps, "start_point": start_pt,
+                 "end_point": end_pt, "duration": dur},
+                {"repetitions": reps, "start_point": start_pt},
+                {"repetitions": reps, "end_point": end_pt},
+                {"repetitions": reps, "duration": dur},
+                {"repetitions": reps, "start_point": start_pt,
+                 "duration": data.Duration(minutes=-20)},
+                {"repetitions": reps, "start_point": end_pt,
+                 "end_point": start_pt}
+            ]
+        for kwargs in _tests:
+            with pytest.raises(BadInputError):
+                data.TimeRecurrence(**kwargs)
 
     # data provider for the test test_get_local_time_zone_no_dst
     # the format for the parameters is

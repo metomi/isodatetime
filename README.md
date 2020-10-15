@@ -302,11 +302,12 @@ years, months, days, hours, minutes, and seconds are used literally
 
 #### 1. Recur with a duration given by the difference between a start date and a subsequent date
 
-Example Syntax           | Example                  | Meaning
- ----------------------- | ------------------------ | ------------------------------------------------------------------
-R/CCYY/CCYY              | R/2010/2014              | Repeat every 4 years, starting at 2010-01-01.
-R/CCYY-MM/CCYY-DDD       | R/2010-01/2012-045       | Repeat every 2 years and 44 days, starting at 2010-01-01
-Rn/CCYY-Www-D/CCYY-Www-D | R5/2015-W05-2/2015-W07-3 | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
+Example Syntax                 | Example                          | Meaning
+ ----------------------------- | -------------------------------- | ------------------------------------------------------------------
+R/CCYY/CCYY                    | R/2010/2014                      | Repeat every 4 years, starting at 2010-01-01
+R/CCYY-MM/CCYY-DDD             | R/2010-01/2012-045               | Repeat every 2 years and 44 days, starting at 2010-01-01
+Rn/CCYY-Www-D/CCYY-Www-D       | R5/2015-W05-2/2015-W07-3         | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
+Rn/CCYY-MM-DDThh/CCYY-MM-DDThh | R1/1925-02-11T00Z/2027-06-01T00Z | Repeat once at 1925-02-11T00Z (note the end date-time is ignored)
 
 #### 2. Recur with a specified duration, starting at a context date-time
 
@@ -326,7 +327,7 @@ R/CCYY-Www-D/PnW           | R/2012-W02-1/P1W         | Repeat weekly starting a
 R/CCYYDDDThhmm/PnD         | R/1996291T0630+0100/P2D  | Repeat every 2 days starting on the 291st day of 1996 at 06:30, UTC + 1
 Rn/CCYY-MM-DDThh:mm/PTnH   | R2/19900201T06Z/PT12H    | Repeat every 12 hours, for a total of 2 repetitions, starting at 1990-02-01T06Z
 Rn/CCYY-Www-D/PnW          | R5/2012-W02-1/P1W        | Repeat weekly, for a total of 5 repetitions, starting at Monday in the second ISO week of 2012
-Rn/CCYYDDDThhmm/PnD        | R1/1996291T0630+0100/P2D | Repeat once at the 291st day of 1996 at 06:30, UTC + 1 (note the duration is ignored)
+Rn/CCYYDDDThhmm/PnD        | R1/1996291T0630Z/P2D     | Repeat once on the 291st day of 1996 at 06:30 (note the duration is ignored)
 
 #### 4. Recur with a specified duration ending at a particular date-time
 
@@ -335,8 +336,8 @@ duration.
 
 Example Syntax             | Example                  | Meaning
  ------------------------- | ------------------------ | ---------------------------------------------------------------
-R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly until 2012-01-02T00Z
-R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years until 2000-01-01.
-R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds until the 12th day in 2501 BC at 18:00 (using 2 expanded year digits).
-Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes, five times, until 2012-01-02T00Z
-Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, until 2000-05-01.
+R/PTnH/CCYY-MM-DDThhZ      | R/PT1H/2012-01-02T00Z    | Repeat hourly, ending at 2012-01-02T00Z (therefore repeats on the hour)
+R/PnY/CCYY                 | R/P3Y/2000               | Repeat every 3 years, ending at 2000-01-01 (therefore repeats at 00:00 January 1st)
+R/PTnS/+XCCYYDDDThhmm      | R/PT5s/-002500012T1800   | Repeat every 5 seconds, ending on the 12th day in 2501 BC at 18:00 (using 2 expanded year digits)
+Rn/PnYTnM/CCYY-MM-DDThhZ   | R5/P1YT5M/2012-01-02T00Z | Repeat every year and 5 minutes, five times, ending at 2012-01-02T00Z
+Rn/PnM/CCYY-MM             | R4/P1M/2000-05           | Repeat monthly, four times, ending at 2000-05-01 (therefore repeats on the first of the month)
