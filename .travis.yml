@@ -38,31 +38,26 @@ install:
   # Upgrade pip and setuptools as some times the versioning scheme hack fails
   # in Travis-CI.
   - pip install --upgrade pip setuptools
-  # Coverage dependencies, coverage for reporting coverage, pytest-cov to
-  # enable PyTest to produce coverage reports, and pytest-env to allow
-  # PyTest to use environment variables in its configuration (e.g. TZ=UTC).
-  - pip install coverage pytest-cov pytest-env pytest-runner
-  # Code style dependencies
   - pip install -e .[all]
+  - pip install pytest-xdist pycodestyle
 
 before_script:
   - flake8 metomi/isodatetime
 
 script:
   - |
+    PYTEST_ARGS=('-n' '2')
     if "$RUN_COVERAGE"; then
-      PY_CMD="coverage run"
-      export COVERAGE_PROCESS_START="${TRAVIS_BUILD_DIR}/.coveragerc"
-      export COVERAGE_FILE="${TRAVIS_BUILD_DIR}/.coverage"
-    else
-      PY_CMD="python"
+      PYTEST_ARGS+=('--cov=metomi/isodatetime')
     fi
+
     # NOTE: the way to handle long-living commands in the documentation is
     # travis_wait 40 coverage run -m isodatetime.tests.test_time_point
     # but it does not produce any output, which can be frustrating in case of errors.
     # So here we are using the approach documented in the issue
     # https://github.com/travis-ci/travis-ci/issues/4190.
-    $PY_CMD setup.py test --pytest-args='--runslow' &
+
+    pytest "${PYTEST_ARGS[@]}" &
     TEST_PID="$!"
     minutes=0
     limit=50
@@ -77,6 +72,8 @@ script:
     wait "${TEST_PID}"
 
 after_success:
-  - coverage xml --ignore-errors
-  # Report metrics, such as coverage
-  - if "$RUN_COVERAGE"; then bash <(curl -s https://codecov.io/bash); fi;
+  - |
+    coverage xml --ignore-errors
+    if "$RUN_COVERAGE"; then
+      bash <(curl -s https://codecov.io/bash)
+    fi

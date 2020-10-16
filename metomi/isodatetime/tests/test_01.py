@@ -18,7 +18,6 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
-import pytest
 import unittest
 
 from metomi.isodatetime import data
@@ -510,7 +509,6 @@ def run_comparison_tests(data_class, test_cases):
 class TestDataModel(unittest.TestCase):
     """Test the functionality of data model manipulation."""
 
-    @pytest.mark.slow
     def test_days_in_year_range(self):
         """Test the summing-over-days-in-year-range shortcut code."""
         for start_year in range(-401, 2):
