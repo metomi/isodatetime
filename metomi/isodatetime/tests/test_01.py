@@ -18,6 +18,7 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
+import pytest
 import unittest
 
 from metomi.isodatetime import data
@@ -610,6 +611,17 @@ class TestDataModel(unittest.TestCase):
             test_subtract = (start_point - test_duration).to_calendar_date()
             self.assertEqual(test_subtract, end_point,
                              "%s - %s" % (start_point, test_duration))
+
+    def test_timepoint_without_year(self):
+        """Test that TimePoints cannot be init'd without a year unless
+        truncated"""
+        for kwargs in [{}, {"month_of_year": 2}, {"hour_of_day": 9}]:
+            with pytest.raises(BadInputError) as exc:
+                data.TimePoint(**kwargs)
+                assert "Missing input: year" in str(exc.value)
+        # If truncated, it's fine:
+        data.TimePoint(truncated=True, month_of_year=2)
+        # TODO: what about just TimePoint(truncated=True) ?
 
     def test_timepoint_comparison(self):
         """Test the TimePoint rich comparison methods and hashing."""

@@ -1062,6 +1062,8 @@ class TimePoint:
             self._second_of_minute = _int_caster(
                 second_of_minute, "second_of_minute", allow_none=True)
         if not self._truncated:
+            if self._year is None:
+                raise BadInputError("Missing input: year")
             if self._hour_of_day is None:
                 self._hour_of_day = 0
             if hour_of_day_decimal is None and self._minute_of_hour is None:
