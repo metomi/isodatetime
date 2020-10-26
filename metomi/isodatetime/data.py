@@ -1296,7 +1296,7 @@ class TimePoint:
             # Truncate instead of rounding up because ticking over the higher
             # quantities would be complicated
             return "999999"
-        string = "%f" % decimal
+        string = "%0.6f" % decimal
         string = string.split(".", 1)[1].rstrip("0")
         if not string:
             return "0"
