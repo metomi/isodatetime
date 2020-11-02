@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v2.3.1
+      uses: actions/checkout@v2
 
     - name: Configure git
       run: |
@@ -21,8 +21,8 @@ jobs:
         branch_name="copyright-${year}"
         git checkout -b "$branch_name"
 
-        echo "::set-env name=YEAR::$year"
-        echo "::set-env name=BRANCH_NAME::$branch_name"
+        echo "YEAR=$year" >> $GITHUB_ENV
+        echo "BRANCH_NAME=$branch_name" >> $GITHUB_ENV
 
     - name: Update copyright year
       run: |
