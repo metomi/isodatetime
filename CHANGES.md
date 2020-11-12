@@ -25,6 +25,11 @@ Data classes are now immutable and hashable.
 number 1.** Also implemented support for adding/subtracting Duration instances
 to/from TimeRecurrence instances.
 
+[#187](https://github.com/metomi/isodatetime/pull/187):
+Replaced `TimePoint.get("attribute_name")` method with individual attributes
+`TimePoint.attribute_name`. Fixed a bug in rounding decimal properties of
+TimePoints.
+
 --------------------------------------------------------------------------------
 
 ## isodatetime 2.0.2 (Released 2020-07-01)

@@ -144,7 +144,7 @@ class TimePointDumper(object):
                 timepoint = timepoint.to_time_zone(new_time_zone)
         property_map = {}
         for property_ in properties:
-            property_map[property_] = timepoint.get(property_)
+            property_map[property_] = getattr(timepoint, property_)
             if (property_ == "century" and
                     ("expanded_year_digits" not in properties or
                      not self.num_expanded_year_digits)):

@@ -142,7 +142,7 @@ def get_timepoint_dumper_tests():
         ),
         (
             {"year": 500200, "month_of_year": 7, "day_of_month": 28,
-             "expanded_year_digits": 2, "hour_of_day": 0,
+             "num_expanded_year_digits": 2, "hour_of_day": 0,
              "hour_of_day_decimal": 0.4356, "time_zone_hour": -8,
              "time_zone_minute": -30},
             [("+XCCYY-MMDDThhmmZ", "+500200-0728T0856Z"),
@@ -166,10 +166,11 @@ def get_timepoint_dumper_tests():
              ("DD/MM/+XCCYY is a silly format",
               "28/07/+500200 is a silly format"),
              ("ThhmmZ", "T0856Z"),
-             ("%m-%dT%H:%M", "07-28T00:26")]
+             ("%m-%dT%H:%M", "07-28T00:26"),
+             ("+XCCYY-MM-DDThh,ii", "+500200-07-28T00,4356")]
         ),
         (
-            {"year": -56, "day_of_year": 318, "expanded_year_digits": 2,
+            {"year": -56, "day_of_year": 318, "num_expanded_year_digits": 2,
              "hour_of_day": 5, "minute_of_hour": 1, "time_zone_hour": 6},
             [("+XCCYY-MMDDThhmmZ", "-000056-1112T2301Z"),
              ("+XCCYYDDDThh:mm:ss", "-000056318T05:01:00"),
@@ -210,6 +211,13 @@ def get_timepoint_dumper_tests():
              ("CCYY-Www-DThhmm+0200", "1000-W01-1T0200+0200"),
              ("CCYY-Www-DThhmm-0200", "0999-W52-7T2200-0200"),
              ("%Y-%m-%dT%H:%M", "0999-12-30T00:00")]
+        ),
+        (
+            {"year": 2027, "month_of_year": 12, "day_of_month": 31,
+             "minute_of_hour": 59, "minute_of_hour_decimal": 0.99999999},
+            [("CCYY-MM-DDThh:mm,nnZ", "2027-12-31T00:59,999999Z"),
+             ("CCYY-MM-DDThh:mm.nnZ", "2027-12-31T00:59.999999Z"),
+             ("Thh:mm:ss,tt", "T00:59:59,999999")]
         )
     ]
 
@@ -265,44 +273,45 @@ def get_timepointparser_tests(allow_only_basic=False,
                              "day_of_month": 4},
                 "+5002000830": {"year": 500200, "month_of_year": 8,
                                 "day_of_month": 30,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "-0000561113": {"year": -56, "month_of_year": 11,
                                 "day_of_month": 13,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "-1000240210": {"year": -100024, "month_of_year": 2,
                                 "day_of_month": 10,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "1967056": {"year": 1967, "day_of_year": 56},
                 "+123456078": {"year": 123456, "day_of_year": 78,
-                               "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
                 "-004560134": {"year": -4560, "day_of_year": 134,
-                               "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
                 "1001W011": {"year": 1001, "week_of_year": 1,
                              "day_of_week": 1},
                 "+000001W457": {"year": 1, "week_of_year": 45,
                                 "day_of_week": 7,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "-010001W053": {"year": -10001, "week_of_year": 5,
-                                "day_of_week": 3, "expanded_year_digits": 2}
+                                "day_of_week": 3,
+                                "num_expanded_year_digits": 2}
             },
             "reduced": {
                 "4401-03": {"year": 4401, "month_of_year": 3},
                 "1982": {"year": 1982},
                 "19": {"year": 1900},
                 "+056789-01": {"year": 56789, "month_of_year": 1,
-                               "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
                 "-000001-12": {"year": -1, "month_of_year": 12,
-                               "expanded_year_digits": 2},
-                "-789123": {"year": -789123, "expanded_year_digits": 2},
-                "+450001": {"year": 450001, "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
+                "-789123": {"year": -789123, "num_expanded_year_digits": 2},
+                "+450001": {"year": 450001, "num_expanded_year_digits": 2},
                 # The following cannot be parsed - looks like truncated -YYMM.
-                #  "-0023": {"year": -2300, "expanded_year_digits": 2},
-                "+5678": {"year": 567800, "expanded_year_digits": 2},
+                #  "-0023": {"year": -2300, "num_expanded_year_digits": 2},
+                "+5678": {"year": 567800, "num_expanded_year_digits": 2},
                 "1765W04": {"year": 1765, "week_of_year": 4},
                 "+001765W44": {"year": 1765, "week_of_year": 44,
-                               "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
                 "-123321W50": {"year": -123321, "week_of_year": 50,
-                               "expanded_year_digits": 2}
+                               "num_expanded_year_digits": 2}
             },
             "truncated": {
                 "-9001": {"year": 90, "month_of_year": 1,
@@ -341,45 +350,45 @@ def get_timepointparser_tests(allow_only_basic=False,
                                "day_of_month": 4},
                 "+500200-08-30": {"year": 500200, "month_of_year": 8,
                                   "day_of_month": 30,
-                                  "expanded_year_digits": 2},
+                                  "num_expanded_year_digits": 2},
                 "-000056-11-13": {"year": -56, "month_of_year": 11,
                                   "day_of_month": 13,
-                                  "expanded_year_digits": 2},
+                                  "num_expanded_year_digits": 2},
                 "-100024-02-10": {"year": -100024, "month_of_year": 2,
                                   "day_of_month": 10,
-                                  "expanded_year_digits": 2},
+                                  "num_expanded_year_digits": 2},
                 "1967-056": {"year": 1967, "day_of_year": 56},
                 "+123456-078": {"year": 123456, "day_of_year": 78,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "-004560-134": {"year": -4560, "day_of_year": 134,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "1001-W01-1": {"year": 1001, "week_of_year": 1,
                                "day_of_week": 1},
                 "+000001-W45-7": {"year": 1, "week_of_year": 45,
                                   "day_of_week": 7,
-                                  "expanded_year_digits": 2},
+                                  "num_expanded_year_digits": 2},
                 "-010001-W05-3": {"year": -10001, "week_of_year": 5,
                                   "day_of_week": 3,
-                                  "expanded_year_digits": 2}
+                                  "num_expanded_year_digits": 2}
             },
             "reduced": {
                 "4401-03": {"year": 4401, "month_of_year": 3},
                 "1982": {"year": 1982},
                 "19": {"year": 1900},
                 "+056789-01": {"year": 56789, "month_of_year": 1,
-                               "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
                 "-000001-12": {"year": -1, "month_of_year": 12,
-                               "expanded_year_digits": 2},
-                "-789123": {"year": -789123, "expanded_year_digits": 2},
-                "+450001": {"year": 450001, "expanded_year_digits": 2},
+                               "num_expanded_year_digits": 2},
+                "-789123": {"year": -789123, "num_expanded_year_digits": 2},
+                "+450001": {"year": 450001, "num_expanded_year_digits": 2},
                 # The following cannot be parsed - looks like truncated -YYMM.
-                #  "-0023": {"year": -2300, "expanded_year_digits": 2},
-                "+5678": {"year": 567800, "expanded_year_digits": 2},
+                #  "-0023": {"year": -2300, "num_expanded_year_digits": 2},
+                "+5678": {"year": 567800, "num_expanded_year_digits": 2},
                 "1765-W04": {"year": 1765, "week_of_year": 4},
                 "+001765-W44": {"year": 1765, "week_of_year": 44,
-                                "expanded_year_digits": 2},
+                                "num_expanded_year_digits": 2},
                 "-123321-W50": {"year": -123321, "week_of_year": 50,
-                                "expanded_year_digits": 2}
+                                "num_expanded_year_digits": 2}
             },
             "truncated": {
                 "-9001": {"year": 90, "month_of_year": 1,
@@ -1084,9 +1093,6 @@ class TestSuite(unittest.TestCase):
                     num_expanded_year_digits=num_expanded_year_digits)
                 self.assertRaises(ctrl_exception, dumper.dump,
                                   ctrl_timepoint, format_)
-        value_error_timepoint = data.TimePoint(minute_of_hour=10)
-        value_error_timepoint._minute_of_hour = "1O"
-        self.assertRaises(ValueError, dumper.dump, value_error_timepoint, "%M")
 
     def test_timepoint_dumper_bounds_error_message(self):
         """Test the exception text contains the information expected"""

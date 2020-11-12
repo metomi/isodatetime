@@ -880,11 +880,11 @@ class TimePoint:
 
     Keyword arguments (usually default to None if not provided):
 
-    expanded_year_digits (default 0) - an agreed-upon number of extra
-        digits to represent the year, beyond the default of 4. For example,
+    num_expanded_year_digits (default 0) - an agreed-upon number of extra
+        digits to represent the year, beyond the normal 4. For example,
         a value of 2 would suggest representing the year 2000 as 002000.
     year (int): A positive or negative integer. Note that ISO 8601 implies
-        using non-zero expanded_year_digits when using negative integers.
+        using non-zero num_expanded_year_digits when using negative integers.
         Remember we are using the proleptic Gregorian calendar, with a year
         zero which does not exist in standard 1 BC => 1 AD usage - so 2 BC
         should be represented as -1.
@@ -936,16 +936,17 @@ class TimePoint:
     """
 
     __slots__ = [
-        "_expanded_year_digits", "_year", "_month_of_year",
+        "_num_expanded_year_digits", "_year", "_month_of_year",
         "_day_of_year", "_day_of_month", "_day_of_week",
         "_week_of_year", "_hour_of_day", "_minute_of_hour",
         "_second_of_minute", "_truncated", "_truncated_property",
         "_truncated_dump_format", "_dump_format", "_time_zone"
     ]
 
-    def __init__(self, expanded_year_digits=0, year=None, month_of_year=None,
-                 week_of_year=None, day_of_year=None, day_of_month=None,
-                 day_of_week=None, hour_of_day=None, hour_of_day_decimal=None,
+    def __init__(self, num_expanded_year_digits=0, year=None,
+                 month_of_year=None, week_of_year=None, day_of_year=None,
+                 day_of_month=None, day_of_week=None,
+                 hour_of_day=None, hour_of_day_decimal=None,
                  minute_of_hour=None, minute_of_hour_decimal=None,
                  second_of_minute=None, second_of_minute_decimal=None,
                  time_zone_hour=None, time_zone_minute=None,
@@ -974,7 +975,7 @@ class TimePoint:
                 repr(truncated_property),
                 "'year_of_decade' or 'year_of_century'")
         _type_checker(
-            (expanded_year_digits, "expanded_year_digits", int),
+            (num_expanded_year_digits, "num_expanded_year_digits", int),
             (year, "year", None, int),
             (month_of_year, "month_of_year", None, int),
             (week_of_year, "week_of_year", None, int),
@@ -991,8 +992,8 @@ class TimePoint:
              float)
         )
         self._dump_format = dump_format
-        self._expanded_year_digits = _int_caster(expanded_year_digits,
-                                                 "expanded_year_digits")
+        self._num_expanded_year_digits = _int_caster(
+            num_expanded_year_digits, "num_expanded_year_digits")
         self._truncated = truncated
         self._truncated_dump_format = truncated_dump_format
         self._truncated_property = truncated_property
@@ -1061,6 +1062,8 @@ class TimePoint:
             self._second_of_minute = _int_caster(
                 second_of_minute, "second_of_minute", allow_none=True)
         if not self._truncated:
+            if self._year is None:
+                raise BadInputError("Missing input: year")
             if self._hour_of_day is None:
                 self._hour_of_day = 0
             if hour_of_day_decimal is None and self._minute_of_hour is None:
@@ -1105,34 +1108,55 @@ class TimePoint:
             self._check_bounds()
 
     @property
-    def expanded_year_digits(self): return self._expanded_year_digits
+    def num_expanded_year_digits(self): return self._num_expanded_year_digits
 
     @property
     def year(self): return self._year
 
     @property
-    def month_of_year(self): return self._month_of_year
+    def month_of_year(self):
+        if self._month_of_year is None:
+            return self.get_calendar_date()[1]
+        return self._month_of_year
 
     @property
-    def week_of_year(self): return self._week_of_year
+    def week_of_year(self):
+        if self._week_of_year is None:
+            return self.get_week_date()[1]
+        return self._week_of_year
 
     @property
-    def day_of_year(self): return self._day_of_year
+    def day_of_year(self):
+        if self._day_of_year is None:
+            return self.get_ordinal_date()[1]
+        return self._day_of_year
 
     @property
-    def day_of_month(self): return self._day_of_month
+    def day_of_month(self):
+        if self._day_of_month is None:
+            return self.get_calendar_date()[2]
+        return self._day_of_month
 
     @property
-    def day_of_week(self): return self._day_of_week
+    def day_of_week(self):
+        if self._day_of_week is None:
+            return self.get_week_date()[2]
+        return self._day_of_week
 
     @property
     def hour_of_day(self): return self._hour_of_day
 
     @property
-    def minute_of_hour(self): return self._minute_of_hour
+    def minute_of_hour(self):
+        if self._minute_of_hour is None:
+            return self.get_hour_minute_second()[1]
+        return self._minute_of_hour
 
     @property
-    def second_of_minute(self): return self._second_of_minute
+    def second_of_minute(self):
+        if self._second_of_minute is None:
+            return self.get_hour_minute_second()[2]
+        return self._second_of_minute
 
     @property
     def time_zone(self): return self._time_zone
@@ -1203,86 +1227,80 @@ class TimePoint:
                                                    self._week_of_year,
                                                    self._day_of_week)
 
+    @property
+    def year_sign(self): return "+" if self._year >= 0 else "-"
+
+    @property
+    def expanded_year_digits(self):
+        """The extra digits at the front of the expanded year, as opposed to
+        the number of such digits"""
+        return abs(self._year / 10000)
+
+    @property
+    def century(self): return (abs(self._year) % 10000) // 100
+
+    @property
+    def year_of_century(self): return abs(self._year) % 100
+
+    @property
+    def year_of_decade(self): return abs(self._year) % 10
+
+    @property
+    def decade_of_century(self):
+        return (abs(self._year) % 100 - abs(self._year) % 10) // 10
+
+    @property
+    def hour_of_day_decimal_string(self):
+        return self._decimal_string("hour_of_day")
+
+    @property
+    def minute_of_hour_decimal_string(self):
+        return self._decimal_string("minute_of_hour")
+
+    @property
+    def second_of_minute_decimal_string(self):
+        return self._decimal_string("second_of_minute")
+
+    @property
+    def time_zone_minute_abs(self): return abs(self._time_zone._minutes)
+
+    @property
+    def time_zone_hour_abs(self): return abs(self._time_zone._hours)
+
+    @property
+    def time_zone_sign(self):
+        if self._time_zone._hours < 0 or self._time_zone._minutes < 0:
+            return "-"
+        return "+"
+
+    @property
+    def seconds_since_unix_epoch(self):
+        reference_timepoint = TimePoint(
+            **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
+        days, seconds = (self - reference_timepoint).get_days_and_seconds()
+        # N.B. This needs altering if we implement leap seconds.
+        return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
+
     def get(self, property_name):
-        """Return a calculated value for property name."""
-        if property_name == "expanded_year_digits":
-            return abs(self._year) / 10000  # FIXME: what's the meaning of this
-        if property_name == "year_sign":
-            return "+" if self._year >= 0 else "-"
-        if property_name == "century":
-            return (abs(self._year) % 10000) // 100
-        if property_name == "year_of_century":
-            return abs(self._year) % 100
-        if property_name == "month_of_year":
-            if self._month_of_year is not None:
-                return self._month_of_year
-            return self.get_calendar_date()[1]
-        if property_name == "day_of_year":
-            if self._day_of_year is not None:
-                return self._day_of_year
-            return self.get_ordinal_date()[1]
-        if property_name == "day_of_month":
-            if self._day_of_month is not None:
-                return self._day_of_month
-            return self.get_calendar_date()[2]
-        if property_name == "week_of_year":
-            if self._week_of_year is not None:
-                return self._week_of_year
-            return self.get_week_date()[1]
-        if property_name == "day_of_week":
-            if self._day_of_week is not None:
-                return self._day_of_week
-            return self.get_week_date()[2]
-        if property_name == "year_of_decade":
-            return abs(self._year) % 10
-        if property_name == "decade_of_century":
-            return (abs(self._year) % 100 - abs(self._year) % 10) // 10
-        if property_name == "minute_of_hour":
-            if self._minute_of_hour is None:
-                return self.get_hour_minute_second()[1]
-            return int(self._minute_of_hour)
-        if property_name == "hour_of_day":
-            return int(self._hour_of_day)
-        if property_name == "hour_of_day_decimal_string":
-            string = "%f" % (float(self._hour_of_day) - int(self._hour_of_day))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        if property_name == "minute_of_hour_decimal_string":
-            string = "%f" % (float(self._minute_of_hour) -
-                             int(self._minute_of_hour))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        if property_name == "second_of_minute":
-            if self._second_of_minute is None:
-                return self.get_hour_minute_second()[2]
-            return int(self._second_of_minute)
-        if property_name == "second_of_minute_decimal_string":  # FIXME: #184
-            string = "%f" % (float(self._second_of_minute) -
-                             int(self._second_of_minute))
-            string = string.replace("0.", "", 1).rstrip("0")
-            if not string:
-                return "0"
-            return string
-        if property_name == "time_zone_minute_abs":
-            return abs(self._time_zone._minutes)
-        if property_name == "time_zone_hour_abs":
-            return abs(self._time_zone._hours)
-        if property_name == "time_zone_sign":
-            if self._time_zone._hours < 0 or self._time_zone._minutes < 0:
-                return "-"
-            return "+"
-        if property_name == "seconds_since_unix_epoch":
-            reference_timepoint = TimePoint(
-                **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
-            days, seconds = (
-                self - reference_timepoint).get_days_and_seconds()
-            # N.B. This needs altering if we implement leap seconds.
-            return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
-        raise NotImplementedError(property_name)
+        """Obsolete method for returning calculated value for property name."""
+        raise NotImplementedError(
+            "The method TimePoint.get('{0}') is obsolete; use TimePoint.{0} "
+            "or getattr() instead".format(property_name))
+        # return getattr(self, property_name)
+
+    def _decimal_string(self, attr):
+        """Return the decimal digits (after the decimal point) of the specified
+        attribute as a string. Rounds to 6 d.p."""
+        decimal = float(getattr(self, attr)) - int(getattr(self, attr))
+        if decimal >= 0.9999995:
+            # Truncate instead of rounding up because ticking over the higher
+            # quantities would be complicated
+            return "999999"
+        string = "%0.6f" % decimal
+        string = string.split(".", 1)[1].rstrip("0")
+        if not string:
+            return "0"
+        return string
 
     def get_second_of_day(self):
         """Return the seconds elapsed since the start of the day."""
@@ -1431,7 +1449,7 @@ class TimePoint:
         for attr in ["month_of_year", "week_of_year", "day_of_year",
                      "day_of_month", "day_of_week", "hour_of_day",
                      "minute_of_hour", "second_of_minute"]:
-            value = getattr(self, attr)
+            value = getattr(self, "_{0}".format(attr))
             if value is not None:
                 props.update({attr: value})
         return props
@@ -1915,10 +1933,10 @@ class TimePoint:
 
     def __str__(self, override_custom_dump_format=False,
                 strftime_format=None):
-        if self._expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
-            TIMEPOINT_DUMPER_MAP[self._expanded_year_digits] = (
-                dumpers.TimePointDumper(self._expanded_year_digits))
-        dumper = TIMEPOINT_DUMPER_MAP[self._expanded_year_digits]
+        if self._num_expanded_year_digits not in TIMEPOINT_DUMPER_MAP:
+            TIMEPOINT_DUMPER_MAP[self._num_expanded_year_digits] = (
+                dumpers.TimePointDumper(self._num_expanded_year_digits))
+        dumper = TIMEPOINT_DUMPER_MAP[self._num_expanded_year_digits]
         if strftime_format is not None:
             return dumper.strftime(self, strftime_format)
         if self._truncated:
@@ -1937,9 +1955,9 @@ class TimePoint:
         return self.__str__(strftime_format=strftime_format)
 
     def _get_dump_format(self):
-        year_digits = 4 + self._expanded_year_digits
+        year_digits = 4 + self._num_expanded_year_digits
         year_string = "%0" + str(year_digits) + "d"
-        if self._expanded_year_digits:
+        if self._num_expanded_year_digits:
             if self._year < 0:
                 year_string = "-" + year_string % abs(self._year)
             else:
