@@ -1,0 +1,64 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.5', '3.6', '3.7', '3.8', '3.9', '3.10-dev']
+        coverage: [false]
+        include:
+          # Modify existing configurations:
+          - os: ubuntu-latest
+            python-version: '3.9'
+            coverage: false
+            tz: 'XXX-05:30'  # UTC+05:30
+          # Add new configurations:
+          - os: ubuntu-latest
+            python-version: '3.9'
+            coverage: true
+          - os: macos-latest
+            python-version: '3.9'
+            coverage: false
+    steps:
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          pip install --upgrade pip setuptools
+          pip install -e .[all]
+          pip install pytest-xdist
+
+      - name: Style test
+        run: flake8 metomi/isodatetime
+
+      - name: Run tests
+        env:
+          TZ: ${{ matrix.tz }}
+        run: |
+          PYTEST_ARGS=('-n' '2')
+          if ${{ matrix.coverage }}; then
+            PYTEST_ARGS+=('--cov=metomi/isodatetime')
+          fi
+
+          pytest "${PYTEST_ARGS[@]}"
+
+      - name: Upload coverage report
+        if: matrix.coverage
+        run: |
+          coverage xml --ignore-errors
+          bash <(curl -s https://codecov.io/bash)
