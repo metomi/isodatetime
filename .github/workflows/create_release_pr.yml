@@ -47,8 +47,6 @@ jobs:
 
     - name: Test the build
       uses: cylc/release-actions/build-python-package@v1
-      with:
-        dry-run: true
 
     - name: Create pull request
       uses: cylc/release-actions/stage-1/create-release-pr@v1

@@ -21,9 +21,6 @@ jobs:
     timeout-minutes: 5
     steps:
 
-    - name: Get the version number
-      uses: cylc/release-actions/stage-2/get-version-from-pr@v1
-
     - name: Checkout repo
       uses: actions/checkout@v2
       with:
@@ -34,11 +31,14 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Get the version number
+      uses: cylc/release-actions/stage-2/get-version-from-pr@v1
+
     - name: Build
       uses: cylc/release-actions/build-python-package@v1
 
     - name: Publish distribution to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.3.1
+      uses: pypa/gh-action-pypi-publish@v1.4.1
       with:
         user: __token__ # uses the API token feature of PyPI - least permissions possible
         password: ${{ secrets.PYPI_TOKEN }}
@@ -52,6 +52,7 @@ jobs:
         commitish: ${{ env.MERGE_SHA }}
         tag_name: ${{ env.VERSION }}
         release_name: isodatetime ${{ env.VERSION }}
+        prerelease: ${{ env.PRERELEASE }}
         body: See [${{ env.CHANGELOG_FILE }}](https://github.com/${{ github.repository }}/blob/master/${{ env.CHANGELOG_FILE }}) for detail.
         # TODO: Get topmost changelog section somehow and use that as the body?
 
