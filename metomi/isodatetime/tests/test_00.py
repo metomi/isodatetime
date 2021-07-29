@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
 # Copyright (C) British Crown (Met Office) & Contributors.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,7 +12,6 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# ----------------------------------------------------------------------------
 
 """This tests the ISO 8601 parsing and data model functionality."""
 
@@ -23,13 +20,11 @@ import datetime
 from itertools import chain
 import unittest
 import pytest
-from unittest.mock import patch, MagicMock, Mock
 
 from metomi.isodatetime import data
 from metomi.isodatetime import dumpers
 from metomi.isodatetime import parsers
 from metomi.isodatetime import parser_spec
-from metomi.isodatetime import timezone
 from metomi.isodatetime.exceptions import (
     ISO8601SyntaxError, TimePointDumperBoundsError, BadInputError)
 
@@ -1478,126 +1473,6 @@ class TestSuite(unittest.TestCase):
         for kwargs in _tests:
             with pytest.raises(BadInputError):
                 data.TimeRecurrence(**kwargs)
-
-    # data provider for the test test_get_local_time_zone_no_dst
-    # the format for the parameters is
-    # [tz_seconds, expected_hours, expected_minutes]]
-    get_local_time_zone_no_dst = [
-        [45900, 12, 45],  # pacific/chatham, +12:45
-        [20700, 5, 45],  # asia/kathmandu, +05:45
-        [3600, 1, 0],  # arctic/longyearbyen, +01:00
-        [0, 0, 0],  # UTC
-        [-10800, -3, 0],  # america/sao_paulo, -03:00
-        [-12600, -3, 30]  # america/st_johns, -03:30
-    ]
-
-    @patch('metomi.isodatetime.timezone.time')
-    def test_get_local_time_zone_no_dst(self, mock_time):
-        """Test that the hour/minute returned is correct.
-
-        Parts of the time module are mocked so that we can specify scenarios
-        without daylight saving time."""
-        for tz_seconds, expected_hours, expected_minutes in \
-                self.get_local_time_zone_no_dst:
-            # for a pre-defined timezone
-            mock_time.timezone.__neg__.return_value = tz_seconds
-            # time without dst
-            mock_time.daylight = False
-            # and localtime also without dst
-            mock_localtime = Mock()
-            mock_time.localtime.return_value = mock_localtime
-            mock_localtime.tm_isdst = 0
-            hours, minutes = timezone.get_local_time_zone()
-            self.assertEqual(expected_hours, hours)
-            self.assertEqual(expected_minutes, minutes)
-
-    # data provider for the test test_get_local_time_zone_with_dst
-    # the format for the parameters is
-    # [tz_seconds, tz_alt_seconds, expected_hours, expected_minutes]
-    get_local_time_zone_with_dst = [
-        [45900, 49500, 13, 45],  # pacific/chatham, +12:45 and +13:45
-        [43200, 46800, 13, 0],  # pacific/auckland, +12:00 and +13:00
-        [3600, 7200, 2, 0],  # arctic/longyearbyen, +01:00
-        [0, 0, 0, 0],  # UTC
-        [-10800, -7200, -2, 0],  # america/sao_paulo, -03:00 and -02:00,
-        [-12600, -9000, -2, 30]  # america/st_johns, -03:30 and -02:30
-    ]
-
-    @patch('metomi.isodatetime.timezone.time')
-    def test_get_local_time_zone_with_dst(self, mock_time):
-        """Test that the hour/minute returned is correct
-
-        Parts of the time module are mocked so that we can specify scenarios
-        with daylight saving time."""
-        for tz_seconds, tz_alt_seconds, expected_hours, expected_minutes in \
-                self.get_local_time_zone_with_dst:
-            # for a pre-defined timezone
-            mock_time.timezone.__neg__.return_value = tz_seconds
-            # time without dst
-            mock_time.daylight = True
-            # and localtime also without dst
-            mock_localtime = MagicMock()
-            mock_time.localtime.return_value = mock_localtime
-            mock_localtime.tm_isdst = 1
-            # and with the following alternative time for when dst is set
-            mock_time.altzone.__neg__.return_value = tz_alt_seconds
-            hours, minutes = timezone.get_local_time_zone()
-            self.assertEqual(expected_hours, hours)
-            self.assertEqual(expected_minutes, minutes)
-
-    # data provider for the test test_get_local_time_zone_format
-    # the format for the parameters is
-    # [tz_seconds, tz_format_mode, expected_format]
-    get_test_get_local_time_zone_format = [
-        # UTC, returns Z, flags are never used for UTC
-        [0, timezone.TimeZoneFormatMode.normal, "Z"],
-        # Positive values, some with minutes != 0
-        # asia/macao, +08:00
-        [28800, timezone.TimeZoneFormatMode.normal, "+0800"],
-        # asia/macao, +08:00
-        [28800, timezone.TimeZoneFormatMode.extended, "+08:00"],
-        # asia/macao, +08:00
-        [28800, timezone.TimeZoneFormatMode.reduced, "+08"],
-        # pacific/chatham, +12:45
-        [45900, timezone.TimeZoneFormatMode.normal, "+1245"],
-        # pacific/chatham, +12:45
-        [45900, timezone.TimeZoneFormatMode.extended, "+12:45"],
-        # pacific/chatham, +12:45
-        [45900, timezone.TimeZoneFormatMode.reduced, "+1245"],
-        # Negative values, some with minutes != 0
-        # america/buenos_aires, -03:00
-        [-10800, timezone.TimeZoneFormatMode.normal, "-0300"],
-        # america/buenos_aires, -03:00
-        [-10800, timezone.TimeZoneFormatMode.extended, "-03:00"],
-        # america/buenos_aires, -03:00
-        [-10800, timezone.TimeZoneFormatMode.reduced, "-03"],
-        # america/st_johns, -03:30
-        [-12600, timezone.TimeZoneFormatMode.normal, "-0330"],
-        # america/st_johns, -03:30
-        [-12600, timezone.TimeZoneFormatMode.extended, "-03:30"],
-        # america/st_johns, -03:30
-        [-12600, timezone.TimeZoneFormatMode.reduced, "-0330"]
-    ]
-
-    @patch('metomi.isodatetime.timezone.time')
-    def test_get_local_time_zone_format(self, mock_time):
-        """Test that the UTC offset string format is correct
-
-        Parts of the time module are mocked so that we can specify scenarios
-        with certain timezone seconds offsets. DST is not really
-        important for this test case"""
-        for tz_seconds, tz_format_mode, expected_format in \
-                self.get_test_get_local_time_zone_format:
-            # for a pre-defined timezone
-            mock_time.timezone.__neg__.return_value = tz_seconds
-            # time without dst
-            mock_time.daylight = False
-            # and localtime also without dst
-            mock_localtime = Mock()
-            mock_time.localtime.return_value = mock_localtime
-            mock_localtime.tm_isdst = 0
-            tz_format = timezone.get_local_time_zone_format(tz_format_mode)
-            self.assertEqual(expected_format, tz_format)
 
     def test_timepoint_dump_format(self):
         """Test the timepoint format dump when values are programmatically
