@@ -50,7 +50,7 @@ jobs:
         env:
           TZ: ${{ matrix.tz }}
         run: |
-          PYTEST_ARGS=('-n' '2')
+          PYTEST_ARGS=(-n 2 -m 'slow or not slow')
           if ${{ matrix.coverage }}; then
             PYTEST_ARGS+=('--cov=metomi/isodatetime')
           fi
