@@ -51,8 +51,8 @@ from metomi.isodatetime import timezone
             id="europe/london, +00:00 and +01:00"
         ),
         pytest.param(
-            -12600, (-3, 30),
-            -9000, (-2, 30),
+            -12600, (-3, -30),
+            -9000, (-2, -30),
             id="america/st_johns, -03:30 and -02:30"
         ),
         pytest.param(
@@ -61,8 +61,8 @@ from metomi.isodatetime import timezone
             id="america/new_york, -05:00 and -04:00,"
         ),
         pytest.param(
-            -8100, (-2, 15),
-            -8100, (-2, 15),
+            -8100, (-2, -15),
+            -8100, (-2, -15),
             id="hypothetical -02:15"
         ),
         pytest.param(

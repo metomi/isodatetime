@@ -19,7 +19,7 @@
 """This provides utilities for extracting the local time zone."""
 
 import time
-import math
+from typing import Tuple
 
 
 class TimeZoneFormatMode(object):
@@ -27,33 +27,39 @@ class TimeZoneFormatMode(object):
     reduced = "reduced"
     extended = "extended"
 
+    templates = {
+        normal: '{sign}{hh:02d}{mm:02d}',
+        reduced: '{sign}{hh:02d}',
+        extended: '{sign}{hh:02d}:{mm:02d}'
+    }
 
-def get_local_time_zone():
+
+def get_local_time_zone() -> Tuple[int, int]:
     """Return the current local UTC offset in hours and minutes."""
     utc_offset_seconds = -time.timezone
     if time.localtime().tm_isdst == 1 and time.daylight:
         utc_offset_seconds = -time.altzone
-    utc_offset_minutes = (utc_offset_seconds // 60) % 60
-    utc_offset_hours = math.floor(utc_offset_seconds / float(3600)) if \
-        utc_offset_seconds > 0 else math.ceil(utc_offset_seconds / float(3600))
-    return int(utc_offset_hours), utc_offset_minutes
+    sign = -1 if utc_offset_seconds < 0 else 1
+    utc_offset_minutes = (utc_offset_seconds // 60) % (sign * 60)
+    utc_offset_hours = sign * ((sign * utc_offset_seconds) // 3600)
+    return utc_offset_hours, utc_offset_minutes
 
 
-def get_local_time_zone_format(tz_fmt_mode=TimeZoneFormatMode.normal):
+def get_local_time_zone_format(
+    tz_fmt_mode: str = TimeZoneFormatMode.normal
+) -> str:
     """Return a string denoting the current local UTC offset.
 
     :param tz_fmt_mode:
     :type tz_fmt_mode: TimeZoneFormat:
     """
     utc_offset_hours, utc_offset_minutes = get_local_time_zone()
-    if utc_offset_hours == 0 and utc_offset_minutes == 0:
+    if utc_offset_hours == utc_offset_minutes == 0:
         return "Z"
-    reduced_timezone_template = "%s%02d"
-    timezone_template = "%s%02d%02d"
-    if tz_fmt_mode == TimeZoneFormatMode.extended:
-        timezone_template = "%s%02d:%02d"
+    if tz_fmt_mode == TimeZoneFormatMode.reduced and utc_offset_minutes != 0:
+        tz_fmt_mode = TimeZoneFormatMode.normal
     sign = "-" if (utc_offset_hours < 0 or utc_offset_minutes < 0) else "+"
-    if tz_fmt_mode == TimeZoneFormatMode.reduced and utc_offset_minutes == 0:
-        return reduced_timezone_template % (sign, abs(utc_offset_hours))
-    return timezone_template % (
-        sign, abs(utc_offset_hours), abs(utc_offset_minutes))
+    timezone_template = TimeZoneFormatMode.templates[tz_fmt_mode]
+    return timezone_template.format(
+        sign=sign, hh=abs(utc_offset_hours), mm=abs(utc_offset_minutes)
+    )
