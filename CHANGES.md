@@ -30,6 +30,10 @@ Replaced `TimePoint.get("attribute_name")` method with individual attributes
 `TimePoint.attribute_name`. Fixed a bug in rounding decimal properties of
 TimePoints.
 
+[#193](https://github.com/metomi/isodatetime/pull/193):
+Fixed a bug where the `timezone` functions would return incorrect results
+for certain non-standard/unusual system time zones.
+
 --------------------------------------------------------------------------------
 
 ## isodatetime 2.0.2 (Released 2020-07-01)
