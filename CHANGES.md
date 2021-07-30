@@ -13,7 +13,7 @@ ones in. -->
 
 ## isodatetime 2.1.0 (<span actions:bind='release-date'>Upcoming, 2020</span>)
 
-This is the 15th release of isodatetime. Requires Python 3.5+.
+This is the 15th release of isodatetime. **Requires Python 3.6+**.
 
 ### Noteworthy Changes
 
