@@ -1300,12 +1300,12 @@ class TimePoint:
         return "+"
 
     @property
-    def seconds_since_unix_epoch(self):
+    def seconds_since_unix_epoch(self) -> int:
         reference_timepoint = TimePoint(
             **CALENDAR.UNIX_EPOCH_DATE_TIME_REFERENCE_PROPERTIES)
         days, seconds = (self - reference_timepoint).get_days_and_seconds()
         # N.B. This needs altering if we implement leap seconds.
-        return str(int(CALENDAR.SECONDS_IN_DAY * days + seconds))
+        return int(CALENDAR.SECONDS_IN_DAY * days + seconds)
 
     def get(self, property_name):
         """Obsolete method for returning calculated value for property name."""
