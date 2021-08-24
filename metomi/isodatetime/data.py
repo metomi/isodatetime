@@ -19,13 +19,14 @@
 """This provides ISO 8601 data model functionality."""
 
 
+from functools import lru_cache
+from math import floor
+import operator
+from typing import Optional
+
 from . import dumpers
 from . import timezone
 from .exceptions import BadInputError
-
-import operator
-from functools import lru_cache
-from math import floor
 
 
 _operator_map = {op.__name__: op for op in [
@@ -277,7 +278,7 @@ class TimeRecurrence:
     @property
     def format_number(self): return self._format_number
 
-    def get_is_valid(self, timepoint: "TimePoint") -> bool:
+    def get_is_valid(self, timepoint: 'TimePoint') -> bool:
         """Return whether the timepoint is valid for this recurrence."""
         if not self._get_is_in_bounds(timepoint):
             return False
@@ -290,7 +291,7 @@ class TimeRecurrence:
                 return False
         return False
 
-    def get_next(self, timepoint: "TimePoint") -> "TimePoint":
+    def get_next(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
         """Return the next timepoint after this timepoint in the recurrence
         series, or None."""
         if self._repetitions == 1 or timepoint is None:
@@ -300,7 +301,7 @@ class TimeRecurrence:
             return next_timepoint
         return None
 
-    def get_prev(self, timepoint: "TimePoint") -> "TimePoint":
+    def get_prev(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
         """Return the previous timepoint before this timepoint in the
         recurrence series, or None."""
         if self._repetitions == 1 or timepoint is None:
@@ -310,7 +311,7 @@ class TimeRecurrence:
             return prev_timepoint
         return None
 
-    def get_first_after(self, timepoint):
+    def get_first_after(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
         """Return the next timepoint in the series after the given timepoint
         which is not necessarily part of the series.
 
@@ -335,7 +336,7 @@ class TimeRecurrence:
             return self._start_point
         return None
 
-    def __getitem__(self, index: int) -> "TimePoint":
+    def __getitem__(self, index: int) -> 'TimePoint':
         if index < 0 or not isinstance(index, int):
             raise IndexError("Unsupported index for TimeRecurrence")
         for i, point in enumerate(self.__iter__()):
@@ -343,7 +344,7 @@ class TimeRecurrence:
                 return point
         raise IndexError("Invalid index for TimeRecurrence")
 
-    def _get_is_in_bounds(self, timepoint: "TimePoint") -> bool:
+    def _get_is_in_bounds(self, timepoint: 'TimePoint') -> bool:
         """Return whether the timepoint is within this recurrence series."""
         if timepoint is None:
             return False
@@ -384,7 +385,7 @@ class TimeRecurrence:
         return hash((self._repetitions, self._start_point, self._end_point,
                      self._duration, self._min_point, self._max_point))
 
-    def __eq__(self, other: "TimeRecurrence") -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, TimeRecurrence):
             return NotImplemented
         for attr in ["_repetitions", "_start_point", "_end_point", "_duration",
@@ -393,7 +394,7 @@ class TimeRecurrence:
                 return False
         return True
 
-    def __add__(self, other: "Duration") -> "TimeRecurrence":
+    def __add__(self, other: 'Duration') -> 'TimeRecurrence':
         if not isinstance(other, Duration):
             raise TypeError(
                 "Invalid type for addition: '{0}' should be Duration."
@@ -412,7 +413,7 @@ class TimeRecurrence:
             repetitions=self._repetitions, **kwargs,
             min_point=self._min_point, max_point=self._max_point)
 
-    def __sub__(self, other: "Duration") -> "TimeRecurrence":
+    def __sub__(self, other: 'Duration') -> 'TimeRecurrence':
         return self + -1 * other
 
     def __str__(self):
@@ -721,37 +722,36 @@ class Duration:
         return hash(
             (self._years, self._months, self._get_non_nominal_seconds()))
 
-    def __eq__(self, other: "Duration") -> bool:
-        if isinstance(other, Duration):
-            if self.is_exact():
-                if other.is_exact():
-                    return (self._get_non_nominal_seconds() ==
-                            other._get_non_nominal_seconds())
-                return False
-            return (
-                self._years == other._years and
-                self._months == other._months and
-                self._get_non_nominal_seconds() ==
-                other._get_non_nominal_seconds()
-            )
-        return NotImplemented
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Duration):
+            return NotImplemented
+        if self.is_exact():
+            if other.is_exact():
+                return (self._get_non_nominal_seconds() ==
+                        other._get_non_nominal_seconds())
+            return False
+        return (
+            self._years == other._years and
+            self._months == other._months and
+            self._get_non_nominal_seconds() == other._get_non_nominal_seconds()
+        )
 
-    def __lt__(self, other: "Duration") -> bool:
+    def __lt__(self, other: 'Duration') -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() < other.get_days_and_seconds()
         return NotImplemented
 
-    def __le__(self, other: "Duration") -> bool:
+    def __le__(self, other: 'Duration') -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() <= other.get_days_and_seconds()
         return NotImplemented
 
-    def __gt__(self, other: "Duration") -> bool:
+    def __gt__(self, other: 'Duration') -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() > other.get_days_and_seconds()
         return NotImplemented
 
-    def __ge__(self, other: "Duration") -> bool:
+    def __ge__(self, other: 'Duration') -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() >= other.get_days_and_seconds()
         return NotImplemented
@@ -1357,7 +1357,7 @@ class TimePoint:
         if self.get_is_week_date():
             return self._year, self._week_of_year, self._day_of_week
 
-    def get_time_zone_offset(self, other: "TimePoint") -> "Duration":
+    def get_time_zone_offset(self, other: 'TimePoint') -> 'Duration':
         """Get the difference in hours and minutes between time zones.
 
         Args:
@@ -1368,7 +1368,7 @@ class TimePoint:
             return Duration()
         return other._time_zone - self._time_zone
 
-    def to_time_zone(self, dest_time_zone: "TimeZone") -> "TimePoint":
+    def to_time_zone(self, dest_time_zone: 'TimeZone') -> 'TimePoint':
         """Return a copy of this TimePoint in the specified time zone.
 
         Args:
@@ -1380,17 +1380,17 @@ class TimePoint:
         new._time_zone = dest_time_zone
         return new
 
-    def to_local_time_zone(self) -> "TimePoint":
+    def to_local_time_zone(self) -> 'TimePoint':
         """Return a copy of this TimePoint in the local time zone."""
         local_hours, local_minutes = timezone.get_local_time_zone()
         return self.to_time_zone(
             TimeZone(hours=local_hours, minutes=local_minutes))
 
-    def to_utc(self) -> "TimePoint":
+    def to_utc(self) -> 'TimePoint':
         """Return a copy of this TimePoint in the UTC time zone."""
         return self.to_time_zone(TimeZone(hours=0, minutes=0))
 
-    def to_calendar_date(self) -> "TimePoint":
+    def to_calendar_date(self) -> 'TimePoint':
         """Return a copy of this TimePoint reformatted in years, month-of-year
         and day-of-month."""
         if self.get_is_calendar_date():
@@ -1402,7 +1402,7 @@ class TimePoint:
         new._week_of_year, new._day_of_week = (None, None)
         return new
 
-    def to_hour_minute_second(self) -> "TimePoint":
+    def to_hour_minute_second(self) -> 'TimePoint':
         """Return a copy of this TimePoint with any time fractions expanded
         into hours, minutes and seconds."""
         new = self._copy()
@@ -1410,7 +1410,7 @@ class TimePoint:
             self.get_hour_minute_second())
         return new
 
-    def to_week_date(self) -> "TimePoint":
+    def to_week_date(self) -> 'TimePoint':
         """Return a copy of this TimePoint reformatted in years, week-of-year
         and day-of-week."""
         if self.get_is_week_date():
@@ -1421,7 +1421,7 @@ class TimePoint:
         new._month_of_year, new._day_of_month = (None, None)
         return new
 
-    def to_ordinal_date(self) -> "TimePoint":
+    def to_ordinal_date(self) -> 'TimePoint':
         """Return a copy of this TimePoint reformatted in years and
         day-of-the-year."""
         new = self._copy()
@@ -1545,7 +1545,7 @@ class TimePoint:
                 new_year_of_century = new._year % 100
         return new
 
-    def __add__(self, other) -> "TimePoint":
+    def __add__(self, other) -> 'TimePoint':
         if isinstance(other, TimePoint):
             if self._truncated and not other._truncated:
                 new = other.to_time_zone(self._time_zone)
@@ -1618,7 +1618,7 @@ class TimePoint:
                     new._week_of_year = max_weeks_in_year
         return new
 
-    def _copy(self) -> "TimePoint":
+    def _copy(self) -> 'TimePoint':
         """Returns an unlinked copy of this instance."""
         new_timepoint = TimePoint(is_empty_instance=True)
         for attr in self.__slots__:
@@ -1646,7 +1646,7 @@ class TimePoint:
         return hash((*point.get_calendar_date(),
                      *point.get_hour_minute_second()))
 
-    def _cmp(self, other: "TimePoint", op: str) -> bool:
+    def _cmp(self, other: object, op: str) -> bool:
         """Compare self with other, using the chosen operator.
 
         Args:
@@ -1680,19 +1680,19 @@ class TimePoint:
         other_datetime = [*other_date, other.get_second_of_day()]
         return _operator_map[op](my_datetime, other_datetime)
 
-    def __eq__(self, other: "TimePoint") -> bool:
+    def __eq__(self, other: object) -> bool:
         return self._cmp(other, "eq")
 
-    def __lt__(self, other: "TimePoint") -> bool:
+    def __lt__(self, other: 'TimePoint') -> bool:
         return self._cmp(other, "lt")
 
-    def __le__(self, other: "TimePoint") -> bool:
+    def __le__(self, other: 'TimePoint') -> bool:
         return self._cmp(other, "le")
 
-    def __gt__(self, other: "TimePoint") -> bool:
+    def __gt__(self, other: 'TimePoint') -> bool:
         return self._cmp(other, "gt")
 
-    def __ge__(self, other: "TimePoint") -> bool:
+    def __ge__(self, other: 'TimePoint') -> bool:
         return self._cmp(other, "ge")
 
     def __sub__(self, other):
