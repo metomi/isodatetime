@@ -22,7 +22,7 @@
 from functools import lru_cache
 from math import floor
 import operator
-from typing import Optional
+from typing import Optional, Union, overload
 
 from . import dumpers
 from . import timezone
@@ -396,10 +396,7 @@ class TimeRecurrence:
 
     def __add__(self, other: 'Duration') -> 'TimeRecurrence':
         if not isinstance(other, Duration):
-            raise TypeError(
-                "Invalid type for addition: '{0}' should be Duration."
-                .format(type(other).__name__)
-            )
+            return NotImplemented
         if self._format_number == 1:
             kwargs = {"start_point": self._start_point + other,
                       "end_point": self._second_point + other}
@@ -414,6 +411,8 @@ class TimeRecurrence:
             min_point=self._min_point, max_point=self._max_point)
 
     def __sub__(self, other: 'Duration') -> 'TimeRecurrence':
+        if not isinstance(other, Duration):
+            return NotImplemented
         return self + -1 * other
 
     def __str__(self):
@@ -619,7 +618,7 @@ class Duration:
         """Return whether we are in week representation."""
         return self._weeks is not None
 
-    def to_days(self):
+    def to_days(self) -> 'Duration':
         """Return a new Duration in day representation rather than weeks."""
         if self.get_is_in_weeks():
             new = self._copy()
@@ -641,17 +640,27 @@ class Duration:
             return Duration(weeks=weeks)
         return self
 
-    def __abs__(self):
-        new = self._copy()
-        for attribute in new.__slots__:
-            attr_value = getattr(new, attribute)
-            if attr_value is not None:
-                setattr(new, attribute, abs(attr_value))
+    def __abs__(self) -> 'Duration':
+        new = self.__class__(_is_empty_instance=True)
+        for attr in self.__slots__:
+            value: Union[int, float, None] = getattr(self, attr)
+            setattr(new, attr, abs(value) if value else value)
         return new
 
-    def __add__(self, other):
-        new = self._copy()
+    @overload
+    def __add__(self, other: 'Duration') -> 'Duration': ...
+
+    @overload
+    def __add__(self, other: 'TimePoint') -> 'TimePoint': ...
+
+    @overload
+    def __add__(self, other: 'TimeRecurrence') -> 'TimeRecurrence': ...
+
+    def __add__(
+        self, other: Union['Duration', 'TimePoint', 'TimeRecurrence']
+    ) -> Union['Duration', 'TimePoint', 'TimeRecurrence']:
         if isinstance(other, Duration):
+            new = self._copy()
             if new.get_is_in_weeks():
                 if other.get_is_in_weeks():
                     new._weeks += other._weeks
@@ -666,33 +675,29 @@ class Duration:
             new._minutes += other._minutes
             new._seconds += other._seconds
             return new
-        if isinstance(other, TimePoint) or isinstance(other, TimeRecurrence):
-            return other + new
-        raise TypeError(
-            "Invalid type for addition: " +
-            "'%s' should be Duration or TimePoint." %
-            type(other).__name__
-        )
+        if isinstance(other, (TimePoint, TimeRecurrence)):
+            return other + self
+        return NotImplemented
 
-    def __sub__(self, other):
+    def __sub__(self, other: 'Duration') -> 'Duration':
+        if not isinstance(other, Duration):
+            return NotImplemented
         return self + -1 * other
 
-    def __mul__(self, other):
+    def __neg__(self) -> 'Duration':
+        return -1 * self
+
+    def __mul__(self, other: int) -> 'Duration':
         # TODO: support float multiplication?
         if not isinstance(other, int):
-            raise TypeError(
-                "Invalid type for multiplication: " +
-                "'%s' should be integer." %
-                type(other).__name__
-            )
-        new = self._copy()
-        for attr in new.__slots__:
-            value = getattr(new, attr)
-            if value is not None:
-                setattr(new, attr, value * other)
+            return NotImplemented
+        new = self.__class__(_is_empty_instance=True)
+        for attr in self.__slots__:
+            value: Union[int, float, None] = getattr(self, attr)
+            setattr(new, attr, value * other if value else value)
         return new
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: int) -> 'Duration':
         return self.__mul__(other)
 
     def __floordiv__(self, other):
@@ -1545,7 +1550,7 @@ class TimePoint:
                 new_year_of_century = new._year % 100
         return new
 
-    def __add__(self, other) -> 'TimePoint':
+    def __add__(self, other: Union['Duration', 'TimePoint']) -> 'TimePoint':
         if isinstance(other, TimePoint):
             if self._truncated and not other._truncated:
                 new = other.to_time_zone(self._time_zone)
@@ -1553,10 +1558,12 @@ class TimePoint:
                 return new.to_time_zone(other._time_zone)
             if other._truncated and not self._truncated:
                 return other + self
-        if not isinstance(other, Duration):
             raise ValueError(
-                "Invalid addition: can only add Duration or "
-                "truncated TimePoint to TimePoint.")
+                "Invalid addition: can only add two TimePoints if one is a "
+                "truncated TimePoint."
+            )
+        if not isinstance(other, Duration):
+            return NotImplemented
         duration = other
         if duration.get_is_in_weeks():
             duration = duration.to_days()
@@ -1660,7 +1667,7 @@ class TimePoint:
                 "Cannot compare truncated to non-truncated "
                 "TimePoint: {0}, {1}".format(self, other))
         if self.get_props() == other.get_props():
-            return True if op in ["eq", "le", "ge"] else False
+            return op in {"eq", "le", "ge"}
         if self._truncated:
             # TODO: Convert truncated TimePoints to UTC when not buggy
             for attribute in self.__slots__:
@@ -1695,8 +1702,21 @@ class TimePoint:
     def __ge__(self, other: 'TimePoint') -> bool:
         return self._cmp(other, "ge")
 
-    def __sub__(self, other):
+    @overload
+    def __sub__(self, other: 'Duration') -> 'TimePoint': ...
+
+    @overload
+    def __sub__(self, other: 'TimePoint') -> 'Duration': ...
+
+    def __sub__(
+        self, other: Union['Duration', 'TimePoint']
+    ) -> Union['TimePoint', 'Duration']:
         if isinstance(other, TimePoint):
+            if self._truncated or other._truncated:
+                raise ValueError(
+                    "Invalid subtraction: can only subtract non-truncated "
+                    "TimePoints from one another."
+                )
             if other > self:
                 return -1 * (other - self)
             other = other.to_time_zone(self._time_zone)
@@ -1726,15 +1746,10 @@ class TimePoint:
                 days=diff_day, hours=diff_hour, minutes=diff_minute,
                 seconds=diff_second)
         if not isinstance(other, Duration):
-            raise TypeError(
-                "Invalid subtraction type " +
-                "'%s' - should be Duration." %
-                type(other).__name__
-            )
-        duration = other
-        return self.__add__(duration * -1)
+            return NotImplemented
+        return self + -1 * other
 
-    def add_months(self, num_months):
+    def add_months(self, num_months: int) -> 'TimePoint':
         """Return a copy of this TimePoint with an amount of months added to
         it."""
         if num_months == 0:
