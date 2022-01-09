@@ -25,6 +25,7 @@ from .exceptions import BadInputError
 
 import operator
 from functools import lru_cache
+from math import floor
 
 
 _operator_map = {op.__name__: op for op in [
@@ -307,6 +308,15 @@ class TimeRecurrence:
         prev_timepoint = timepoint - self._duration
         if self._get_is_in_bounds(prev_timepoint):
             return prev_timepoint
+        return None
+
+    def get_first_after(self, timepoint):
+        if self._get_is_in_bounds(timepoint):
+            iterations, seconds_since = divmod((timepoint - self.start_point).get_seconds(),
+                                               self.duration.get_seconds())
+            return timepoint + (self.duration - Duration(seconds=floor(seconds_since)))
+        elif timepoint < self.start_point:
+            return self.start_point
         return None
 
     def __getitem__(self, index: int) -> "TimePoint":
