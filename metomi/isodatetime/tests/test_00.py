@@ -908,6 +908,8 @@ def get_timerecurrence_first_after_tests():
           ("2021-01-01T00:00:00Z", "None")])
 
     ]
+
+
 def get_timerecurrenceparser_tests():
     """Yield tests for the time recurrence parser."""
     test_points = ["-100024-02-10T17:00:00-12:30",
@@ -1413,7 +1415,8 @@ class TestSuite(unittest.TestCase):
                     timepoint_expression)
                 test_result = str(test_recurrence.get_first_after(timepoint))
                 self.assertEqual(test_result, ctrl_result,
-                                 ctrl_result + " is first in " + expression + " after " + timepoint_expression)
+                                 ctrl_result + " is first in " + expression
+                                 + " after " + timepoint_expression)
 
     def test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""

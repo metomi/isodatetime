@@ -312,9 +312,11 @@ class TimeRecurrence:
 
     def get_first_after(self, timepoint):
         if self._get_is_in_bounds(timepoint):
-            iterations, seconds_since = divmod((timepoint - self.start_point).get_seconds(),
-                                               self.duration.get_seconds())
-            return timepoint + (self.duration - Duration(seconds=floor(seconds_since)))
+            iterations, seconds_since = divmod(
+                (timepoint - self.start_point).get_seconds(),
+                self.duration.get_seconds())
+            return timepoint + (
+                        self.duration - Duration(seconds=floor(seconds_since)))
         elif timepoint < self.start_point:
             return self.start_point
         return None
