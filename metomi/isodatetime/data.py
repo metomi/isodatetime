@@ -552,19 +552,17 @@ class Duration:
     @property
     def seconds(self): return self._seconds
 
-    def _copy(self):
+    def _copy(self) -> 'Duration':
         """Return an (unlinked) copy of this instance."""
         new = self.__class__(_is_empty_instance=True)
         for attr in self.__slots__:
             setattr(new, attr, getattr(self, attr))
         return new
 
-    def is_exact(self):
+    def is_exact(self) -> bool:
         """Return True if the instance is defined in non-nominal/exact units
         (weeks, days, hours, minutes or seconds) only."""
-        if self._years or self._months:
-            return False
-        return True
+        return not (self._years or self._months)
 
     def get_days_and_seconds(self):
         """Return a roughly-converted duration in days and seconds.

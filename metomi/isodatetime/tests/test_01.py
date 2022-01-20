@@ -612,6 +612,13 @@ class TestDataModel(unittest.TestCase):
             self.assertEqual(test_subtract, end_point,
                              "%s - %s" % (start_point, test_duration))
 
+    def test_duration_is_exact(self):
+        """Test Duration.is_exact()."""
+        duration = data.Duration(weeks=1, days=1)
+        assert duration.is_exact()
+        for duration in (data.Duration(months=1), data.Duration(years=1)):
+            assert not duration.is_exact()
+
     def test_timepoint_comparison(self):
         """Test the TimePoint rich comparison methods and hashing."""
         run_comparison_tests(data.TimePoint, get_timepoint_comparison_tests())
