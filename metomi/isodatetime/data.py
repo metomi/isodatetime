@@ -311,23 +311,28 @@ class TimeRecurrence:
         return None
 
     def get_first_after(self, timepoint):
+        """Return the next timepoint in the series after the given timepoint
+        which is not necessarily part of the series.
+        
+        If the given timepoint is before the start point, return the
+        start point, or if it is after the end point, return None.
+        """
         if self._get_is_in_bounds(timepoint):
             if self.duration.is_exact():
                 # Since it's exact, we can do maths instead of iterating
                 iterations, seconds_since = divmod(
-                    (timepoint - self.start_point).get_seconds(),
-                    self.duration.get_seconds())
-                return timepoint + (self.duration - Duration(
+                    (timepoint - self._start_point).get_seconds(),
+                    self._duration.get_seconds())
+                return timepoint + (self._duration - Duration(
                     seconds=floor(seconds_since)))
             else:
                 # Since duration is inexact, we have to iterate
-                current = self.start_point
-                while current <= timepoint:
-                    print(current)
+                current = self._start_point
+                while current is not None and current <= timepoint:
                     current = self.get_next(current)
                 return current
-        elif timepoint < self.start_point:
-            return self.start_point
+        elif timepoint < self._start_point:
+            return self._start_point
         return None
 
     def __getitem__(self, index: int) -> "TimePoint":
