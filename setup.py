@@ -92,7 +92,7 @@ setup(
     install_requires=install_requires,
     tests_require=tests_require,
     extras_require=extras_require,
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
@@ -100,10 +100,10 @@ setup(
         ("License :: OSI Approved" +
          " :: GNU Lesser General Public License v3 (LGPLv3)"),
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities"

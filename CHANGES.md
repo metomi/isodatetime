@@ -13,7 +13,7 @@ ones in. -->
 
 ## isodatetime 2.1.0 (<span actions:bind='release-date'>Upcoming, 2020</span>)
 
-This is the 15th release of isodatetime. Requires Python 3.5+.
+This is the 15th release of isodatetime. **Requires Python 3.6+**.
 
 ### Noteworthy Changes
 
@@ -29,6 +29,10 @@ to/from TimeRecurrence instances.
 Replaced `TimePoint.get("attribute_name")` method with individual attributes
 `TimePoint.attribute_name`. Fixed a bug in rounding decimal properties of
 TimePoints.
+
+[#193](https://github.com/metomi/isodatetime/pull/193):
+Fixed a bug where the `timezone` functions would return incorrect results
+for certain non-standard/unusual system time zones.
 
 --------------------------------------------------------------------------------
 
