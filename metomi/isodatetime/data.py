@@ -313,12 +313,12 @@ class TimeRecurrence:
     def get_first_after(self, timepoint):
         """Return the next timepoint in the series after the given timepoint
         which is not necessarily part of the series.
-        
+
         If the given timepoint is before the start point, return the
         start point, or if it is after the end point, return None.
         """
         if self._get_is_in_bounds(timepoint):
-            if self.duration.is_exact():
+            if self._duration is not None and self._duration.is_exact():
                 # Since it's exact, we can do maths instead of iterating
                 iterations, seconds_since = divmod(
                     (timepoint - self._start_point).get_seconds(),
