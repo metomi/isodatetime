@@ -35,7 +35,7 @@ below:
 * Uwe L. Korn (DE)
 * Mel Hall (Met Office, UK)
 * Ronnie Dutta (Met Office, UK)
-
+* Walt Whiteside (US)
 
 (All contributors are identifiable with email addresses in the version control
 logs or otherwise.)

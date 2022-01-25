@@ -889,6 +889,26 @@ def get_timerecurrence_membership_tests():
     ]
 
 
+def get_timerecurrence_first_after_tests():
+    """Return test get_first_after expressions for data.TimeRecurrence"""
+    return [
+        ("R5/2020-01-01T00:00:00Z/2020-01-05T00:00:00Z",
+         [("2019-01-01T00:00:00Z", "2020-01-01T00:00:00Z"),
+          ("2020-01-02T00:00:00Z", "2020-01-05T00:00:00Z"),
+          ("2020-01-15T00:00:00Z", "2020-01-17T00:00:00Z"),
+          ("2021-01-01T00:00:00Z", "None")]),
+        ("R3/P700D/1961-W01-1T06,5Z",
+         [("1950-01-01T00:00:00Z", "1957-W10-1T06,5Z"),
+          ("1958-01-01T00:00:00Z", "1959-02-02T06:30:00Z"),
+          ("2021-01-01T00:00:00Z", "None")]),
+        ("R/2000-01-01T00:00:00Z/P1Y",
+         [("2001-01-01T00:00:00Z", "2002-01-01T00:00:00Z"),
+          ("2002-01-01T00:00:00Z", "2003-01-01T00:00:00Z")]),
+        ("R1/2000-01-01T00:00:00Z/P1Y",
+         [("2000-01-01T00:00:00Z", "None")])
+    ]
+
+
 def get_timerecurrenceparser_tests():
     """Yield tests for the time recurrence parser."""
     test_points = ["-100024-02-10T17:00:00-12:30",
@@ -1381,6 +1401,21 @@ class TestSuite(unittest.TestCase):
                 test_is_member = test_recurrence.get_is_valid(timepoint)
                 self.assertEqual(test_is_member, ctrl_is_member,
                                  timepoint_expression + " in " + expression)
+        for expression, results in get_timerecurrence_first_after_tests():
+            try:
+                test_recurrence = parser.parse(expression)
+            except ISO8601SyntaxError:
+                raise ValueError(
+                    "TimeRecurrenceParser test failed to parse '%s'" %
+                    expression
+                )
+            for timepoint_expression, ctrl_result in results:
+                timepoint = parsers.parse_timepoint_expression(
+                    timepoint_expression)
+                test_result = str(test_recurrence.get_first_after(timepoint))
+                self.assertEqual(test_result, ctrl_result,
+                                 ctrl_result + " is first in " + expression
+                                 + " after " + timepoint_expression)
 
     def test_timerecurrence_parser(self):
         """Test the recurring date/time series parsing."""

@@ -25,6 +25,7 @@ from .exceptions import BadInputError
 
 import operator
 from functools import lru_cache
+from math import floor
 
 
 _operator_map = {op.__name__: op for op in [
@@ -307,6 +308,31 @@ class TimeRecurrence:
         prev_timepoint = timepoint - self._duration
         if self._get_is_in_bounds(prev_timepoint):
             return prev_timepoint
+        return None
+
+    def get_first_after(self, timepoint):
+        """Return the next timepoint in the series after the given timepoint
+        which is not necessarily part of the series.
+
+        If the given timepoint is before the start point, return the
+        start point, or if it is after the end point, return None.
+        """
+        if self._get_is_in_bounds(timepoint):
+            if self._duration is not None and self._duration.is_exact():
+                # Since it's exact, we can do maths instead of iterating
+                iterations, seconds_since = divmod(
+                    (timepoint - self._start_point).get_seconds(),
+                    self._duration.get_seconds())
+                return timepoint + (self._duration - Duration(
+                    seconds=floor(seconds_since)))
+            else:
+                # Since duration is inexact, we have to iterate
+                current = self._start_point
+                while current is not None and current <= timepoint:
+                    current = self.get_next(current)
+                return current
+        elif timepoint < self._start_point:
+            return self._start_point
         return None
 
     def __getitem__(self, index: int) -> "TimePoint":
