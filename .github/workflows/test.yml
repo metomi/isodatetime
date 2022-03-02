@@ -37,7 +37,7 @@ jobs:
             coverage: false
     name: ${{ matrix.os }} py-${{ matrix.python-version }} ${{ matrix.tz }} ${{ matrix.coverage && '(coverage)' || '' }}
     env:
-      PYTEST_ADDOPTS: -n 5 -m 'slow or not slow'
+      PYTEST_ADDOPTS: -n 5 -m 'slow or not slow' --color=yes
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
