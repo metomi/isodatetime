@@ -18,6 +18,7 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
+from typing import Union
 import pytest
 import unittest
 
@@ -630,8 +631,9 @@ def test_timepoint_comparison():
         with pytest.raises(TypeError):
             point < var
     # Cannot use "<", ">=" etc truncated TimePoints of different modes:
-    day_month_point = data.TimePoint(month_of_year=2, day_of_month=5,
-                                        truncated=True)
+    day_month_point = data.TimePoint(
+        month_of_year=2, day_of_month=5, truncated=True
+    )
     ordinal_point = data.TimePoint(day_of_year=36, truncated=True)
     with pytest.raises(TypeError):  # TODO: should be ValueError?
         day_month_point < ordinal_point
@@ -653,24 +655,42 @@ def test_timepoint_subtract():
         assert test_string == ctrl_string
 
 
-def test_timepoint_add_duration():
-    """Test adding a duration to a timepoint"""
-    seconds_added = 5
-    timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                hour_of_day=1, minute_of_hour=1)
-    duration = data.Duration(seconds=seconds_added)
-    t = timepoint + duration
-    assert seconds_added == t.second_of_minute
-
-
-def test_timepoint_add_duration_without_minute():
-    """Test adding a duration to a timepoint"""
-    seconds_added = 5
-    timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                hour_of_day=1)
-    duration = data.Duration(seconds=seconds_added)
-    t = timepoint + duration
-    assert seconds_added == t.second_of_minute
+@pytest.mark.parametrize(
+    'timepoint, other, expected',
+    [
+        pytest.param(
+            data.TimePoint(
+                year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
+                minute_of_hour=1
+            ),
+            data.Duration(seconds=5),
+            data.TimePoint(
+                year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
+                minute_of_hour=1, second_of_minute=5
+            ),
+            id="1900-01-01T01:01 + PT5S"
+        ),
+        pytest.param(
+            data.TimePoint(
+                year=1900, month_of_year=1, day_of_month=1, hour_of_day=1
+            ),
+            data.Duration(seconds=5),
+            data.TimePoint(
+                year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
+                second_of_minute=5
+            ),
+            id="1900-01-01T01 + PT5S"
+        ),
+    ]
+)
+def test_timepoint_add(
+    timepoint: data.TimePoint,
+    other: Union[data.Duration, data.TimePoint],
+    expected: data.TimePoint
+):
+    """Test adding to a timepoint"""
+    assert timepoint + other == expected
+    assert other + timepoint == expected
 
 
 def test_timepoint_bounds():
