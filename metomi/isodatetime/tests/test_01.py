@@ -619,71 +619,78 @@ class TestDataModel(unittest.TestCase):
         for duration in (data.Duration(months=1), data.Duration(years=1)):
             assert not duration.is_exact()
 
-    def test_timepoint_comparison(self):
-        """Test the TimePoint rich comparison methods and hashing."""
-        run_comparison_tests(data.TimePoint, get_timepoint_comparison_tests())
-        point = data.TimePoint(year=2000)
-        for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
-            self.assertFalse(point == var)
-            with self.assertRaises(TypeError):
-                point < var
-        # Cannot use "<", ">=" etc truncated TimePoints of different modes:
-        day_month_point = data.TimePoint(month_of_year=2, day_of_month=5,
-                                         truncated=True)
-        ordinal_point = data.TimePoint(day_of_year=36, truncated=True)
-        with self.assertRaises(TypeError):  # TODO: should be ValueError?
-            day_month_point < ordinal_point
 
-    def test_timepoint_plus_float_time_duration_day_of_month_type(self):
-        """Test (TimePoint + Duration).day_of_month is an int."""
-        time_point = data.TimePoint(year=2000) + data.Duration(seconds=1.0)
-        self.assertEqual(type(time_point.day_of_month), int)
+def test_timepoint_comparison():
+    """Test the TimePoint rich comparison methods and hashing."""
+    run_comparison_tests(data.TimePoint, get_timepoint_comparison_tests())
+    point = data.TimePoint(year=2000)
+    for var in [7, 'foo', (1, 2), data.Duration(days=1)]:
+        assert not (point == var)
+        assert point != var
+        with pytest.raises(TypeError):
+            point < var
+    # Cannot use "<", ">=" etc truncated TimePoints of different modes:
+    day_month_point = data.TimePoint(month_of_year=2, day_of_month=5,
+                                        truncated=True)
+    ordinal_point = data.TimePoint(day_of_year=36, truncated=True)
+    with pytest.raises(TypeError):  # TODO: should be ValueError?
+        day_month_point < ordinal_point
 
-    def test_timepoint_subtract(self):
-        """Test subtracting one time point from another."""
-        for test_props1, test_props2, ctrl_string in (
-                get_timepoint_subtract_tests()):
-            point1 = data.TimePoint(**test_props1)
-            point2 = data.TimePoint(**test_props2)
-            test_string = str(point1 - point2)
-            self.assertEqual(test_string, ctrl_string,
-                             "%s - %s" % (point1, point2))
 
-    def test_timepoint_add_duration(self):
-        """Test adding a duration to a timepoint"""
-        seconds_added = 5
-        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                   hour_of_day=1, minute_of_hour=1)
-        duration = data.Duration(seconds=seconds_added)
-        t = timepoint + duration
-        self.assertEqual(seconds_added, t.second_of_minute)
+def test_timepoint_plus_float_time_duration_day_of_month_type():
+    """Test (TimePoint + Duration).day_of_month is an int."""
+    time_point = data.TimePoint(year=2000) + data.Duration(seconds=1.0)
+    assert isinstance(time_point.day_of_month, int)
 
-    def test_timepoint_add_duration_without_minute(self):
-        """Test adding a duration to a timepoint"""
-        seconds_added = 5
-        timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
-                                   hour_of_day=1)
-        duration = data.Duration(seconds=seconds_added)
-        t = timepoint + duration
-        self.assertEqual(seconds_added, t.second_of_minute)
 
-    def test_timepoint_bounds(self):
-        """Test out of bounds TimePoints"""
-        tests = get_timepoint_bounds_tests()
-        for kwargs in tests["in_bounds"]:
+def test_timepoint_subtract():
+    """Test subtracting one time point from another."""
+    for test_props1, test_props2, ctrl_string in (
+            get_timepoint_subtract_tests()):
+        point1 = data.TimePoint(**test_props1)
+        point2 = data.TimePoint(**test_props2)
+        test_string = str(point1 - point2)
+        assert test_string == ctrl_string
+
+
+def test_timepoint_add_duration():
+    """Test adding a duration to a timepoint"""
+    seconds_added = 5
+    timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
+                                hour_of_day=1, minute_of_hour=1)
+    duration = data.Duration(seconds=seconds_added)
+    t = timepoint + duration
+    assert seconds_added == t.second_of_minute
+
+
+def test_timepoint_add_duration_without_minute():
+    """Test adding a duration to a timepoint"""
+    seconds_added = 5
+    timepoint = data.TimePoint(year=1900, month_of_year=1, day_of_month=1,
+                                hour_of_day=1)
+    duration = data.Duration(seconds=seconds_added)
+    t = timepoint + duration
+    assert seconds_added == t.second_of_minute
+
+
+def test_timepoint_bounds():
+    """Test out of bounds TimePoints"""
+    tests = get_timepoint_bounds_tests()
+    for kwargs in tests["in_bounds"]:
+        data.TimePoint(**kwargs)
+    for kwargs in tests["out_of_bounds"]:
+        with pytest.raises(BadInputError) as exc_info:
             data.TimePoint(**kwargs)
-        for kwargs in tests["out_of_bounds"]:
-            with self.assertRaises(BadInputError) as cm:
-                data.TimePoint(**kwargs)
-            assert "out of bounds" in str(cm.exception)
+        assert "out of bounds" in str(exc_info.value)
 
-    def test_timepoint_conflicting_inputs(self):
-        """Test TimePoints initialized with incompatible inputs"""
-        tests = get_timepoint_conflicting_input_tests()
-        for kwargs in tests:
-            with self.assertRaises(BadInputError) as cm:
-                data.TimePoint(**kwargs)
-            assert "Conflicting input" in str(cm.exception)
+
+def test_timepoint_conflicting_inputs():
+    """Test TimePoints initialized with incompatible inputs"""
+    tests = get_timepoint_conflicting_input_tests()
+    for kwargs in tests:
+        with pytest.raises(BadInputError) as exc_info:
+            data.TimePoint(**kwargs)
+        assert "Conflicting input" in str(exc_info.value)
 
 
 def test_timepoint_without_year():
