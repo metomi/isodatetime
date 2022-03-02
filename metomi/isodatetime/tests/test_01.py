@@ -681,6 +681,12 @@ def test_timepoint_subtract():
             ),
             id="1900-01-01T01 + PT5S"
         ),
+        pytest.param(
+            data.TimePoint(year=2000),
+            data.TimePoint(month_of_year=3, day_of_month=30, truncated=True),
+            data.TimePoint(year=2000, month_of_year=3, day_of_month=30),
+            id="2000-01-01 + --03-30"
+        )
     ]
 )
 def test_timepoint_add(
