@@ -217,6 +217,15 @@ def test_4_bad(mock_print):
     )
 
 
+def test_negative_duration():
+    """Test arg parsing of negative durations."""
+    for variant in ('-P1D', r'\-P1D',):
+        args = isodatetime_main.parse_args(['2000', '-s', variant])
+        assert args.offsets1 == ['-P1D']
+        args = isodatetime_main.parse_args(['2000', rf'-s={variant}'])
+        assert args.offsets1 == ['-P1D']
+
+
 @pytest.mark.parametrize(
     'stdin,args,stdout', [
         ('2000', [], '2000'),

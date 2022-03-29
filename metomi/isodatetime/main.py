@@ -285,6 +285,10 @@ def parse_args(sys_args=None):
 
     if sys_args is None:
         sys_args = sys.argv[1:]
+    sys_args = [
+        rf'\{arg}' if arg.startswith('-P') else arg
+        for arg in sys_args
+    ]
     if hasattr(arg_parser, 'parse_intermixed_args'):
         args = arg_parser.parse_intermixed_args(sys_args)
     else:
