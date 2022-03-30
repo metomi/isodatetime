@@ -174,7 +174,7 @@ from . import __version__
 from .datetimeoper import DateTimeOperator
 
 
-def parse_args():
+def parse_args(sys_args=None):
     arg_parser = ArgumentParser(
         prog='isodatetime',
         formatter_class=RawDescriptionHelpFormatter,
@@ -282,10 +282,17 @@ def parse_args():
         ],
     ]:
         arg_parser.add_argument(*o_args, **o_kwargs)
+
+    if sys_args is None:
+        sys_args = sys.argv[1:]
+    sys_args = [
+        rf'\{arg}' if arg.startswith('-P') else arg
+        for arg in sys_args
+    ]
     if hasattr(arg_parser, 'parse_intermixed_args'):
-        args = arg_parser.parse_intermixed_args()
+        args = arg_parser.parse_intermixed_args(sys_args)
     else:
-        args = arg_parser.parse_args()
+        args = arg_parser.parse_args(sys_args)
 
     if args.offsets1:
         args.offsets1 = [item.replace("\\", "") for item in args.offsets1]
@@ -296,9 +303,9 @@ def parse_args():
     return args
 
 
-def main():
+def main(sys_args=None):
     """Implement "isodatetime" command."""
-    args = parse_args()
+    args = parse_args(sys_args)
 
     if args.version_mode:
         print(__version__)

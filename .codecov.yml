@@ -58,7 +58,7 @@ coverage:
 
 # files to ignore
 ignore:
-  - "isodatetime/tests*"
+  - "metomi/isodatetime/tests*"
 
 # turn off comments to pull requests
 comment: off
