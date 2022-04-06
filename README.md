@@ -304,10 +304,13 @@ years, months, days, hours, minutes, and seconds are used literally
 
 Example Syntax                 | Example                          | Meaning
  ----------------------------- | -------------------------------- | ------------------------------------------------------------------
-R/CCYY/CCYY                    | R/2010/2014                      | Repeat every 4 years, starting at 2010-01-01
-R/CCYY-MM/CCYY-DDD             | R/2010-01/2012-045               | Repeat every 2 years and 44 days, starting at 2010-01-01
-Rn/CCYY-Www-D/CCYY-Www-D       | R5/2015-W05-2/2015-W07-3         | Repeat every 2 weeks and 1 day, five times, starting at 2015-W05-2
+R/CCYY/CCYY                    | R/2010/2014                      | Repeat every 1461 days (≈ 4 years\*), starting at 2010-01-01
+R/CCYY-MM/CCYY-DDD             | R/2010-01/2012-045               | Repeat every 774 days (≈ 2 years and 44 days\*), starting at 2010-01-01
+Rn/CCYY-Www-D/CCYY-Www-D       | R5/2015-W05-2/2015-W07-3         | Repeat every 15 days (= 2 weeks and 1 day), five times, starting at 2015-W05-2
 Rn/CCYY-MM-DDThh/CCYY-MM-DDThh | R1/1925-02-11T00Z/2027-06-01T00Z | Repeat once at 1925-02-11T00Z (note the end date-time is ignored)
+
+\*See the previous section as to why only an approximate equivalent number of
+years are given.
 
 #### 2. Recur with a specified duration, starting at a context date-time
 
