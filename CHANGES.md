@@ -8,6 +8,11 @@ creating a new release entry be sure to copy & paste the span tag with the
 `actions:bind` attribute, which is used by a regex to find the text to be
 updated. Only the first match gets replaced, so it's fine to leave the old
 ones in. -->
+--------------------------------------------------------------------------------
+
+## isodatetime 3.1.0 (<span actions:bind='release-date'>Pending</span>)
+
+Requires Python 3.7+
 
 --------------------------------------------------------------------------------
 
