@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (C) British Crown (Met Office) & Contributors.
 #
@@ -34,13 +33,13 @@ SYNOPSIS
     isodatetime now [--offset1=OFFSET1] 20380119T031407Z [--offset2=OFFSET2]
     # 2.2 Between a date time in the past and now
     isodatetime 19700101T000000Z now
-    # 2.3 Between reference cycle time (+ OFFSET1) and a future date time
+    # 2.3 Between reference date time (+ OFFSET1) and a future date time
     #     Assume: export ISODATETIMEREF=20371225T000000Z
     isodatetime ref [--offset1=OFFSET1] 20380119T031407Z
-    # 2.4 Between reference cycle time and now (+ OFFSET2)
+    # 2.4 Between reference date time and now (+ OFFSET2)
     #     Assume: export ISODATETIMEREF=20371225T000000Z
     isodatetime ref now [--offset2=OFFSET2]
-    # 2.5 Between a date time in the past and the reference cycle date time
+    # 2.5 Between a date time in the past and the reference date time
     #     Assume: export ISODATETIMEREF=20371225T000000Z
     isodatetime 19700101T000000Z ref
     # 2.6 Between 2 specific date times
@@ -90,7 +89,7 @@ ENVIRONMENT VARIABLES
     ISODATETIMECALENDAR=gregorian|360day|365day|366day
         Specify the calendar mode.
     ISODATETIMEREF
-        Specify the a reference date time, e.g. the curent task cycle point in
+        Specify a reference date time, e.g. the curent task cycle point in
         a Cylc workflow. If the `ref` argument is used, the value of this
         environment variable is used by the command as the reference time
         instead of the current time.
