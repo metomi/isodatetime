@@ -22,28 +22,27 @@ SYNOPSIS
     # 1.1 Current date time with an optional offset
     isodatetime [--offset=OFFSET]
     isodatetime now [--offset=OFFSET]
-    isodatetime ref [--offset=OFFSET]
-    # 1.2 Task cycle date time with an optional offset
-    #     Assume: export ISODATETIMEREF=20371225T000000Z
-    isodatetime -c [--offset=OFFSET]
-    isodatetime -c ref [--offset=OFFSET]
-    # 1.3 A specific date time with an optional offset
+    # 1.2 A specific date time with an optional offset
     isodatetime 20380119T031407Z [--offset=OFFSET]
+    isodatetime "$CYLC_TASK_CYCLE_POINT" [--offset=OFFSET]
+    # 1.4 A reference date time env var with an optional offset
+    #     Assume: export ISODATETIMEREF=20371225T000000Z
+    isodatetime ref [--offset=OFFSET]
 
     # 2. Print duration
     # 2.1 Between now (+ OFFSET1) and a future date time (+ OFFSET2)
     isodatetime now [--offset1=OFFSET1] 20380119T031407Z [--offset2=OFFSET2]
     # 2.2 Between a date time in the past and now
     isodatetime 19700101T000000Z now
-    # 2.3 Between task cycle time (+ OFFSET1) and a future date time
+    # 2.3 Between reference cycle time (+ OFFSET1) and a future date time
     #     Assume: export ISODATETIMEREF=20371225T000000Z
-    isodatetime -c ref [--offset1=OFFSET1] 20380119T031407Z
-    # 2.4 Between task cycle time and now (+ OFFSET2)
+    isodatetime ref [--offset1=OFFSET1] 20380119T031407Z
+    # 2.4 Between reference cycle time and now (+ OFFSET2)
     #     Assume: export ISODATETIMEREF=20371225T000000Z
-    isodatetime -c ref now [--offset2=OFFSET2]
-    # 2.5 Between a date time in the past and the task cycle date time
+    isodatetime ref now [--offset2=OFFSET2]
+    # 2.5 Between a date time in the past and the reference cycle date time
     #     Assume: export ISODATETIMEREF=20371225T000000Z
-    isodatetime -c 19700101T000000Z ref
+    isodatetime 19700101T000000Z ref
     # 2.6 Between 2 specific date times
     isodatetime 19700101T000000Z 20380119T031407Z
 
@@ -77,9 +76,8 @@ DESCRIPTION
        The --max=N (default=10) can be used to control the maximum number
        of time points to print in the result.
 
-    Note: Negative durations can be provided in the following ways:
-        \\-PT1H
-        \\\\-PT1H
+    Note: Negative durations can be provided, e.g.:
+        --offset "-PT1H"
 
 CALENDAR MODE
     The calendar mode is determined (in order) by:
@@ -92,10 +90,10 @@ ENVIRONMENT VARIABLES
     ISODATETIMECALENDAR=gregorian|360day|365day|366day
         Specify the calendar mode.
     ISODATETIMEREF
-        Specify the current cycle time of a task in a suite. If the
-        `--use-task-cycle-time` option is set, the value of this environment
-        variable is used by the command as the reference time instead of the
-        current time.
+        Specify the a reference date time, e.g. the curent task cycle point in
+        a Cylc workflow. If the `ref` argument is used, the value of this
+        environment variable is used by the command as the reference time
+        instead of the current time.
 
 OFFSET FORMAT
     `OFFSET` must follow the ISO 8601 duration representations such as
