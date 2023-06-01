@@ -23,9 +23,8 @@ SYNOPSIS
     isodatetime now [--offset=OFFSET]
     # 1.2 A specific date time with an optional offset
     isodatetime 20380119T031407Z [--offset=OFFSET]
-    isodatetime "$CYLC_TASK_CYCLE_POINT" [--offset=OFFSET]
     # 1.4 A reference date time env var with an optional offset
-    #     Assume: export ISODATETIMEREF=20371225T000000Z
+    export ISODATETIMEREF=20371225T000000Z
     isodatetime ref [--offset=OFFSET]
 
     # 2. Print duration
@@ -34,13 +33,13 @@ SYNOPSIS
     # 2.2 Between a date time in the past and now
     isodatetime 19700101T000000Z now
     # 2.3 Between reference date time (+ OFFSET1) and a future date time
-    #     Assume: export ISODATETIMEREF=20371225T000000Z
+    export ISODATETIMEREF=20371225T000000Z
     isodatetime ref [--offset1=OFFSET1] 20380119T031407Z
     # 2.4 Between reference date time and now (+ OFFSET2)
-    #     Assume: export ISODATETIMEREF=20371225T000000Z
+    export ISODATETIMEREF=20371225T000000Z
     isodatetime ref now [--offset2=OFFSET2]
     # 2.5 Between a date time in the past and the reference date time
-    #     Assume: export ISODATETIMEREF=20371225T000000Z
+    export ISODATETIMEREF=20371225T000000Z
     isodatetime 19700101T000000Z ref
     # 2.6 Between 2 specific date times
     isodatetime 19700101T000000Z 20380119T031407Z
