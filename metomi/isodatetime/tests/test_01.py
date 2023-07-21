@@ -24,6 +24,7 @@ import unittest
 
 from metomi.isodatetime import data
 from metomi.isodatetime.exceptions import BadInputError
+from metomi.isodatetime.parsers import TimePointParser
 
 
 def get_timeduration_tests():
@@ -655,10 +656,17 @@ def test_timepoint_subtract():
         assert test_string == ctrl_string
 
 
+def tp_add_param(timepoint, other, expected):
+    """pytest.param with nicely formatted IDs"""
+    return pytest.param(
+        timepoint, other, expected, id=f"{timepoint} + {other} = {expected}"
+    )
+
+
 @pytest.mark.parametrize(
     'timepoint, other, expected',
     [
-        pytest.param(
+        tp_add_param(
             data.TimePoint(
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
                 minute_of_hour=1
@@ -668,9 +676,8 @@ def test_timepoint_subtract():
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
                 minute_of_hour=1, second_of_minute=5
             ),
-            id="1900-01-01T01:01 + PT5S"
         ),
-        pytest.param(
+        tp_add_param(
             data.TimePoint(
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1
             ),
@@ -679,15 +686,56 @@ def test_timepoint_subtract():
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
                 second_of_minute=5
             ),
-            id="1900-01-01T01 + PT5S"
         ),
-        pytest.param(
+        tp_add_param(
+            data.TimePoint(year=1990, day_of_month=14, hour_of_day=1),
+            data.Duration(years=2, months=11, days=5, hours=26, minutes=32),
+            data.TimePoint(
+                year=1992, month_of_year=12, day_of_month=20,
+                hour_of_day=3, minute_of_hour=32
+            )
+        ),
+        tp_add_param(
             data.TimePoint(year=2000),
             data.TimePoint(month_of_year=3, day_of_month=30, truncated=True),
             data.TimePoint(year=2000, month_of_year=3, day_of_month=30),
-            id="2000-01-01 + --03-30"
-        )
-    ]
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000),
+            data.TimePoint(month_of_year=2, day_of_month=15, truncated=True),
+            data.TimePoint(year=2000, month_of_year=2, day_of_month=15),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=15),
+            data.TimePoint(month_of_year=1, day_of_month=15, truncated=True),
+            data.TimePoint(year=2000, day_of_month=15),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=15),
+            data.TimePoint(month_of_year=1, day_of_month=14, truncated=True),
+            data.TimePoint(year=2001, day_of_month=14),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=15),
+            data.TimePoint(day_of_month=14, truncated=True),
+            data.TimePoint(year=2000, month_of_year=2, day_of_month=14),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2001, month_of_year=2),
+            data.TimePoint(day_of_month=31, truncated=True),
+            data.TimePoint(year=2001, month_of_year=3, day_of_month=31),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2001),
+            data.TimePoint(month_of_year=2, day_of_month=29, truncated=True),
+            data.TimePoint(year=2004, month_of_year=2, day_of_month=29),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2001, day_of_month=6),
+            data.TimePoint(month_of_year=3, truncated=True),
+            data.TimePoint(year=2001, month_of_year=3, day_of_month=1),
+        ),
+    ],
 )
 def test_timepoint_add(
     timepoint: data.TimePoint,
@@ -695,8 +743,32 @@ def test_timepoint_add(
     expected: data.TimePoint
 ):
     """Test adding to a timepoint"""
-    assert timepoint + other == expected
-    assert other + timepoint == expected
+    forward = timepoint + other
+    assert forward == expected
+    backward = other + timepoint
+    assert backward == expected
+
+
+@pytest.mark.parametrize(
+    'timepoint, other, expected',
+    [
+        tp_add_param(
+            '1990-04-15T00Z',
+            '-11-02',
+            data.TimePoint(year=2011, month_of_year=2, day_of_month=1)
+        )
+    ]
+)
+def test_timepoint_add__extra(
+    timepoint: str, other: str, expected: data.TimePoint
+):
+    parser = TimePointParser(allow_truncated=True)
+    parsed_timepoint = parser.parse(timepoint)
+    parsed_other = parser.parse(other)
+    forward = parsed_timepoint + parsed_other
+    assert forward == expected
+    backward = parsed_other + parsed_timepoint
+    assert backward == expected
 
 
 def test_timepoint_bounds():

@@ -1490,6 +1490,7 @@ class TimePoint:
         """Returns a copy of this TimePoint with truncated time properties
         added to it."""
         new = self._copy()
+
         if hour_of_day is not None and minute_of_hour is None:
             minute_of_hour = 0
         if ((hour_of_day is not None or minute_of_hour is not None) and
@@ -1509,31 +1510,45 @@ class TimePoint:
             while new._hour_of_day != hour_of_day:
                 new._hour_of_day += 1.0
                 new._tick_over()
+
         if day_of_week is not None:
             new = new.to_week_date()
             while new._day_of_week != day_of_week:
                 new._day_of_week += 1
-                new._tick_over()
-        if day_of_month is not None:
-            new = new.to_calendar_date()
-            while new._day_of_month != day_of_month:
-                new._day_of_month += 1
-                new._tick_over()
-        if day_of_year is not None:
-            new = new.to_ordinal_date()
-            while new._day_of_year != day_of_year:
-                new._day_of_year += 1
                 new._tick_over()
         if week_of_year is not None:
             new = new.to_week_date()
             while new._week_of_year != week_of_year:
                 new._week_of_year += 1
                 new._tick_over()
-        if month_of_year is not None:
+
+        if day_of_month or month_of_year:
             new = new.to_calendar_date()
-            while new._month_of_year != month_of_year:
-                new._month_of_year += 1
+            # Find next date that satisfies same day & month as provided
+            found = False
+            while not found:
+                for month, day in iter_months_days(
+                    new._year, new._month_of_year, new._day_of_month
+                ):
+                    if (
+                        day_of_month in {None, day} and
+                        month_of_year in {None, month}
+                    ):
+                        new._day_of_month = day
+                        new._month_of_year = month
+                        found = True
+                        break
+                else:  # no break
+                    new._year += 1
+                    new._month_of_year = 1
+                    new._day_of_month = 1
+
+        if day_of_year is not None:
+            new = new.to_ordinal_date()
+            while new._day_of_year != day_of_year:
+                new._day_of_year += 1
                 new._tick_over()
+
         if year_of_decade is not None:
             new = new.to_calendar_date()
             new_year_of_decade = new._year % 10
@@ -1546,6 +1561,7 @@ class TimePoint:
             while new_year_of_century != year_of_century:
                 new._year += 1
                 new_year_of_century = new._year % 100
+
         return new
 
     def __add__(self, other: Union['Duration', 'TimePoint']) -> 'TimePoint':
