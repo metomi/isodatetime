@@ -18,13 +18,25 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
-from typing import Union
+from typing import Optional, Union
 import pytest
 import unittest
 
 from metomi.isodatetime import data
+from metomi.isodatetime.data import Calendar
 from metomi.isodatetime.exceptions import BadInputError
 from metomi.isodatetime.parsers import TimePointParser
+
+
+@pytest.fixture
+def patch_calendar_mode(monkeypatch: pytest.MonkeyPatch):
+    """Fixture for setting calendar mode on singleton CALENDAR instance."""
+    def _patch_calendar_mode(mode: str) -> None:
+        calendar = Calendar()
+        calendar.set_mode(mode)
+        monkeypatch.setattr(data, 'CALENDAR', calendar)
+
+    return _patch_calendar_mode
 
 
 def get_timeduration_tests():
@@ -756,7 +768,7 @@ def test_timepoint_add(
             '1990-04-15T00Z',
             '-11-02',
             data.TimePoint(year=2011, month_of_year=2, day_of_month=1)
-        )
+        ),
     ]
 )
 def test_timepoint_add__extra(
@@ -801,3 +813,23 @@ def test_timepoint_without_year():
     # If truncated, it's fine:
     data.TimePoint(truncated=True, month_of_year=2)
     # TODO: what about just TimePoint(truncated=True) ?
+
+
+@pytest.mark.parametrize(
+    'calendar_mode, year, expected',
+    [
+        (Calendar.MODE_GREGORIAN, 2004, 2004),
+        (Calendar.MODE_GREGORIAN, 2001, 2004),
+        (Calendar.MODE_GREGORIAN, 2000, 2000),
+        (Calendar.MODE_GREGORIAN, 1897, 1904),
+        (Calendar.MODE_360, 2001, None),
+        (Calendar.MODE_365, 2001, None),
+        (Calendar.MODE_366, 2001, None),
+    ]
+)
+def test_find_next_leap_year(
+    calendar_mode: str, year: int, expected: Optional[int],
+    patch_calendar_mode
+):
+    patch_calendar_mode(calendar_mode)
+    assert data.find_next_leap_year(year) == expected

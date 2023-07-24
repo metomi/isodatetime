@@ -22,7 +22,7 @@
 from functools import lru_cache
 from math import floor
 import operator
-from typing import Optional, Union, overload
+from typing import List, Optional, Union, cast, overload
 
 from . import dumpers
 from . import timezone
@@ -1524,24 +1524,8 @@ class TimePoint:
 
         if day_of_month or month_of_year:
             new = new.to_calendar_date()
-            # Find next date that satisfies same day & month as provided
-            found = False
-            while not found:
-                for month, day in iter_months_days(
-                    new._year, new._month_of_year, new._day_of_month
-                ):
-                    if (
-                        day_of_month in {None, day} and
-                        month_of_year in {None, month}
-                    ):
-                        new._day_of_month = day
-                        new._month_of_year = month
-                        found = True
-                        break
-                else:  # no break
-                    new._year += 1
-                    new._month_of_year = 1
-                    new._day_of_month = 1
+            # Set next date that satisfies day & month provided
+            new._next_month_and_day(month_of_year, day_of_month)
 
         if day_of_year is not None:
             new = new.to_ordinal_date()
@@ -1563,6 +1547,72 @@ class TimePoint:
                 new_year_of_century = new._year % 100
 
         return new
+
+    @overload
+    def find_next_month_and_day(
+        self, month: int, day: Optional[int]
+    ) -> 'TimePoint':
+        ...
+
+    @overload
+    def find_next_month_and_day(
+        self, month: Optional[int], day: int
+    ) -> 'TimePoint':
+        ...
+
+    def find_next_month_and_day(
+        self, month: Optional[int], day: Optional[int]
+    ) -> 'TimePoint':
+        """Return the next TimePoint after this one (inclusive) that has the
+        same month and/or day as specified.
+
+        Args:
+            month: month of year.
+            day: day of month.
+        """
+        new = self._copy()
+        new._next_month_and_day(month, day)
+        return new
+
+    def _next_month_and_day(
+        self, month: Optional[int], day: Optional[int]
+    ) -> None:
+        """Implementation of find_next_month_and_day().
+
+        WARNING: mutates self instance.
+        """
+        years_to_check: List[int] = [self._year, self._year + 1]
+        for i, year in enumerate(years_to_check):
+            self._year = year
+            if month:
+                if month >= self._month_of_year and (
+                    day is None or
+                    self._day_of_month <= day <= get_days_in_month(month, year)
+                ):
+                    self._month_of_year = month
+                    self._day_of_month = day or 1
+                    return
+            else:
+                for month_ in range(
+                    self._month_of_year, CALENDAR.MONTHS_IN_YEAR + 1
+                ):
+                    if self._day_of_month <= day <= get_days_in_month(
+                        month_, year
+                    ):
+                        self._month_of_year = month_
+                        self._day_of_month = day
+                        return
+                    self._day_of_month = 1
+            self._month_of_year = 1
+            self._day_of_month = 1
+            if i == 1:
+                # Didn't find it - check next leap year if applicable
+                next_leap_year = find_next_leap_year(self._year)
+                if next_leap_year not in {None, *years_to_check}:
+                    years_to_check.append(cast(int, next_leap_year))
+        raise ValueError(
+            f"Invalid month of year {month} or day of month {day}"
+        )
 
     def __add__(self, other: Union['Duration', 'TimePoint']) -> 'TimePoint':
         if isinstance(other, TimePoint):
@@ -2152,6 +2202,18 @@ def get_is_leap_year(year):
         if year % factor == 0:
             year_is_leap = is_leap_factor
     return year_is_leap
+
+
+def find_next_leap_year(year: int) -> Optional[int]:
+    """Find the next leap year after or including this year.
+
+    Returns None if calendar does not have leap years."""
+    if CALENDAR.MODES[CALENDAR.mode][1] is None:
+        return None
+    while True:
+        if get_is_leap_year(year):
+            return year
+        year += 1
 
 
 def get_days_in_year_range(start_year, end_year):
