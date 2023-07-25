@@ -22,7 +22,7 @@
 from functools import lru_cache
 from math import floor
 import operator
-from typing import List, Optional, Union, cast, overload
+from typing import List, Optional, Tuple, Union, cast, overload
 
 from . import dumpers
 from . import timezone
@@ -1483,10 +1483,19 @@ class TimePoint:
                 props.update({attr: value})
         return props
 
-    def add_truncated(self, year_of_century=None, year_of_decade=None,
-                      month_of_year=None, week_of_year=None, day_of_year=None,
-                      day_of_month=None, day_of_week=None, hour_of_day=None,
-                      minute_of_hour=None, second_of_minute=None):
+    def add_truncated(
+        self,
+        year_of_century: Optional[int] = None,
+        year_of_decade: Optional[int] = None,
+        month_of_year: Optional[int] = None,
+        week_of_year: Optional[int] = None,
+        day_of_year: Optional[int] = None,
+        day_of_month: Optional[int] = None,
+        day_of_week: Optional[int] = None,
+        hour_of_day: Optional[int] = None,
+        minute_of_hour: Optional[int] = None,
+        second_of_minute: Optional[int] = None
+    ):
         """Returns a copy of this TimePoint with truncated time properties
         added to it."""
         new = self._copy()
@@ -1958,8 +1967,9 @@ class TimePoint:
                 day = None
                 while num_days != self._day_of_month:
                     start_year -= 1
-                    for month, day in iter_months_days(
-                            start_year, in_reverse=True):
+                    for month, day in iter_months_days(  # noqa: B007
+                        start_year, in_reverse=True
+                    ):
                         num_days -= 1
                         if num_days == self._day_of_month:
                             break
@@ -1973,17 +1983,18 @@ class TimePoint:
             else:
                 max_day_in_month = CALENDAR.DAYS_IN_MONTHS[month_index]
             if self._day_of_month > max_day_in_month:
-                num_days = 0
+                num_days = 0  # noqa: SIM113
                 for month, day in iter_months_days(
-                        self._year,
-                        month_of_year=self._month_of_year,
-                        day_of_month=1):
+                    self._year,
+                    month_of_year=self._month_of_year,
+                    day_of_month=1
+                ):
                     num_days += 1
                     if num_days == self._day_of_month:
                         self._month_of_year = month
                         self._day_of_month = day
                         break
-                else:
+                else:  # no break
                     start_year = self._year
                     while num_days != self._day_of_month:
                         start_year += 1
@@ -2599,16 +2610,21 @@ def get_timepoint_properties_from_seconds_since_unix_epoch(num_seconds):
     return properties
 
 
-def iter_months_days(year, month_of_year=None, day_of_month=None,
-                     in_reverse=False):
+def iter_months_days(
+    year: int,
+    month_of_year: Optional[int] = None,
+    day_of_month: Optional[int] = None,
+    in_reverse: bool = False
+) -> List[Tuple[int, int]]:
     """Iterate over each day in each month of year.
 
-    year is an integer specifying the year to use.
-    month_of_year is an optional integer, specifying a start month.
-    day_of_month is an optional integer, specifying a start day.
-    in_reverse is an optional boolean that reverses the iteration if
-    True (default False).
+    Args:
+        year - year to use.
+        month_of_year - start month.
+        day_of_month - start day.
+        in_reverse - reverses the iteration if True.
 
+    Returns list of (month_of_year, day_of_month) tuples.
     """
     is_leap_year = get_is_leap_year(year)
     return _iter_months_days(
@@ -2616,8 +2632,13 @@ def iter_months_days(year, month_of_year=None, day_of_month=None,
 
 
 @lru_cache(maxsize=100000)
-def _iter_months_days(is_leap_year, month_of_year, day_of_month, _,
-                      in_reverse=False):
+def _iter_months_days(
+    is_leap_year: bool,
+    month_of_year: int,
+    day_of_month: int,
+    _cal_mode,
+    in_reverse: bool = False
+) -> List[Tuple[int, int]]:
     if day_of_month is not None and month_of_year is None:
         raise ValueError("Need to specify start month as well as day.")
     source = CALENDAR.INDEXED_DAYS_IN_MONTHS
