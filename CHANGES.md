@@ -14,6 +14,11 @@ ones in. -->
 
 Requires Python 3.7+
 
+### Fixes
+
+[#231](https://github.com/metomi/isodatetime/pull/231):
+Fixed mistakes in the CLI help text.
+
 --------------------------------------------------------------------------------
 
 ## isodatetime 3.0.0 (<span actions:bind='release-date'>Released 2022-03-31</span>)
