@@ -10,7 +10,7 @@ updated. Only the first match gets replaced, so it's fine to leave the old
 ones in. -->
 --------------------------------------------------------------------------------
 
-## isodatetime 3.1.0 (<span actions:bind='release-date'>Pending</span>)
+## isodatetime 3.1.0 (<span actions:bind='release-date'>Released 2023-10-05</span>)
 
 Requires Python 3.7+
 
