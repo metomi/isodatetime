@@ -1,0 +1,86 @@
+# Copyright (C) British Crown (Met Office) & Contributors.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+[build-system]
+requires = ["setuptools >= 49.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "metomi-isodatetime"
+authors = [
+    {name = "Met Office", email = "metomi@metoffice.gov.uk"}
+]
+description = "Python ISO 8601 date time parser and data model/manipulation utilities"
+license = {text = "LGPLv3"}
+readme = "README.md"
+keywords = ["isodatetime", "datetime", "iso8601", "date", "time", "parser"]
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Other Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities"
+]
+dynamic = ["version"]
+
+
+[project.urls]
+Homepage = "https://github.com/metomi/isodatetime"
+Repository = "https://github.com/metomi/isodatetime"
+Changelog = "https://github.com/metomi/isodatetime/blob/master/CHANGES.md"
+
+
+[tool.setuptools]
+platforms = ["any"]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "metomi.isodatetime.FULL_VERSION"}
+
+
+[tool.setuptools.packages.find]
+include = ["metomi*"]
+exclude = ["metomi.isodatetime.tests*"]
+
+
+[tool.setuptools.package-data]
+"metomi.isodatetime" = ["py.typed"]
+
+
+[project.scripts]
+isodatetime = "metomi.isodatetime.main:main"
+
+
+[project.optional-dependencies]
+test = [
+    "coverage",
+    "pytest>=6",
+    "pytest-env",
+    "pytest-cov",
+    "flake8",
+]
+all = [
+    "metomi-isodatetime[test]",
+]
