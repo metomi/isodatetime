@@ -82,7 +82,23 @@ test = [
     "pytest-cov",
     "pytest-xdist",
     "flake8",
+    "bandit>=1.7.1",
 ]
 all = [
     "metomi-isodatetime[test]",
 ]
+
+
+[tool.pytest.ini_options]
+addopts = "-v -s -ra --color=auto --doctest-glob='*.md' -m 'not slow'"
+markers = [
+    "slow: mark a test as slow - it will be skipped by default (use '-m \"slow or not slow\"' to run all tests)"
+]
+testpaths = [
+    "metomi/isodatetime/tests",
+    "README.md",
+]
+
+
+[tool.bandit]
+exclude_dirs = ["metomi/isodatetime/tests"]
