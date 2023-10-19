@@ -1,0 +1,51 @@
+name: Build
+
+# build the project whenever the configuration is changed
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'README.md'       # check markdown is valid
+      - 'MANIFEST.in'     # check packaging
+      - 'pyproject.toml'  # check build config
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 2
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: ['ubuntu-latest']
+        python: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        include:
+          - os: 'macos-latest'
+            python: '3.7'
+    name: ${{ matrix.os }} py-${{ matrix.python }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build
+        uses: cylc/release-actions/build-python-package@v1
+        with:
+          check-dependencies: false
+
+      - name: Inspect
+        run: |
+          unzip -l dist/*.whl | tee files
+          grep 'metomi/isodatetime/data.py' files
+          grep 'metomi_isodatetime.*.dist-info/LICENSE' files
+          # grep 'metomi/isodatetime/py.typed' files # (not yet added)

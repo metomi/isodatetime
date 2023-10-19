@@ -4,11 +4,19 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 2
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 40
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -27,8 +35,10 @@ jobs:
           - os: macos-latest
             python-version: '3.11'
             coverage: false
+    name: ${{ matrix.os }} py-${{ matrix.python-version }} ${{ matrix.tz }} ${{ matrix.coverage && '(coverage)' || '' }}
+    env:
+      PYTEST_ADDOPTS: -n 5 -m 'slow or not slow'
     steps:
-
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -38,27 +48,48 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install
-        run: |
-          pip install --upgrade pip setuptools
-          pip install -e .[all]
-          pip install pytest-xdist
+        run: pip install -e .[all]
 
-      - name: Style test
-        run: flake8 metomi/isodatetime
+      - name: Style
+        run: flake8
 
       - name: Run tests
         env:
           TZ: ${{ matrix.tz }}
-        run: |
-          PYTEST_ARGS=(-n 2 -m 'slow or not slow')
-          if ${{ matrix.coverage }}; then
-            PYTEST_ARGS+=('--cov=metomi/isodatetime')
-          fi
+          PYTEST_ADDOPTS: ${{ matrix.coverage && format('{0} --cov=metomi/isodatetime', env.PYTEST_ADDOPTS) || env.PYTEST_ADDOPTS }}
+        run: pytest
 
-          pytest "${PYTEST_ARGS[@]}"
-
-      - name: Upload coverage report
+      - name: Coverage report
         if: matrix.coverage
         run: |
-          coverage xml --ignore-errors
-          bash <(curl -s https://codecov.io/bash)
+          coverage xml
+          coverage report
+
+      - name: Upload coverage artifact
+        if: matrix.coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_${{ matrix.os }}_py-${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 4
+
+  codecov-upload:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Codecov upload
+        uses: codecov/codecov-action@v3
+        with:
+          name: ${{ github.workflow }}
+          fail_ci_if_error: true
+          verbose: true
+          # Token not required for public repos, but avoids upload failure due
+          # to rate-limiting (but not for PRs opened from forks)
+          token: ${{ secrets.CODECOV_TOKEN }}

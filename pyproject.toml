@@ -79,6 +79,7 @@ test = [
     "pytest>=6",
     "pytest-env",
     "pytest-cov",
+    "pytest-xdist",
     "flake8",
 ]
 all = [
