@@ -27,10 +27,26 @@ source=
 [report]
 exclude_lines =
     pragma: no cover
+
     def __repr__
-    raise NotImplementedError
+    @(abc\.)?abstractmethod
+
+    # Ignore code that can only run in CLI:
     if __name__ == .__main__.:
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise NotImplementedError
+    return NotImplemented
+
+    # Ignore type checking code:
+    if (typing\.)?TYPE_CHECKING:
+    @overload( |$)
+
+    # Don't complain about ellipsis (exception classes, typing overloads etc):
+    \.\.\.
+
     def parse_args
+
 omit=
     metomi/isodatetime/tests
 precision=2
