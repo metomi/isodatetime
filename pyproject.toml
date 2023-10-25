@@ -82,6 +82,7 @@ test = [
     "pytest-cov",
     "pytest-xdist",
     "flake8",
+    'flake8-type-checking; python_version > "3.7"',
     "bandit>=1.7.1",
 ]
 all = [
