@@ -1511,17 +1511,22 @@ class TimePoint:
         if second_of_minute is not None or minute_of_hour is not None:
             new = new.to_hour_minute_second()
         if second_of_minute is not None:
-            while new._second_of_minute != second_of_minute:
-                new._second_of_minute += 1.0
-                new._tick_over()
+            new._second_of_minute += (
+                (second_of_minute - new._second_of_minute)
+                % CALENDAR.SECONDS_IN_MINUTE
+            )
+            new._tick_over()
         if minute_of_hour is not None:
-            while new._minute_of_hour != minute_of_hour:
-                new._minute_of_hour += 1.0
-                new._tick_over()
+            new._minute_of_hour += (
+                (minute_of_hour - new._minute_of_hour)
+                % CALENDAR.MINUTES_IN_HOUR
+            )
+            new._tick_over()
         if hour_of_day is not None:
-            while new._hour_of_day != hour_of_day:
-                new._hour_of_day += 1.0
-                new._tick_over()
+            new._hour_of_day += (
+                (hour_of_day - new._hour_of_day) % CALENDAR.HOURS_IN_DAY
+            )
+            new._tick_over()
 
         if day_of_week is not None:
             new = new.to_week_date()
