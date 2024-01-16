@@ -22,7 +22,7 @@
 from functools import lru_cache
 from math import floor
 import operator
-from typing import List, Optional, Tuple, Union, cast, overload
+from typing import Dict, List, Optional, Tuple, Union, cast, overload
 
 from . import dumpers
 from . import timezone
@@ -1433,20 +1433,15 @@ class TimePoint:
         new._week_of_year, new._day_of_week = (None, None)
         return new
 
-    def get_largest_truncated_property_name(self):
+    def get_largest_truncated_property_name(self) -> Optional[str]:
         """Return the largest unit in a truncated representation."""
-        if not self._truncated:
+        truncated_props = self.get_truncated_properties()
+        if not truncated_props:
             return None
-        prop_dict = self.get_truncated_properties()
-        for attr in ["year_of_century", "year_of_decade", "month_of_year",
-                     "week_of_year", "day_of_year", "day_of_month",
-                     "day_of_week", "hour_of_day", "minute_of_hour",
-                     "second_of_minute"]:
-            if attr in prop_dict:
-                return attr
-        return None
+        # Relies on dict being ordered in Python 3.6+:
+        return next(iter(truncated_props))
 
-    def get_smallest_missing_property_name(self):
+    def get_smallest_missing_property_name(self) -> Optional[str]:
         """Return the smallest unit missing from a truncated representation."""
         if not self._truncated:
             return None
@@ -1466,45 +1461,53 @@ class TimePoint:
                 return attr_value
         return None
 
-    def get_truncated_properties(self):
-        """Return a map of properties if this is a truncated representation."""
+    def get_truncated_properties(self) -> Optional[Dict[str, float]]:
+        """Return a map of properties if this is a truncated representation.
+
+        Ordered from largest unit to smallest.
+        """
         if not self._truncated:
             return None
         props = {}
         if self._truncated_property == "year_of_decade":
-            props.update({"year_of_decade": self._year % 10})
-        if self._truncated_property == "year_of_century":
-            props.update({"year_of_century": self._year % 100})
+            props['year_of_decade'] = self._year % 10
+        elif self._truncated_property == "year_of_century":
+            props['year_of_century'] = self._year % 100
         for attr in ["month_of_year", "week_of_year", "day_of_year",
                      "day_of_month", "day_of_week", "hour_of_day",
                      "minute_of_hour", "second_of_minute"]:
-            value = getattr(self, "_{0}".format(attr))
+            value = getattr(self, f"_{attr}")
             if value is not None:
-                props.update({attr: value})
+                props[attr] = value
         return props
 
-    def add_truncated(
-        self,
-        year_of_century: Optional[int] = None,
-        year_of_decade: Optional[int] = None,
-        month_of_year: Optional[int] = None,
-        week_of_year: Optional[int] = None,
-        day_of_year: Optional[int] = None,
-        day_of_month: Optional[int] = None,
-        day_of_week: Optional[int] = None,
-        hour_of_day: Optional[int] = None,
-        minute_of_hour: Optional[int] = None,
-        second_of_minute: Optional[int] = None
-    ):
-        """Returns a copy of this TimePoint with truncated time properties
+    def add_truncated(self, other: 'TimePoint') -> 'TimePoint':
+        """Returns a copy of this TimePoint with the other, truncated TimePoint
         added to it."""
         new = self._copy()
+        props = other.get_truncated_properties()
+        assert props is not None  # nosec B101 (this method only for truncated)
+        largest_unit = next(iter(props))
 
-        if hour_of_day is not None and minute_of_hour is None:
-            minute_of_hour = 0
-        if ((hour_of_day is not None or minute_of_hour is not None) and
-                second_of_minute is None):
-            second_of_minute = 0
+        # Time units are assumed to be 0 if not specified and the largest
+        # specified unit is higher up
+        for unit in ('second_of_minute', 'minute_of_hour', 'hour_of_day'):
+            if largest_unit == unit:
+                break
+            if unit not in props:
+                props[unit] = 0
+
+        year_of_century = cast('Optional[int]', props.get('year_of_century'))
+        year_of_decade = cast('Optional[int]', props.get('year_of_decade'))
+        month_of_year = cast('Optional[int]', props.get('month_of_year'))
+        week_of_year = cast('Optional[int]', props.get('week_of_year'))
+        day_of_year = cast('Optional[int]', props.get('day_of_year'))
+        day_of_month = cast('Optional[int]', props.get('day_of_month'))
+        day_of_week = cast('Optional[int]', props.get('day_of_week'))
+        hour_of_day = props.get('hour_of_day')
+        minute_of_hour = props.get('minute_of_hour')
+        second_of_minute = props.get('second_of_minute')
+
         if second_of_minute is not None or minute_of_hour is not None:
             new = new.to_hour_minute_second()
         if second_of_minute is not None:
@@ -1542,64 +1545,66 @@ class TimePoint:
                 new._day_of_year += 1
                 new._tick_over()
 
-        if year_of_decade is not None:
+        if year_of_decade is not None or year_of_century is not None:
+            # BUG: converting to calendar date can lead to bad results for
+            # truncated week dates (though having a truncated year of decade
+            # or century is not documented for week dates)
             new = new.to_calendar_date()
-            new_year_of_decade = new._year % 10
-            while new_year_of_decade != year_of_decade:
-                new._year += 1
-                new_year_of_decade = new._year % 10
-        if year_of_century is not None:
-            new = new.to_calendar_date()
-            new_year_of_century = new._year % 100
-            while new_year_of_century != year_of_century:
-                new._year += 1
-                new_year_of_century = new._year % 100
+            if day_of_month is None:
+                new._day_of_month = 1
+            if month_of_year is None:
+                new._month_of_year = 1
 
-        return new
+            if year_of_decade is not None:
+                prop, factor = year_of_decade, 10
+            else:
+                prop, factor = year_of_century, 100
 
-    @overload
-    def find_next_month_and_day(
-        self, month: int, day: Optional[int]
-    ) -> 'TimePoint':
-        ...
+            # Skip to next matching year:
+            new._year += (prop - new._year % factor) % factor
 
-    @overload
-    def find_next_month_and_day(
-        self, month: Optional[int], day: int
-    ) -> 'TimePoint':
-        ...
+            if new < self:
+                # We are still on the same year but must have set the day or
+                # month to 1, so skip to the next matching year:
+                new._year += factor
 
-    def find_next_month_and_day(
-        self, month: Optional[int], day: Optional[int]
-    ) -> 'TimePoint':
-        """Return the next TimePoint after this one (inclusive) that has the
-        same month and/or day as specified.
+            if new._day_of_month > get_days_in_month(
+                new._month_of_year, new._year
+            ):
+                # Skip to next matching leap year:
+                while True:
+                    new._year += factor
+                    if get_is_leap_year(new._year):
+                        break
 
-        Args:
-            month: month of year.
-            day: day of month.
-        """
-        new = self._copy()
-        new._next_month_and_day(month, day)
         return new
 
     def _next_month_and_day(
         self, month: Optional[int], day: Optional[int]
     ) -> None:
-        """Implementation of find_next_month_and_day().
+        """Get the next TimePoint after this one that has the
+        same month and/or day as specified.
 
         WARNING: mutates self instance.
+
+        If no day is specified, it will be taken to be the 1st of the month.
+
+        If the day and month match this TimePoint, it will be unaltered.
         """
+        if day is None:
+            day = 1
         years_to_check: List[int] = [self._year, self._year + 1]
         for i, year in enumerate(years_to_check):
             self._year = year
             if month:
-                if month >= self._month_of_year and (
-                    day is None or
-                    self._day_of_month <= day <= get_days_in_month(month, year)
+                if day <= get_days_in_month(month, year) and (
+                    month > self._month_of_year or (
+                        month == self._month_of_year and
+                        day >= self._day_of_month
+                    )
                 ):
                     self._month_of_year = month
-                    self._day_of_month = day or 1
+                    self._day_of_month = day
                     return
             else:
                 for month_ in range(
@@ -1618,7 +1623,7 @@ class TimePoint:
                 # Didn't find it - check next leap year if applicable
                 next_leap_year = find_next_leap_year(self._year)
                 if next_leap_year not in {None, *years_to_check}:
-                    years_to_check.append(cast(int, next_leap_year))
+                    years_to_check.append(cast('int', next_leap_year))
         raise ValueError(
             f"Invalid month of year {month} or day of month {day}"
         )
@@ -1627,7 +1632,7 @@ class TimePoint:
         if isinstance(other, TimePoint):
             if self._truncated and not other._truncated:
                 new = other.to_time_zone(self._time_zone)
-                new = new.add_truncated(**self.get_truncated_properties())
+                new = new.add_truncated(self)
                 return new.to_time_zone(other._time_zone)
             if other._truncated and not self._truncated:
                 return other + self

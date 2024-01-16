@@ -708,6 +708,11 @@ def tp_add_param(timepoint, other, expected):
             )
         ),
         tp_add_param(
+            data.TimePoint(year=1994, day_of_month=2, hour_of_day=5),
+            data.Duration(months=0),
+            data.TimePoint(year=1994, day_of_month=2, hour_of_day=5),
+        ),
+        tp_add_param(
             data.TimePoint(year=2000),
             data.TimePoint(month_of_year=3, day_of_month=30, truncated=True),
             data.TimePoint(year=2000, month_of_year=3, day_of_month=30),
@@ -716,6 +721,11 @@ def tp_add_param(timepoint, other, expected):
             data.TimePoint(year=2000),
             data.TimePoint(month_of_year=2, day_of_month=15, truncated=True),
             data.TimePoint(year=2000, month_of_year=2, day_of_month=15),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=15),
+            data.TimePoint(day_of_month=15, truncated=True),
+            data.TimePoint(year=2000, day_of_month=15),
         ),
         tp_add_param(
             data.TimePoint(year=2000, day_of_month=15),
@@ -733,6 +743,23 @@ def tp_add_param(timepoint, other, expected):
             data.TimePoint(year=2000, month_of_year=2, day_of_month=14),
         ),
         tp_add_param(
+            data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
+            data.TimePoint(day_of_month=4, truncated=True),
+            data.TimePoint(year=2000, month_of_year=2, day_of_month=4),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
+            data.TimePoint(day_of_month=4, second_of_minute=1, truncated=True),
+            data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2000, day_of_month=31),
+            data.TimePoint(day_of_month=2, hour_of_day=7, truncated=True),
+            data.TimePoint(
+                year=2000, month_of_year=2, day_of_month=2, hour_of_day=7,
+            ),
+        ),
+        tp_add_param(
             data.TimePoint(year=2001, month_of_year=2),
             data.TimePoint(day_of_month=31, truncated=True),
             data.TimePoint(year=2001, month_of_year=3, day_of_month=31),
@@ -746,6 +773,59 @@ def tp_add_param(timepoint, other, expected):
             data.TimePoint(year=2001, day_of_month=6),
             data.TimePoint(month_of_year=3, truncated=True),
             data.TimePoint(year=2001, month_of_year=3, day_of_month=1),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2002, month_of_year=4, day_of_month=8),
+            data.TimePoint(month_of_year=1, truncated=True),
+            data.TimePoint(year=2003, month_of_year=1, day_of_month=1),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2002, month_of_year=4, day_of_month=8),
+            data.TimePoint(day_of_month=1, truncated=True),
+            data.TimePoint(year=2002, month_of_year=5, day_of_month=1),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2004),
+            data.TimePoint(hour_of_day=3, truncated=True),
+            data.TimePoint(year=2004, hour_of_day=3),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2004, hour_of_day=3, second_of_minute=1),
+            data.TimePoint(hour_of_day=3, truncated=True),
+            data.TimePoint(year=2004, day_of_month=2, hour_of_day=3),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2010, hour_of_day=19, minute_of_hour=41),
+            data.TimePoint(minute_of_hour=15, truncated=True),
+            data.TimePoint(year=2010, hour_of_day=20, minute_of_hour=15),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2010, hour_of_day=19, minute_of_hour=41),
+            data.TimePoint(month_of_year=3, minute_of_hour=15, truncated=True),
+            data.TimePoint(year=2010, month_of_year=3, minute_of_hour=15),
+        ),
+        tp_add_param(
+            data.TimePoint(year=2077, day_of_month=21),
+            data.TimePoint(
+                year=7, truncated=True, truncated_property="year_of_decade"
+            ),
+            data.TimePoint(year=2087),
+        ),
+        tp_add_param(
+            data.TimePoint(year=3000),
+            data.TimePoint(
+                year=0, month_of_year=2, day_of_month=29,
+                truncated=True, truncated_property="year_of_decade",
+            ),
+            data.TimePoint(year=3020, month_of_year=2, day_of_month=29),
+        ),
+        tp_add_param(
+            data.TimePoint(year=3000),
+            data.TimePoint(
+                year=0, month_of_year=2, day_of_month=29,
+                truncated=True, truncated_property="year_of_century",
+            ),
+            data.TimePoint(year=3200, month_of_year=2, day_of_month=29),
         ),
     ],
 )
@@ -769,12 +849,37 @@ def test_timepoint_add(
             '-11-02',
             data.TimePoint(year=2011, month_of_year=2, day_of_month=1)
         ),
+        tp_add_param(
+            '2008-01-01T02Z',
+            '-08',
+            data.TimePoint(year=2108),
+        ),
+        tp_add_param(
+            '2008-01-01T02Z',
+            '-08T02Z',
+            data.TimePoint(year=2008, hour_of_day=2),
+        ),
+        tp_add_param(
+            '2009-01-04T00Z',
+            '-09',
+            data.TimePoint(year=2109),
+        ),
+        tp_add_param(
+            '2014-04-12T00Z',
+            '-14-04',
+            data.TimePoint(year=2114, month_of_year=4, day_of_month=1)
+        ),
+        tp_add_param(
+            '2014-04-01T00Z',
+            '-14-04',
+            data.TimePoint(year=2014, month_of_year=4, day_of_month=1)
+        ),
     ]
 )
 def test_timepoint_add__extra(
     timepoint: str, other: str, expected: data.TimePoint
 ):
-    parser = TimePointParser(allow_truncated=True)
+    parser = TimePointParser(allow_truncated=True, assumed_time_zone=(0, 0))
     parsed_timepoint = parser.parse(timepoint)
     parsed_other = parser.parse(other)
     forward = parsed_timepoint + parsed_other
