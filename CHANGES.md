@@ -12,6 +12,9 @@ ones in. -->
 
 ### Breaking changes
 
+[#234](https://github.com/metomi/isodatetime/pull/234):
+Fixed behaviour of adding a truncated TimePoint to a normal TimePoint.
+
 [#203](https://github.com/metomi/isodatetime/pull/203):
 `TimePoint.seconds_since_unix_epoch` is now an `int` instead of `str`.
 
