@@ -23,7 +23,7 @@ import pytest
 import unittest
 
 from metomi.isodatetime import data
-from metomi.isodatetime.data import Calendar
+from metomi.isodatetime.data import Calendar, Duration, TimePoint
 from metomi.isodatetime.exceptions import BadInputError
 from metomi.isodatetime.parsers import TimePointParser
 
@@ -37,6 +37,20 @@ def patch_calendar_mode(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(data, 'CALENDAR', calendar)
 
     return _patch_calendar_mode
+
+
+def add_param(obj, other, expected):
+    """pytest.param with nicely formatted IDs for addition tests."""
+    return pytest.param(
+        obj, other, expected, id=f"{obj} + {other} = {expected}"
+    )
+
+
+def subtract_param(obj, other, expected):
+    """pytest.param with nicely formatted IDs for subtraction tests."""
+    return pytest.param(
+        obj, other, expected, id=f"{obj} - {other} = {expected}"
+    )
 
 
 def get_timeduration_tests():
@@ -593,45 +607,76 @@ class TestDataModel(unittest.TestCase):
             with self.assertRaises(TypeError):
                 dur < var
 
-    def test_timeduration_add_week(self):
-        """Test the Duration not in weeks add Duration in weeks."""
-        self.assertEqual(
-            str(data.Duration(days=7) + data.Duration(weeks=1)),
-            "P14D")
 
-    def test_duration_floordiv(self):
-        """Test the existing dunder floordir, which will be removed when we
-        move to Python 3"""
-        duration = data.Duration(years=4, months=4, days=4, hours=4,
-                                 minutes=4, seconds=4)
-        expected = data.Duration(years=2, months=2, days=2, hours=2,
-                                 minutes=2, seconds=2)
-        duration //= 2
-        self.assertEqual(duration, expected)
+@pytest.mark.parametrize('duration, other, expected', [
+    add_param(
+        Duration(hours=1, minutes=6), Duration(hours=3),
+        Duration(hours=4, minutes=6)
+    ),
+    add_param(
+        Duration(days=7), Duration(weeks=1), Duration(days=14)
+    ),
+    add_param(
+        Duration(years=2), Duration(seconds=43),
+        Duration(years=2, seconds=43)
+    ),
+])
+def test_duration_add(
+    duration: Duration, other: Duration, expected: Duration
+):
+    """Test adding Durations."""
+    for left, right in [(duration, other), (other, duration)]:
+        assert left + right == expected
+        assert str(left + right) == str(expected)
 
-    def test_duration_in_weeks_floordiv(self):
-        """Test the existing dunder floordir, which will be removed when we
-        move to Python 3"""
-        duration = data.Duration(weeks=4)
-        duration //= 2
-        self.assertEqual(2, duration.weeks)
 
-    def test_duration_subtract(self):
-        """Test subtracting a duration from a timepoint."""
-        for test in get_duration_subtract_tests():
-            start_point = data.TimePoint(**test["start"])
-            test_duration = data.Duration(**test["duration"])
-            end_point = data.TimePoint(**test["result"])
-            test_subtract = (start_point - test_duration).to_calendar_date()
-            self.assertEqual(test_subtract, end_point,
-                             "%s - %s" % (start_point, test_duration))
+@pytest.mark.parametrize('duration, other, expected', [
+    subtract_param(
+        Duration(hours=15), Duration(hours=3), Duration(hours=12)
+    ),
+    subtract_param(
+        Duration(years=2, months=3, days=4), Duration(years=1, days=2),
+        Duration(years=1, months=3, days=2)
+    ),
+    subtract_param(
+        Duration(hours=1, minutes=6), Duration(hours=3),
+        Duration(hours=-1, minutes=-54)
+    ),
+])
+def test_duration_subtract(
+    duration: Duration, other: Duration, expected: Duration
+):
+    """Test subtracting Durations."""
+    assert duration - other == expected
+    # assert str(duration - other) == str(expected) # BUG with string
+    # representation of LHS for negative results?
 
-    def test_duration_is_exact(self):
-        """Test Duration.is_exact()."""
-        duration = data.Duration(weeks=1, days=1)
-        assert duration.is_exact()
-        for duration in (data.Duration(months=1), data.Duration(years=1)):
-            assert not duration.is_exact()
+
+@pytest.mark.parametrize('duration, expected', [
+    (
+        Duration(years=4, months=4, days=4, hours=4, minutes=4, seconds=4),
+        Duration(years=2, months=2, days=2, hours=2, minutes=2, seconds=2)
+    ),
+    (
+        Duration(weeks=4), Duration(weeks=2)
+    ),
+])
+def test_duration_floordiv(duration: Duration, expected: Duration):
+    duration //= 2
+    assert duration == expected
+
+
+@pytest.mark.parametrize('duration, expected', [
+    (Duration(years=1), False),
+    (Duration(months=1), False),
+    (Duration(weeks=1), True),
+    (Duration(days=1), True),
+    (Duration(weeks=1, days=1), True),
+    (Duration(months=1, days=1), False),
+])
+def test_duration_is_exact(duration: Duration, expected: bool):
+    """Test Duration.is_exact()."""
+    assert duration.is_exact() is expected
 
 
 def test_timepoint_comparison():
@@ -668,17 +713,20 @@ def test_timepoint_subtract():
         assert test_string == ctrl_string
 
 
-def tp_add_param(timepoint, other, expected):
-    """pytest.param with nicely formatted IDs"""
-    return pytest.param(
-        timepoint, other, expected, id=f"{timepoint} + {other} = {expected}"
-    )
+@pytest.mark.parametrize('test', get_duration_subtract_tests())
+def test_timepoint_duration_subtract(test):
+    """Test subtracting a duration from a timepoint."""
+    start_point = TimePoint(**test["start"])
+    test_duration = Duration(**test["duration"])
+    end_point = TimePoint(**test["result"])
+    test_subtract = (start_point - test_duration).to_calendar_date()
+    assert test_subtract == end_point
 
 
 @pytest.mark.parametrize(
     'timepoint, other, expected',
     [
-        tp_add_param(
+        add_param(
             data.TimePoint(
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1,
                 minute_of_hour=1
@@ -689,7 +737,7 @@ def tp_add_param(timepoint, other, expected):
                 minute_of_hour=1, second_of_minute=5
             ),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(
                 year=1900, month_of_year=1, day_of_month=1, hour_of_day=1
             ),
@@ -699,7 +747,7 @@ def tp_add_param(timepoint, other, expected):
                 second_of_minute=5
             ),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=1990, day_of_month=14, hour_of_day=1),
             data.Duration(years=2, months=11, days=5, hours=26, minutes=32),
             data.TimePoint(
@@ -707,111 +755,111 @@ def tp_add_param(timepoint, other, expected):
                 hour_of_day=3, minute_of_hour=32
             )
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=1994, day_of_month=2, hour_of_day=5),
             data.Duration(months=0),
             data.TimePoint(year=1994, day_of_month=2, hour_of_day=5),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000),
             data.TimePoint(month_of_year=3, day_of_month=30, truncated=True),
             data.TimePoint(year=2000, month_of_year=3, day_of_month=30),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000),
             data.TimePoint(month_of_year=2, day_of_month=15, truncated=True),
             data.TimePoint(year=2000, month_of_year=2, day_of_month=15),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=15),
             data.TimePoint(day_of_month=15, truncated=True),
             data.TimePoint(year=2000, day_of_month=15),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=15),
             data.TimePoint(month_of_year=1, day_of_month=15, truncated=True),
             data.TimePoint(year=2000, day_of_month=15),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=15),
             data.TimePoint(month_of_year=1, day_of_month=14, truncated=True),
             data.TimePoint(year=2001, day_of_month=14),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=15),
             data.TimePoint(day_of_month=14, truncated=True),
             data.TimePoint(year=2000, month_of_year=2, day_of_month=14),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
             data.TimePoint(day_of_month=4, truncated=True),
             data.TimePoint(year=2000, month_of_year=2, day_of_month=4),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
             data.TimePoint(day_of_month=4, second_of_minute=1, truncated=True),
             data.TimePoint(year=2000, day_of_month=4, second_of_minute=1),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2000, day_of_month=31),
             data.TimePoint(day_of_month=2, hour_of_day=7, truncated=True),
             data.TimePoint(
                 year=2000, month_of_year=2, day_of_month=2, hour_of_day=7,
             ),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2001, month_of_year=2),
             data.TimePoint(day_of_month=31, truncated=True),
             data.TimePoint(year=2001, month_of_year=3, day_of_month=31),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2001),
             data.TimePoint(month_of_year=2, day_of_month=29, truncated=True),
             data.TimePoint(year=2004, month_of_year=2, day_of_month=29),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2001, day_of_month=6),
             data.TimePoint(month_of_year=3, truncated=True),
             data.TimePoint(year=2001, month_of_year=3, day_of_month=1),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2002, month_of_year=4, day_of_month=8),
             data.TimePoint(month_of_year=1, truncated=True),
             data.TimePoint(year=2003, month_of_year=1, day_of_month=1),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2002, month_of_year=4, day_of_month=8),
             data.TimePoint(day_of_month=1, truncated=True),
             data.TimePoint(year=2002, month_of_year=5, day_of_month=1),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2004),
             data.TimePoint(hour_of_day=3, truncated=True),
             data.TimePoint(year=2004, hour_of_day=3),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2004, hour_of_day=3, second_of_minute=1),
             data.TimePoint(hour_of_day=3, truncated=True),
             data.TimePoint(year=2004, day_of_month=2, hour_of_day=3),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2010, hour_of_day=19, minute_of_hour=41),
             data.TimePoint(minute_of_hour=15, truncated=True),
             data.TimePoint(year=2010, hour_of_day=20, minute_of_hour=15),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2010, hour_of_day=19, minute_of_hour=41),
             data.TimePoint(month_of_year=3, minute_of_hour=15, truncated=True),
             data.TimePoint(year=2010, month_of_year=3, minute_of_hour=15),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=2077, day_of_month=21),
             data.TimePoint(
                 year=7, truncated=True, truncated_property="year_of_decade"
             ),
             data.TimePoint(year=2087),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=3000),
             data.TimePoint(
                 year=0, month_of_year=2, day_of_month=29,
@@ -819,7 +867,7 @@ def tp_add_param(timepoint, other, expected):
             ),
             data.TimePoint(year=3020, month_of_year=2, day_of_month=29),
         ),
-        tp_add_param(
+        add_param(
             data.TimePoint(year=3000),
             data.TimePoint(
                 year=0, month_of_year=2, day_of_month=29,
@@ -844,32 +892,32 @@ def test_timepoint_add(
 @pytest.mark.parametrize(
     'timepoint, other, expected',
     [
-        tp_add_param(
+        add_param(
             '1990-04-15T00Z',
             '-11-02',
             data.TimePoint(year=2011, month_of_year=2, day_of_month=1)
         ),
-        tp_add_param(
+        add_param(
             '2008-01-01T02Z',
             '-08',
             data.TimePoint(year=2108),
         ),
-        tp_add_param(
+        add_param(
             '2008-01-01T02Z',
             '-08T02Z',
             data.TimePoint(year=2008, hour_of_day=2),
         ),
-        tp_add_param(
+        add_param(
             '2009-01-04T00Z',
             '-09',
             data.TimePoint(year=2109),
         ),
-        tp_add_param(
+        add_param(
             '2014-04-12T00Z',
             '-14-04',
             data.TimePoint(year=2114, month_of_year=4, day_of_month=1)
         ),
-        tp_add_param(
+        add_param(
             '2014-04-01T00Z',
             '-14-04',
             data.TimePoint(year=2014, month_of_year=4, day_of_month=1)
