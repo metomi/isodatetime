@@ -679,6 +679,15 @@ def test_duration_is_exact(duration: Duration, expected: bool):
     assert duration.is_exact() is expected
 
 
+def test_duration_neg():
+    """Test negating a Duration."""
+    duration = Duration(years=1, months=2, days=3, hours=4, seconds=6)
+    assert -duration == Duration(
+        years=-1, months=-2, days=-3, hours=-4, seconds=-6
+    )
+    assert str(-duration) == "-P1Y2M3DT4H6S"
+
+
 def test_timepoint_comparison():
     """Test the TimePoint rich comparison methods and hashing."""
     run_comparison_tests(data.TimePoint, get_timepoint_comparison_tests())
@@ -703,14 +712,25 @@ def test_timepoint_plus_float_time_duration_day_of_month_type():
     assert isinstance(time_point.day_of_month, int)
 
 
-def test_timepoint_subtract():
+@pytest.mark.parametrize(
+    'test_props1, test_props2, ctrl_string', get_timepoint_subtract_tests()
+)
+def test_timepoint_subtract(test_props1, test_props2, ctrl_string):
     """Test subtracting one time point from another."""
-    for test_props1, test_props2, ctrl_string in (
-            get_timepoint_subtract_tests()):
-        point1 = data.TimePoint(**test_props1)
-        point2 = data.TimePoint(**test_props2)
-        test_string = str(point1 - point2)
-        assert test_string == ctrl_string
+    point1 = TimePoint(**test_props1)
+    point2 = TimePoint(**test_props2)
+    test_string = str(point1 - point2)
+    assert test_string == ctrl_string
+
+
+def test_timepoint_subtract_truncated():
+    """Test an error is raised if subtracting a truncated TimePoint from
+    a non-truncated one and vice versa."""
+    msg = r"Invalid subtraction"
+    with pytest.raises(ValueError, match=msg):
+        TimePoint(year=2000) - TimePoint(day_of_month=2, truncated=True)
+    with pytest.raises(ValueError, match=msg):
+        TimePoint(day_of_month=2, truncated=True) - TimePoint(year=2000)
 
 
 @pytest.mark.parametrize('test', get_duration_subtract_tests())
@@ -874,6 +894,11 @@ def test_timepoint_duration_subtract(test):
                 truncated=True, truncated_property="year_of_century",
             ),
             data.TimePoint(year=3200, month_of_year=2, day_of_month=29),
+        ),
+        add_param(
+            data.TimePoint(year=3012, month_of_year=10, hour_of_day=9),
+            data.TimePoint(day_of_year=63, truncated=True),
+            data.TimePoint(year=3013, day_of_year=63),
         ),
     ],
 )
