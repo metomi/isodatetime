@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (C) British Crown (Met Office) & Contributors.
 #
@@ -23,8 +22,7 @@
 # which branch to monitor and whether wait for ci success
 codecov:
   branch: master
-  notify:
-    require_ci_to_pass: yes
+  max_report_age: 5d
 
 # define the colour bar limits here
 coverage:
@@ -42,23 +40,13 @@ coverage:
         threshold: '5%'
     patch:
       default:
-        # basic
         target: '75%'
         threshold: '5%'
         base: auto
-        # advanced
-        branches: null
-        if_no_uploads: error
-        if_not_found: success
-        if_ci_failed: error
-        only_pulls: false
-        flags: null
-        paths: null
-    changes: no
 
 # files to ignore
 ignore:
   - "metomi/isodatetime/tests*"
 
 # turn off comments to pull requests
-comment: off
+comment: false
