@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - '.github/workflows/build.yml'
       - 'README.md'       # check markdown is valid
       - 'MANIFEST.in'     # check packaging
       - 'pyproject.toml'  # check build config
@@ -24,10 +25,12 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest']
-        python: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+        python: ['3.8', '3.9', '3.10', '3.11', '3.x']
         include:
-          - os: 'macos-latest'
+          - os: ubuntu-22.04
             python: '3.7'
+          - os: 'macos-latest'
+            python: '3.9'
     name: ${{ matrix.os }} py-${{ matrix.python }}
     steps:
       - name: Checkout
