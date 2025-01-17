@@ -19,14 +19,21 @@ import copy
 import datetime
 from itertools import chain
 import unittest
+
 import pytest
 
-from metomi.isodatetime import data
-from metomi.isodatetime import dumpers
-from metomi.isodatetime import parsers
-from metomi.isodatetime import parser_spec
+from metomi.isodatetime import (
+    data,
+    dumpers,
+    parser_spec,
+    parsers,
+)
 from metomi.isodatetime.exceptions import (
-    ISO8601SyntaxError, TimePointDumperBoundsError, BadInputError)
+    BadInputError,
+    ISO8601SyntaxError,
+    StrptimeConversionError,
+    TimePointDumperBoundsError,
+)
 
 
 def get_timedurationparser_tests():
@@ -1523,5 +1530,6 @@ class TestSuite(unittest.TestCase):
         # QUESTION: What was this test meant to do exactly?
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_strptime_bad(tp_parser: parsers.TimePointParser):
+    with pytest.raises(StrptimeConversionError):
+        tp_parser.strptime("2020-01-01", "]")

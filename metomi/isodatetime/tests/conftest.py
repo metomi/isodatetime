@@ -13,9 +13,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
 import time
 from unittest.mock import Mock
+
+import pytest
+
+from metomi.isodatetime.parsers import TimePointParser
 
 
 @pytest.fixture
@@ -39,3 +42,12 @@ def mock_local_time_zone(monkeypatch: pytest.MonkeyPatch):
         mock_time.localtime.return_value = Mock(tm_isdst=is_dst)
         monkeypatch.setattr('metomi.isodatetime.timezone.time', mock_time)
     return _mock_local_time_zone
+
+
+@pytest.fixture(scope='session')
+def tp_parser():
+    """Returns a TimePointParser instance for the session.
+
+    This saves time by only creating the parser once for the entire session.
+    """
+    return TimePointParser()

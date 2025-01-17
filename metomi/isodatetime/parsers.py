@@ -19,7 +19,6 @@
 """This provides ISO 8601 parsing functionality."""
 
 import re
-import sre_constants
 
 from . import data
 from . import parser_spec
@@ -338,12 +337,13 @@ class TimePointParser(object):
             regex, strptime_data_string,
             dump_format=dump_format, source=strptime_format_string)
 
-    def _parse_from_custom_regex(self, regex, data_string, dump_format=None,
-                                 source=None):
+    def _parse_from_custom_regex(
+        self, regex, data_string, dump_format=None, source=None
+    ):
         """Parse data_string according to the regular expression in regex."""
         try:
             compiled_regex = re.compile(regex)
-        except sre_constants.error:
+        except Exception:
             raise StrptimeConversionError(source, regex)
         result = compiled_regex.match(data_string)
         if not result:
