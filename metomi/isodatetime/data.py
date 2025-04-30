@@ -394,7 +394,7 @@ class TimeRecurrence:
                 return False
         return True
 
-    def __add__(self, other: 'Duration') -> 'TimeRecurrence':
+    def __add__(self, other: object) -> 'TimeRecurrence':
         if not isinstance(other, Duration):
             return NotImplemented
         if self._format_number == 1:
@@ -410,7 +410,7 @@ class TimeRecurrence:
             repetitions=self._repetitions, **kwargs,
             min_point=self._min_point, max_point=self._max_point)
 
-    def __sub__(self, other: 'Duration') -> 'TimeRecurrence':
+    def __sub__(self, other: object) -> 'TimeRecurrence':
         if not isinstance(other, Duration):
             return NotImplemented
         return self + -1 * other
@@ -655,7 +655,7 @@ class Duration:
     def __add__(self, other: 'TimeRecurrence') -> 'TimeRecurrence': ...
 
     def __add__(
-        self, other: Union['Duration', 'TimePoint', 'TimeRecurrence']
+        self, other: object
     ) -> Union['Duration', 'TimePoint', 'TimeRecurrence']:
         if isinstance(other, Duration):
             new = self._copy()
@@ -677,7 +677,7 @@ class Duration:
             return other + self
         return NotImplemented
 
-    def __sub__(self, other: 'Duration') -> 'Duration':
+    def __sub__(self, other: object) -> 'Duration':
         if not isinstance(other, Duration):
             return NotImplemented
         return self + -1 * other
@@ -685,7 +685,7 @@ class Duration:
     def __neg__(self) -> 'Duration':
         return -1 * self
 
-    def __mul__(self, other: int) -> 'Duration':
+    def __mul__(self, other: object) -> 'Duration':
         # TODO: support float multiplication?
         if not isinstance(other, int):
             return NotImplemented
@@ -695,7 +695,7 @@ class Duration:
             setattr(new, attr, value * other if value else value)
         return new
 
-    def __rmul__(self, other: int) -> 'Duration':
+    def __rmul__(self, other: object) -> 'Duration':
         return self.__mul__(other)
 
     def __floordiv__(self, other):
@@ -739,22 +739,22 @@ class Duration:
             self._get_non_nominal_seconds() == other._get_non_nominal_seconds()
         )
 
-    def __lt__(self, other: 'Duration') -> bool:
+    def __lt__(self, other: object) -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() < other.get_days_and_seconds()
         return NotImplemented
 
-    def __le__(self, other: 'Duration') -> bool:
+    def __le__(self, other: object) -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() <= other.get_days_and_seconds()
         return NotImplemented
 
-    def __gt__(self, other: 'Duration') -> bool:
+    def __gt__(self, other: object) -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() > other.get_days_and_seconds()
         return NotImplemented
 
-    def __ge__(self, other: 'Duration') -> bool:
+    def __ge__(self, other: object) -> bool:
         if isinstance(other, Duration):
             return self.get_days_and_seconds() >= other.get_days_and_seconds()
         return NotImplemented
@@ -1633,7 +1633,7 @@ class TimePoint:
             f"Invalid month of year {month} or day of month {day}"
         )
 
-    def __add__(self, other: Union['Duration', 'TimePoint']) -> 'TimePoint':
+    def __add__(self, other: object) -> 'TimePoint':
         if isinstance(other, TimePoint):
             if self._truncated and not other._truncated:
                 new = other.to_time_zone(self._time_zone)
@@ -1773,16 +1773,16 @@ class TimePoint:
     def __eq__(self, other: object) -> bool:
         return self._cmp(other, "eq")
 
-    def __lt__(self, other: 'TimePoint') -> bool:
+    def __lt__(self, other: object) -> bool:
         return self._cmp(other, "lt")
 
-    def __le__(self, other: 'TimePoint') -> bool:
+    def __le__(self, other: object) -> bool:
         return self._cmp(other, "le")
 
-    def __gt__(self, other: 'TimePoint') -> bool:
+    def __gt__(self, other: object) -> bool:
         return self._cmp(other, "gt")
 
-    def __ge__(self, other: 'TimePoint') -> bool:
+    def __ge__(self, other: object) -> bool:
         return self._cmp(other, "ge")
 
     @overload
@@ -1791,9 +1791,7 @@ class TimePoint:
     @overload
     def __sub__(self, other: 'TimePoint') -> 'Duration': ...
 
-    def __sub__(
-        self, other: Union['Duration', 'TimePoint']
-    ) -> Union['TimePoint', 'Duration']:
+    def __sub__(self, other: object) -> Union['TimePoint', 'Duration']:
         if isinstance(other, TimePoint):
             if self._truncated or other._truncated:
                 raise ValueError(
