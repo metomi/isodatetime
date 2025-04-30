@@ -22,11 +22,26 @@
 from functools import lru_cache
 from math import floor
 import operator
-from typing import Dict, List, Optional, Tuple, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
-from . import dumpers
-from . import timezone
+from . import (
+    dumpers,
+    timezone,
+)
 from .exceptions import BadInputError
+
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 
 _operator_map = {op.__name__: op for op in [
@@ -1481,7 +1496,7 @@ class TimePoint:
                 props[attr] = value
         return props
 
-    def add_truncated(self, other: 'TimePoint') -> 'TimePoint':
+    def _add_truncated(self, other: 'TimePoint') -> 'TimePoint':
         """Returns a copy of this TimePoint with the other, truncated TimePoint
         added to it."""
         new = self._copy()
@@ -1551,15 +1566,13 @@ class TimePoint:
                 new._tick_over()
 
         if year_of_decade is not None or year_of_century is not None:
-            # BUG: converting to calendar date can lead to bad results for
-            # truncated week dates (though having a truncated year of decade
-            # or century is not documented for week dates)
             new = new.to_calendar_date()
             if day_of_month is None:
                 new._day_of_month = 1
             if month_of_year is None:
                 new._month_of_year = 1
 
+            factor: Literal[10, 100]
             if year_of_decade is not None:
                 prop, factor = year_of_decade, 10
             else:
@@ -1577,10 +1590,17 @@ class TimePoint:
                 new._month_of_year, new._year
             ):
                 # Skip to next matching leap year:
-                while True:
-                    new._year += factor
-                    if get_is_leap_year(new._year):
-                        break
+                new._year = find_next_leap_year(new._year, factor)
+                if new._year is None:
+                    # Should never happen as truncated TimePoint validates
+                    # bounds on init
+                    raise RuntimeError(
+                        "Unexpected out of bounds: "
+                        f"day of month: {new._day_of_month}, "
+                        f"month of year: {new._month_of_year}, "
+                        f"year of {'decade' if factor == 10 else 'century'}: "
+                        f"{prop}"
+                    )
 
         return new
 
@@ -1637,7 +1657,7 @@ class TimePoint:
         if isinstance(other, TimePoint):
             if self._truncated and not other._truncated:
                 new = other.to_time_zone(self._time_zone)
-                new = new.add_truncated(self)
+                new = new._add_truncated(self)
                 return new.to_time_zone(other._time_zone)
             if other._truncated and not self._truncated:
                 return other + self
@@ -2223,16 +2243,22 @@ def get_is_leap_year(year):
     return year_is_leap
 
 
-def find_next_leap_year(year: int) -> Optional[int]:
+def find_next_leap_year(
+    year: int, step: 'Literal[1, 10, 100]' = 1
+) -> Optional[int]:
     """Find the next leap year after or including this year.
 
-    Returns None if calendar does not have leap years."""
+    Returns None if calendar does not have leap years, or it is not possible
+    to find a leap year with the chosen step.
+    """
     if CALENDAR.MODES[CALENDAR.mode][1] is None:
         return None
-    while True:
-        if get_is_leap_year(year):
-            return year
-        year += 1
+    if (step == 10 and year % 2) or (step == 100 and year % 4):
+        # Not possible to get a leap year with this combo
+        return None
+    while not get_is_leap_year(year):
+        year += step
+    return year
 
 
 def get_days_in_year_range(start_year, end_year):
@@ -2294,7 +2320,10 @@ def _get_days_in_year(year, _):
     return CALENDAR.DAYS_IN_YEAR
 
 
-def get_days_in_month(month_of_year, year="leap"):
+def get_days_in_month(
+    month_of_year: int,
+    year: Union[int, None, 'Literal["leap"]'] = "leap",
+) -> int:
     """Return the number of days in the month of this particular year.
     Year can also be "leap", or None for non-leap."""
     return _get_days_in_month(month_of_year, year, CALENDAR.mode)

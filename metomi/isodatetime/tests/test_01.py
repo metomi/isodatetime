@@ -1011,3 +1011,20 @@ def test_find_next_leap_year(
 ):
     patch_calendar_mode(calendar_mode)
     assert data.find_next_leap_year(year) == expected
+
+
+@pytest.mark.parametrize(
+    'year, step, expected',
+    [
+        (2003, 10, None),
+        (2003, 100, None),
+        (2004, 10, 2004),
+        (2004, 100, 2004),
+        (2014, 10, 2024),
+        (2014, 100, None),
+        (2100, 10, 2120),
+        (2100, 100, 2400),
+    ]
+)
+def test_find_next_leap_year__step(year, step, expected):
+    assert data.find_next_leap_year(year, step) == expected
