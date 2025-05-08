@@ -12,8 +12,14 @@ ones in. -->
 
 ### Breaking changes
 
-[#203](https://github.com/metomi/isodatetime/pull/203):
-`TimePoint.seconds_since_unix_epoch` is now an `int` instead of `str`.
+[#234](https://github.com/metomi/isodatetime/pull/234):
+- Removed public `TimePoint.add_truncated()` method.
+- `TimePoint.seconds_since_unix_epoch` is now an `int` instead of `str`.
+
+### Fixes
+
+[#234](https://github.com/metomi/isodatetime/pull/234):
+Fixed behaviour of adding a truncated TimePoint to a normal TimePoint.
 
 
 ## isodatetime 3.1.0 (<span actions:bind='release-date'>Released 2023-10-05</span>)
