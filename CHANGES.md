@@ -8,7 +8,19 @@ creating a new release entry be sure to copy & paste the span tag with the
 `actions:bind` attribute, which is used by a regex to find the text to be
 updated. Only the first match gets replaced, so it's fine to leave the old
 ones in. -->
---------------------------------------------------------------------------------
+## isodatetime 3.2.0 (<span actions:bind='release-date'>Upcoming</span>)
+
+### Breaking changes
+
+[#234](https://github.com/metomi/isodatetime/pull/234):
+- Removed public `TimePoint.add_truncated()` method.
+- `TimePoint.seconds_since_unix_epoch` is now an `int` instead of `str`.
+
+### Fixes
+
+[#234](https://github.com/metomi/isodatetime/pull/234):
+Fixed behaviour of adding a truncated TimePoint to a normal TimePoint.
+
 
 ## isodatetime 3.1.0 (<span actions:bind='release-date'>Released 2023-10-05</span>)
 
@@ -19,7 +31,6 @@ Requires Python 3.7+
 [#231](https://github.com/metomi/isodatetime/pull/231):
 Fixed mistakes in the CLI help text.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 3.0.0 (<span actions:bind='release-date'>Released 2022-03-31</span>)
 
@@ -44,7 +55,6 @@ TimePoints.
 Fixed a bug where the `timezone` functions would return incorrect results
 for certain non-standard/unusual system time zones.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2.0.2 (Released 2020-07-01)
 
@@ -62,7 +72,6 @@ CLI can now read in from piped stdin.
 TimePoints can no longer be created with out-of-bounds values, e.g.
 `2020-00-00`, `2020-13-32T25:60`, `--02-30` are not valid.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2.0.1 (Released 2019-07-23)
 
@@ -86,7 +95,6 @@ Support the CF compatible calendar mode strings `360_day`, `365_day` & `366_day`
 [#132](https://github.com/metomi/isodatetime/pull/132):
 Change namespace of `isodatetime` to `metomi.isodatetime`
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2.0.0 (Released 2019-01-22)
 
@@ -119,7 +127,6 @@ Fixed time point dumper time zone inconsistency.
 [#118](https://github.com/metomi/isodatetime/pull/118):
 Fixed time point dumper date type inconsistency.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2018.11.0 (Released 2018-11-05)
 
@@ -143,7 +150,6 @@ Fix for timezone offsets where minutes are not 0.
 [#87](https://github.com/metomi/isodatetime/pull/87):
 Add `setup.py`.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2018.09.0 (Released 2018-09-11)
 
@@ -155,7 +161,6 @@ This is the 10th release of isodatetime.
 New TimePoint method to find the next smallest property that is missing from a
 truncated representation.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2018.02.0 (Released 2018-02-06)
 
@@ -166,7 +171,6 @@ This is the 9th release of isodatetime.
 [#82](https://github.com/metomi/isodatetime/pull/82):
 Fix subtracting a later timepoint from an earlier one.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2017.08.0 (Released 2017-08-09)
 
@@ -180,13 +184,11 @@ Fix error string for bad conversion for strftime/strptime.
 [#74](https://github.com/metomi/isodatetime/pull/74):
 Slotted the data classes to improve memory footprint.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2017.02.1 (Released 2017-02-21)
 
 This is the 7th release of isodatetime. Admin only release.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2017.02.0 (Released 2017-02-20)
 
@@ -197,7 +199,6 @@ This is the 6th release of isodatetime.
 [#73](https://github.com/metomi/isodatetime/pull/73):
 Fix adding duration not in weeks and duration in weeks.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2014.10.0 (Released 2014-10-01)
 
@@ -216,7 +217,6 @@ Fix `date1 - date2` where `date2` is greater than `date1` and `date1` and
 [#60](https://github.com/metomi/isodatetime/pull/60):
 Stricter dumper year bounds checking.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2014.08.0 (Released 2014-08-11)
 
@@ -235,7 +235,6 @@ digits.
 Speeds up calculations involving counting the days over a number of consecutive
 years.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2014.07.0 (Released 2014-07-29)
 
@@ -253,7 +252,6 @@ More flexible API for calendar mode.
 [#48](https://github.com/metomi/isodatetime/pull/48):
 `TimeInterval` class: add `get_seconds` method and input prettifying.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2014.06.0 (Released 2014-06-19)
 
@@ -279,7 +277,6 @@ Implement subset of strftime/strptime POSIX standard.
 [#28](https://github.com/metomi/isodatetime/pull/28):
 Fix get next point for single-repetition recurrences.
 
---------------------------------------------------------------------------------
 
 ## isodatetime 2014-03 (Released 2014-03-13)
 
