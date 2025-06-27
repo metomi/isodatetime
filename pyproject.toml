@@ -27,19 +27,18 @@ description = "Python ISO 8601 date time parser and data model/manipulation util
 license = {text = "LGPLv3"}
 readme = "README.md"
 keywords = ["isodatetime", "datetime", "iso8601", "date", "time", "parser"]
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Other Environment",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities"
@@ -82,7 +81,7 @@ test = [
     "pytest-cov",
     "pytest-xdist",
     "flake8",
-    'flake8-type-checking; python_version > "3.7"',
+    'flake8-type-checking',
     "bandit>=1.7.1",
 ]
 all = [

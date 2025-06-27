@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12']
         coverage: [false]
         include:
           # Modify existing configurations:
@@ -30,13 +30,13 @@ jobs:
             tz: 'XXX-05:30'  # UTC+05:30
           # Add new configurations:
           - os: ubuntu-22.04
-            python-version: '3.7'
+            python-version: '3.9' # oldest supported version
             coverage: false
           - os: ubuntu-latest
             python-version: '3.x'
             coverage: true
           - os: macos-latest
-            python-version: '3.9'
+            python-version: '3.9' # oldest supported version
             coverage: false
     name: ${{ matrix.os }} py-${{ matrix.python-version }} ${{ matrix.tz }} ${{ matrix.coverage && '(coverage)' || '' }}
     env:
