@@ -18,6 +18,10 @@ ones in. -->
 
 ### Fixes
 
+[#266](https://github.com/metomi/isodatetime/pull/234):
+Fixed a bug causing unhelpful error messages when parsing a
+malformed time-point containing >1 letter "T".
+
 [#234](https://github.com/metomi/isodatetime/pull/234):
 Fixed behaviour of adding a truncated TimePoint to a normal TimePoint.
 

@@ -439,7 +439,7 @@ class TimePointParser(object):
             time_zone_info = (
                 self.process_time_zone_info({}))
             time_info.update(time_zone_info)
-        else:
+        elif len(date_time_time_zone) == 2:
             date, time_time_zone = date_time_time_zone
             if not date and self.allow_truncated:
                 keys = (None, "truncated", "")
@@ -501,6 +501,8 @@ class TimePointParser(object):
             parsed_expr += parser_spec.TIME_DESIGNATOR + (
                 time_expr + time_zone_expr)
             time_info.update(time_zone_info)
+        else:
+            raise ISO8601SyntaxError('time', timepoint_string)
         return date_info, time_info, parsed_expr
 
     def process_time_zone_info(self, time_zone_info=None):
