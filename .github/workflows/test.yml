@@ -43,7 +43,7 @@ jobs:
       PYTEST_ADDOPTS: -n 5 -m 'slow or not slow' --color=yes
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -87,7 +87,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download coverage artifacts
         uses: actions/download-artifact@v5
