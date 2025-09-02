@@ -49,6 +49,7 @@ jobs:
       - name: Inspect
         run: |
           unzip -l dist/*.whl | tee files
+          set -x
           grep 'metomi/isodatetime/data.py' files
-          grep 'metomi_isodatetime.*.dist-info/LICENSE' files
-          # grep 'metomi/isodatetime/py.typed' files # (not yet added)
+          grep 'metomi_isodatetime.*.dist-info/licenses/LICENSE' files
+          grep 'metomi/isodatetime/py.typed' files
