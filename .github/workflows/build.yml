@@ -17,6 +17,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 2
+  PIP_PROGRESS_BAR: off
 
 jobs:
   build:
@@ -25,7 +26,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest']
-        python: ['3.10', '3.11', '3.12', '3.x']
+        python: ['3.10', '3.11', '3.12', '3']
         include:
           - os: ubuntu-22.04
             python: '3.9'
@@ -37,9 +38,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: ${{ matrix.python }}
+          cache-environment: true
+          post-cleanup: 'all'
+          environment-name: isodatetime-build
+          create-args: >-
+            python=${{ matrix.python }}
 
       - name: Build
         uses: cylc/release-actions/build-python-package@v1
