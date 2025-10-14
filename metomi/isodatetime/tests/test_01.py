@@ -18,7 +18,6 @@
 # ----------------------------------------------------------------------------
 """This tests the ISO 8601 data model functionality."""
 
-from typing import Optional, Union
 import pytest
 import unittest
 
@@ -904,7 +903,7 @@ def test_timepoint_duration_subtract(test):
 )
 def test_timepoint_add(
     timepoint: data.TimePoint,
-    other: Union[data.Duration, data.TimePoint],
+    other: data.Duration | data.TimePoint,
     expected: data.TimePoint
 ):
     """Test adding to a timepoint"""
@@ -1006,7 +1005,7 @@ def test_timepoint_without_year():
     ]
 )
 def test_find_next_leap_year(
-    calendar_mode: str, year: int, expected: Optional[int],
+    calendar_mode: str, year: int, expected: int | None,
     patch_calendar_mode
 ):
     patch_calendar_mode(calendar_mode)
