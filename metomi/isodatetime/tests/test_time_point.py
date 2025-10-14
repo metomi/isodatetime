@@ -23,6 +23,8 @@ import pytest
 import random
 
 from metomi.isodatetime.data import TimePoint, Duration, get_days_since_1_ad
+from metomi.isodatetime.parsers import TimePointParser
+from metomi.isodatetime.exceptions import ISO8601SyntaxError
 
 
 def daterange(start_date, end_date):
@@ -123,3 +125,12 @@ def _test_timepoint(test_year):
             test_data.get_calendar_date(),
             test_data.get_hour_minute_second()]
         assert test_data == ctrl_data
+
+
+def test_invalid_point():
+    """Check that invalid points return a sensible failure.
+    """
+    bad = 'STARTTIMET0000Z'
+    tpp = TimePointParser()
+    with pytest.raises(ISO8601SyntaxError, match=bad):
+        tpp.parse(bad)
