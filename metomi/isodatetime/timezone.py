@@ -19,7 +19,6 @@
 """This provides utilities for extracting the local time zone."""
 
 import time
-from typing import Tuple
 
 
 class TimeZoneFormatMode(object):
@@ -34,7 +33,7 @@ class TimeZoneFormatMode(object):
     }
 
 
-def get_local_time_zone() -> Tuple[int, int]:
+def get_local_time_zone() -> tuple[int, int]:
     """Return the current local UTC offset in hours and minutes."""
     utc_offset_seconds = -time.timezone
     if time.localtime().tm_isdst == 1 and time.daylight:

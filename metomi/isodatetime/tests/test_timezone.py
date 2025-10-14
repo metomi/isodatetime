@@ -15,7 +15,7 @@
 
 """This tests the timezone module."""
 
-from typing import Callable, Tuple
+from typing import Callable
 import pytest
 
 from metomi.isodatetime import timezone
@@ -75,9 +75,9 @@ from metomi.isodatetime import timezone
 def test_get_local_time_zone(
     dst: bool,
     tz_seconds: int,
-    expected_no_dst: Tuple[int, int],
+    expected_no_dst: tuple[int, int],
     tz_dst_seconds: int,
-    expected_with_dst: Tuple[int, int],
+    expected_with_dst: tuple[int, int],
     mock_local_time_zone: Callable
 ):
     """Test that the hour/minute returned is correct.
@@ -134,7 +134,7 @@ def test_get_local_time_zone(
 )
 def test_get_local_time_zone_format(
     tz_seconds: int,
-    expected_formats: Tuple[int, int, int],
+    expected_formats: tuple[int, int, int],
     mock_local_time_zone: Callable
 ):
     """Test that the UTC offset string format is correct.

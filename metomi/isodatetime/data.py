@@ -23,12 +23,7 @@ from functools import lru_cache
 from math import floor
 import operator
 from typing import (
-    TYPE_CHECKING,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
+    Literal,
     cast,
     overload,
 )
@@ -38,10 +33,6 @@ from . import (
     timezone,
 )
 from .exceptions import BadInputError
-
-
-if TYPE_CHECKING:
-    from typing_extensions import Literal
 
 
 _operator_map = {op.__name__: op for op in [
@@ -306,7 +297,7 @@ class TimeRecurrence:
                 return False
         return False
 
-    def get_next(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
+    def get_next(self, timepoint: 'TimePoint') -> 'TimePoint | None':
         """Return the next timepoint after this timepoint in the recurrence
         series, or None."""
         if self._repetitions == 1 or timepoint is None:
@@ -316,7 +307,7 @@ class TimeRecurrence:
             return next_timepoint
         return None
 
-    def get_prev(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
+    def get_prev(self, timepoint: 'TimePoint') -> 'TimePoint | None':
         """Return the previous timepoint before this timepoint in the
         recurrence series, or None."""
         if self._repetitions == 1 or timepoint is None:
@@ -326,7 +317,7 @@ class TimeRecurrence:
             return prev_timepoint
         return None
 
-    def get_first_after(self, timepoint: 'TimePoint') -> Optional['TimePoint']:
+    def get_first_after(self, timepoint: 'TimePoint') -> 'TimePoint | None':
         """Return the next timepoint in the series after the given timepoint
         which is not necessarily part of the series.
 
@@ -656,7 +647,7 @@ class Duration:
     def __abs__(self) -> 'Duration':
         new = self.__class__(_is_empty_instance=True)
         for attr in self.__slots__:
-            value: Union[int, float, None] = getattr(self, attr)
+            value: int | float | None = getattr(self, attr)
             setattr(new, attr, abs(value) if value else value)
         return new
 
@@ -671,7 +662,7 @@ class Duration:
 
     def __add__(
         self, other: object
-    ) -> Union['Duration', 'TimePoint', 'TimeRecurrence']:
+    ) -> 'Duration | TimePoint | TimeRecurrence':
         if isinstance(other, Duration):
             new = self._copy()
             if new.get_is_in_weeks():
@@ -706,7 +697,7 @@ class Duration:
             return NotImplemented
         new = self.__class__(_is_empty_instance=True)
         for attr in self.__slots__:
-            value: Union[int, float, None] = getattr(self, attr)
+            value: int | float | None = getattr(self, attr)
             setattr(new, attr, value * other if value else value)
         return new
 
@@ -1448,7 +1439,7 @@ class TimePoint:
         new._week_of_year, new._day_of_week = (None, None)
         return new
 
-    def get_largest_truncated_property_name(self) -> Optional[str]:
+    def get_largest_truncated_property_name(self) -> str | None:
         """Return the largest unit in a truncated representation."""
         truncated_props = self.get_truncated_properties()
         if not truncated_props:
@@ -1456,7 +1447,7 @@ class TimePoint:
         # Relies on dict being ordered in Python 3.6+:
         return next(iter(truncated_props))
 
-    def get_smallest_missing_property_name(self) -> Optional[str]:
+    def get_smallest_missing_property_name(self) -> str | None:
         """Return the smallest unit missing from a truncated representation."""
         if not self._truncated:
             return None
@@ -1476,7 +1467,7 @@ class TimePoint:
                 return attr_value
         return None
 
-    def get_truncated_properties(self) -> Optional[Dict[str, float]]:
+    def get_truncated_properties(self) -> dict[str, float] | None:
         """Return a map of properties if this is a truncated representation.
 
         Ordered from largest unit to smallest.
@@ -1512,13 +1503,13 @@ class TimePoint:
             if unit not in props:
                 props[unit] = 0
 
-        year_of_century = cast('Optional[int]', props.get('year_of_century'))
-        year_of_decade = cast('Optional[int]', props.get('year_of_decade'))
-        month_of_year = cast('Optional[int]', props.get('month_of_year'))
-        week_of_year = cast('Optional[int]', props.get('week_of_year'))
-        day_of_year = cast('Optional[int]', props.get('day_of_year'))
-        day_of_month = cast('Optional[int]', props.get('day_of_month'))
-        day_of_week = cast('Optional[int]', props.get('day_of_week'))
+        year_of_century = cast('int | None', props.get('year_of_century'))
+        year_of_decade = cast('int | None', props.get('year_of_decade'))
+        month_of_year = cast('int | None', props.get('month_of_year'))
+        week_of_year = cast('int | None', props.get('week_of_year'))
+        day_of_year = cast('int | None', props.get('day_of_year'))
+        day_of_month = cast('int | None', props.get('day_of_month'))
+        day_of_week = cast('int | None', props.get('day_of_week'))
         hour_of_day = props.get('hour_of_day')
         minute_of_hour = props.get('minute_of_hour')
         second_of_minute = props.get('second_of_minute')
@@ -1605,7 +1596,7 @@ class TimePoint:
         return new
 
     def _next_month_and_day(
-        self, month: Optional[int], day: Optional[int]
+        self, month: int | None, day: int | None
     ) -> None:
         """Get the next TimePoint after this one that has the
         same month and/or day as specified.
@@ -1618,7 +1609,7 @@ class TimePoint:
         """
         if day is None:
             day = 1
-        years_to_check: List[int] = [self._year, self._year + 1]
+        years_to_check: list[int] = [self._year, self._year + 1]
         for i, year in enumerate(years_to_check):
             self._year = year
             if month:
@@ -1811,7 +1802,7 @@ class TimePoint:
     @overload
     def __sub__(self, other: 'TimePoint') -> 'Duration': ...
 
-    def __sub__(self, other: object) -> Union['TimePoint', 'Duration']:
+    def __sub__(self, other: object) -> 'TimePoint | Duration':
         if isinstance(other, TimePoint):
             if self._truncated or other._truncated:
                 raise ValueError(
@@ -2245,7 +2236,7 @@ def get_is_leap_year(year):
 
 def find_next_leap_year(
     year: int, step: 'Literal[1, 10, 100]' = 1
-) -> Optional[int]:
+) -> int | None:
     """Find the next leap year after or including this year.
 
     Returns None if calendar does not have leap years, or it is not possible
@@ -2322,7 +2313,7 @@ def _get_days_in_year(year, _):
 
 def get_days_in_month(
     month_of_year: int,
-    year: Union[int, None, 'Literal["leap"]'] = "leap",
+    year: int | None | Literal["leap"] = "leap",
 ) -> int:
     """Return the number of days in the month of this particular year.
     Year can also be "leap", or None for non-leap."""
@@ -2649,10 +2640,10 @@ def get_timepoint_properties_from_seconds_since_unix_epoch(num_seconds):
 
 def iter_months_days(
     year: int,
-    month_of_year: Optional[int] = None,
-    day_of_month: Optional[int] = None,
+    month_of_year: int | None = None,
+    day_of_month: int | None = None,
     in_reverse: bool = False
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """Iterate over each day in each month of year.
 
     Args:
@@ -2675,7 +2666,7 @@ def _iter_months_days(
     day_of_month: int,
     _cal_mode,
     in_reverse: bool = False
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     if day_of_month is not None and month_of_year is None:
         raise ValueError("Need to specify start month as well as day.")
     source = CALENDAR.INDEXED_DAYS_IN_MONTHS
