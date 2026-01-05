@@ -22,7 +22,7 @@
 # which branch to monitor and whether wait for ci success
 codecov:
   branch: master
-  max_report_age: 5d
+  max_report_age: off
 
 # define the colour bar limits here
 coverage:
