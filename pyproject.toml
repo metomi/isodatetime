@@ -102,7 +102,7 @@ exclude_dirs = ["metomi/isodatetime/tests"]
 
 [tool.ruff]
 line-length = 79
-target-version = "py312"
+target-version = "py310"
 
 [tool.ruff.format]
 quote-style = "preserve"
@@ -110,7 +110,7 @@ quote-style = "preserve"
 
 [tool.black]
 line-length = 79
-target-version = ['py312']
+target-version = ['py310']
 skip-string-normalization = true
 
 
