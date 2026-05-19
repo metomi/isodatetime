@@ -1727,12 +1727,19 @@ class TimePoint:
         new_timepoint._time_zone = self._time_zone._copy()
         return new_timepoint
 
-    def get_props(self) -> list:
-        """Return the data properties of this TimePoint as a list of tuples."""
+    def get_props(self, copy: bool = True) -> list:
+        """Return the data properties of this TimePoint as a list of tuples.
+
+        Args:
+            _copy:
+                If False, values will not be coppied, only set this if you are
+                sure you won't modifiy the result.
+
+        """
         props = []
         for attr in self.__slots__:
             value = getattr(self, attr, None)
-            if callable(getattr(value, "_copy", None)):
+            if copy and callable(getattr(value, "_copy", None)):
                 value = value._copy()
             props.append((attr[1:], value))
             # Have sliced attr string to remove leading underscore
@@ -1760,7 +1767,7 @@ class TimePoint:
             raise ValueError(
                 "Cannot compare truncated to non-truncated "
                 "TimePoint: {0}, {1}".format(self, other))
-        if self.get_props() == other.get_props():
+        if self.get_props(copy=False) == other.get_props(copy=False):
             return op in {"eq", "le", "ge"}
         if self._truncated:
             # TODO: Convert truncated TimePoints to UTC when not buggy
