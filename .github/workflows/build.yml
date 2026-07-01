@@ -35,7 +35,7 @@ jobs:
     name: ${{ matrix.os }} py-${{ matrix.python }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Python
         uses: mamba-org/setup-micromamba@v3
