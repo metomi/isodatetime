@@ -732,6 +732,19 @@ def test_timepoint_subtract_truncated():
         TimePoint(day_of_month=2, truncated=True) - TimePoint(year=2000)
 
 
+def test_timepoint_truncated_to_calendar_ordinal_date():
+    """A truncated TimePoint has no fully-determined date, so converting it
+    to a calendar or ordinal date should raise a clear ValueError rather than
+    an obscure TypeError (GitHub #265)."""
+    point = TimePoint(
+        year=1, week_of_year=2, truncated=True,
+        truncated_property='year_of_decade')
+    with pytest.raises(ValueError, match="Cannot get the calendar date"):
+        point.to_calendar_date()
+    with pytest.raises(ValueError, match="Cannot get the ordinal date"):
+        point.to_ordinal_date()
+
+
 @pytest.mark.parametrize('test', get_duration_subtract_tests())
 def test_timepoint_duration_subtract(test):
     """Test subtracting a duration from a timepoint."""

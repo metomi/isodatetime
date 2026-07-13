@@ -20,6 +20,11 @@ Requires Python 3.10+
 
 ### Fixes
 
+[#286](https://github.com/metomi/isodatetime/pull/286):
+Fixed an unhelpful `TypeError` when converting a truncated `TimePoint`
+to a calendar or ordinal date; a clear `ValueError` is now raised
+instead.
+
 [#266](https://github.com/metomi/isodatetime/pull/234):
 Fixed a bug causing unhelpful error messages when parsing a
 malformed time-point containing >1 letter "T".

@@ -1224,6 +1224,10 @@ class TimePoint:
 
     def get_calendar_date(self):
         """Return the year, month-of-year and day-of-month for this date."""
+        if self._truncated:
+            raise ValueError(
+                "Cannot get the calendar date of a truncated "
+                "TimePoint: {0}".format(self))
         if self.get_is_calendar_date():
             return self._year, self._month_of_year, self._day_of_month
         if self.get_is_ordinal_date():
@@ -1251,6 +1255,10 @@ class TimePoint:
 
     def get_ordinal_date(self):
         """Return the year, day-of-year for this date."""
+        if self._truncated:
+            raise ValueError(
+                "Cannot get the ordinal date of a truncated "
+                "TimePoint: {0}".format(self))
         if self.get_is_calendar_date():
             return get_ordinal_date_from_calendar_date(self._year,
                                                        self._month_of_year,

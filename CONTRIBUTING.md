@@ -37,6 +37,7 @@ below:
 * Ronnie Dutta (Met Office, UK)
 * Walt Whiteside (US)
 * Mark Dawson (Met Office, UK)
+* Vincent Gao (UK)
 
 (All contributors are identifiable with email addresses in the version control
 logs or otherwise.)
