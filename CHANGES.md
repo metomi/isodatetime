@@ -20,7 +20,7 @@ Requires Python 3.10+
 
 ### Fixes
 
-[#266](https://github.com/metomi/isodatetime/pull/234):
+[#266](https://github.com/metomi/isodatetime/pull/266):
 Fixed a bug causing unhelpful error messages when parsing a
 malformed time-point containing >1 letter "T".
 
