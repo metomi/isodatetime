@@ -20,6 +20,9 @@ Requires Python 3.10+
 
 ### Fixes
 
+[#263](https://github.com/metomi/isodatetime/pull/263):
+Unblock compatibility with upcoming Python 3.15.
+
 [#266](https://github.com/metomi/isodatetime/pull/266):
 Fixed a bug causing unhelpful error messages when parsing a
 malformed time-point containing >1 letter "T".
