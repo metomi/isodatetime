@@ -8,7 +8,7 @@ creating a new release entry be sure to copy & paste the span tag with the
 `actions:bind` attribute, which is used by a regex to find the text to be
 updated. Only the first match gets replaced, so it's fine to leave the old
 ones in. -->
-## isodatetime 3.2.0 (<span actions:bind='release-date'>Upcoming</span>)
+## isodatetime 3.2.0 (<span actions:bind='release-date'>Released 2026-09-30</span>)
 
 Requires Python 3.10+
 
@@ -19,6 +19,9 @@ Requires Python 3.10+
 - `TimePoint.seconds_since_unix_epoch` is now an `int` instead of `str`.
 
 ### Fixes
+
+[#263](https://github.com/metomi/isodatetime/pull/263):
+Unblock compatibility with upcoming Python 3.15.
 
 [#266](https://github.com/metomi/isodatetime/pull/266):
 Fixed a bug causing unhelpful error messages when parsing a
