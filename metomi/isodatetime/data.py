@@ -2025,7 +2025,12 @@ class TimePoint:
         _bounds_checker(self._month_of_year, "month_of_year",
                         min_val=1, max_val=CALENDAR.MONTHS_IN_YEAR)
         if self._month_of_year is not None:
-            if self._year is not None:
+            if self._year is not None and not (
+                self._truncated
+                and self._truncated_property in (
+                    "year_of_decade", "year_of_century"
+                )
+            ):
                 max_days_in_month = get_days_in_month(self._month_of_year,
                                                       self._year)
             else:

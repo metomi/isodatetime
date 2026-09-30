@@ -399,6 +399,10 @@ def get_timepoint_bounds_tests():
         "in_bounds": [
             {"year": 2020, "month_of_year": 2, "day_of_month": 29},
             {"truncated": True, "month_of_year": 2, "day_of_month": 29},
+            {"truncated": True, "truncated_property": "year_of_decade",
+             "year": 2, "month_of_year": 2, "day_of_month": 29},
+            {"truncated": True, "truncated_property": "year_of_century",
+             "year": 12, "month_of_year": 2, "day_of_month": 29},
             {"year": 2020, "week_of_year": 53},
             {"truncated": True, "week_of_year": 53},
             {"year": 2020, "day_of_year": 366},
