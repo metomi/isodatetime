@@ -40,8 +40,6 @@ class DateTimeOperator(object):
     PARSE_FORMATS = [
         "%a %b %d %H:%M:%S %Y",     # ctime
         "%a %d %b %H:%M:%S %Z %Y",  # Unix "date"
-        "%Y-%m-%dT%H:%M:%S",       # ISO8601, extended
-        "%Y%m%dT%H%M%S",           # ISO8601, basic
     ]
 
     STR_NOW = "now"

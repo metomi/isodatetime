@@ -309,6 +309,16 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             id='positive',
         ),
         pytest.param(
+            '2026',
+            '20260101T0450',
+            None,
+            None,
+            None,
+            None,
+            'PT4H50M',
+            id='positive-2',
+        ),
+        pytest.param(
             # Use (3.1 - 3.0) to bypass str(float) precision issue
             '20190101T010203',
             '20190101T010203.1',
