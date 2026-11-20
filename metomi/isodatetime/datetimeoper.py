@@ -26,7 +26,7 @@ from .parsers import TimePointParser, DurationParser, TimeRecurrenceParser
 from metomi.isodatetime.exceptions import OffsetValueError
 
 
-class DateTimeOperator(object):
+class DateTimeOperator:
 
     """A class to parse and print date string with an offset."""
 
@@ -37,10 +37,10 @@ class DateTimeOperator(object):
     ENV_CALENDAR_MODE = "ISODATETIMECALENDAR"
 
     # strptime formats and their compatibility with the ISO 8601 parser.
-    PARSE_FORMATS = [
-        "%a %b %d %H:%M:%S %Y",     # ctime
-        "%a %d %b %H:%M:%S %Z %Y",  # Unix "date"
-    ]
+    PARSE_FORMATS = (
+        r"%a %b %d %H:%M:%S %Y",     # ctime
+        r"%a %d %b %H:%M:%S %Z %Y",  # Unix "date"
+    )
 
     STR_NOW = "now"
     STR_REF = "ref"

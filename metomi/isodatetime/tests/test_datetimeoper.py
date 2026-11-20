@@ -319,6 +319,26 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             id='positive-2',
         ),
         pytest.param(
+            '2026-11-01',
+            'Mon Nov  2 06:30:00 2026',
+            None,
+            None,
+            None,
+            None,
+            'P1DT6H30M',
+            id='ctime',
+        ),
+        pytest.param(
+            '2026-11-01',
+            'Mon 2 Nov 06:30:00 UTC 2026',
+            None,
+            None,
+            None,
+            None,
+            'P1DT6H30M',
+            id='unix-date',
+        ),
+        pytest.param(
             # Use (3.1 - 3.0) to bypass str(float) precision issue
             '20190101T010203',
             '20190101T010203.1',
@@ -439,8 +459,10 @@ def test_diff_time_point_strs(
     print_format,
     duration_print_format,
     expected,
+    mock_local_time_zone,
 ):
     """DateTimeOperator.diff_time_point_strs(...)"""
+    mock_local_time_zone(0)
     datetimeoper = idt_dtoper.DateTimeOperator(ref_point_str='20150106')
     assert (
         datetimeoper.diff_time_point_strs(
