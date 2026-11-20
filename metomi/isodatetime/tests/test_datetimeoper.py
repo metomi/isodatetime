@@ -149,15 +149,8 @@ def test_process_time_point_str_x():
     assert str(ctxmgr.value) == 'P0000-W01-1: bad offset value'
 
 
-def test_process_time_point_str_calendar():
-    """DateTimeOperator.process_time_point_str(...)
-
-    Alternate calendars.
-    """
-    assert idt_dtoper.DateTimeOperator.get_calendar_mode() == 'gregorian'
-    with pytest.raises(KeyError):
-        idt_dtoper.DateTimeOperator.set_calendar_mode('milkywaygalactic')
-    for cal, str_in, offsets, str_out in [
+@pytest.mark.parametrize(
+    'cal,str_in,offsets,str_out', [
         # 360day
         ('360day', '20130301', ['-P1D'], '20130230'),
         ('360day', '20130230', ['P1D'], '20130301'),
@@ -176,41 +169,39 @@ def test_process_time_point_str_calendar():
         # 366_day
         ('366_day', '20130301', ['-P1D'], '20130229'),
         ('366_day', '20130229', ['P1D'], '20130301'),
-    ]:
-        # Calendar mode, is unfortunately, a global variable,
-        # so needs to reset value on return.
-        calendar_mode = (
-            idt_dtoper.DateTimeOperator.get_calendar_mode())
-        # Calendar mode by constructor.
-        try:
-            datetimeoper = idt_dtoper.DateTimeOperator(
-                calendar_mode=cal)
-            assert str_out == datetimeoper.process_time_point_str(
-                str_in, offsets)
-        finally:
-            idt_dtoper.DateTimeOperator.set_calendar_mode(
-                calendar_mode)
-        # Calendar mode by environment variable
-        try:
-            environ = os.environ.copy()
-            key = (
-                idt_dtoper.DateTimeOperator.ENV_CALENDAR_MODE
-            )
-            environ[key] = cal
-            with patch.dict(os.environ, environ, clear=True):
-                datetimeoper = idt_dtoper.DateTimeOperator()
-                assert str_out == datetimeoper.process_time_point_str(
-                    str_in, offsets)
-        finally:
-            idt_dtoper.DateTimeOperator.set_calendar_mode(calendar_mode)
-
-
-def test_process_time_point_str_format():
+    ])
+def test_process_time_point_str_calendar(cal, str_in, offsets, str_out):
     """DateTimeOperator.process_time_point_str(...)
 
-    With parse_format and print_format.
+    Alternate calendars.
     """
-    for parse_format, print_format, point_str_in, point_str_out in [
+    assert idt_dtoper.DateTimeOperator.get_calendar_mode() == 'gregorian'
+    with pytest.raises(KeyError):
+        idt_dtoper.DateTimeOperator.set_calendar_mode('milkywaygalactic')
+    # Calendar mode, is unfortunately, a global variable,
+    # so needs to reset value on return.
+    calendar_mode = idt_dtoper.DateTimeOperator.get_calendar_mode()
+    # Calendar mode by constructor.
+    try:
+        datetimeoper = idt_dtoper.DateTimeOperator(calendar_mode=cal)
+        assert str_out == datetimeoper.process_time_point_str(str_in, offsets)
+    finally:
+        idt_dtoper.DateTimeOperator.set_calendar_mode(calendar_mode)
+    # Calendar mode by environment variable
+    try:
+        environ = os.environ.copy()
+        key = idt_dtoper.DateTimeOperator.ENV_CALENDAR_MODE
+        environ[key] = cal
+        with patch.dict(os.environ, environ, clear=True):
+            datetimeoper = idt_dtoper.DateTimeOperator()
+            assert str_out == datetimeoper.process_time_point_str(
+                str_in, offsets)
+    finally:
+        idt_dtoper.DateTimeOperator.set_calendar_mode(calendar_mode)
+
+
+@pytest.mark.parametrize(
+    'parse_format,print_format,point_str_in,point_str_out', [
         ('%d/%m/%Y %H:%M:%S', '%Y-%m-%dT%H:%M:%S',
          '24/12/2012 06:00:00', '2012-12-24T06:00:00'),
         ('%Y,%M,%d,%H', '%Y%M%d%H', '2014,01,02,05', '2014010205'),
@@ -228,56 +219,56 @@ def test_process_time_point_str_format():
         (None, '%Y.file', '2014-02-01T04:05:06', '2014.file'),
         (None, 'y%Ym%md%d', '2014-02-01T04:05:06', 'y2014m02d01'),
         (None, '%F', '2014-02-01T04:05:06', '2014-02-01'),
+    ])
+def test_process_time_point_str_format(
+    parse_format, print_format, point_str_in, point_str_out
+):
+    """DateTimeOperator.process_time_point_str(...)
 
-    ]:
-        datetimeoper = idt_dtoper.DateTimeOperator(
-            utc_mode=True,
-            parse_format=parse_format)
-        assert point_str_out == datetimeoper.process_time_point_str(
-            point_str_in, print_format=print_format)
-    # Bad parse format
+    With parse_format and print_format.
+    """
     datetimeoper = idt_dtoper.DateTimeOperator(
-        parse_format='%o')
+        utc_mode=True,
+        parse_format=parse_format)
+    assert point_str_out == datetimeoper.process_time_point_str(
+        point_str_in, print_format=print_format)
+
+
+def test_process_time_point_str_format_bad_parse_format():
+    datetimeoper = idt_dtoper.DateTimeOperator(parse_format='%o')
     with pytest.raises(ValueError) as ctxmgr:
         datetimeoper.process_time_point_str('0000')
     assert str(ctxmgr.value) == "'o' is a bad directive in format '%o'"
 
 
-def test_format_duration_str_x():
+@pytest.mark.parametrize('print_format,duration_str_in,duration_out', [
+    ('s', 'PT1M', 60.0),
+    ('s', 'P1DT1H1M1S', 90061.0),
+    ('m', 'PT1S', 0.0166666666667),
+    ('h', 'P832DT23H12M45S', 19991.2125),
+    ('S', '-PT1M1S', -61.0),
+])
+def test_format_duration_str_x(print_format, duration_str_in, duration_out):
     """DateTimeOperator.format_duration_str(...)"""
     datetimeoper = idt_dtoper.DateTimeOperator()
-    # Good ones
-    for print_format, duration_str_in, duration_out in [
-        ('s', 'PT1M', 60.0),
-        ('s', 'P1DT1H1M1S', 90061.0),
-        ('m', 'PT1S', 0.0166666666667),
-        ('h', 'P832DT23H12M45S', 19991.2125),
-        ('S', '-PT1M1S', -61.0),
-    ]:
-        assert duration_out == pytest.approx(
-            datetimeoper.format_duration_str(
-                duration_str_in, print_format))
-    # Bad ones
-    for print_format, duration_str_in in [
-        ('y', 'PT1M'),
-        ('s', 'quickquick'),
-    ]:
-        with pytest.raises(ValueError):
-            datetimeoper.format_duration_str(duration_str_in, print_format)
+    assert datetimeoper.format_duration_str(
+        duration_str_in, print_format
+    ) == pytest.approx(duration_out)
 
 
-def test_diff_time_point_strs():
-    """DateTimeOperator.diff_time_point_strs(...)"""
-    datetimeoper = idt_dtoper.DateTimeOperator(
-        ref_point_str='20150106')
-    for (
-        time_point_str1,
-        time_point_str2,
-        offsets1, offsets2,
-        print_format,
-        duration_print_format,
-        duration_out,
-    ) in [
+@pytest.mark.parametrize('print_format,duration_str_in', [
+    ('y', 'PT1M'),
+    ('s', 'quickquick'),
+])
+def test_format_duration_str_bad(print_format, duration_str_in):
+    datetimeoper = idt_dtoper.DateTimeOperator()
+    with pytest.raises(ValueError):
+        datetimeoper.format_duration_str(duration_str_in, print_format)
+
+
+@pytest.mark.parametrize(
+    'time_point_str1,time_point_str2,offsets1,offsets2,print_format,'
+    'duration_print_format,duration_out', [
         (   # Positive
             '20130101T12',
             '20130301',
@@ -388,11 +379,23 @@ def test_diff_time_point_strs():
             's',
             -3600.0,
         ),
-    ]:
-        assert duration_out == datetimeoper.diff_time_point_strs(
-            time_point_str1,
-            time_point_str2,
-            offsets1,
-            offsets2,
-            print_format,
-            duration_print_format)
+    ])
+def test_diff_time_point_strs(
+    time_point_str1,
+    time_point_str2,
+    offsets1,
+    offsets2,
+    print_format,
+    duration_print_format,
+    duration_out,
+):
+    """DateTimeOperator.diff_time_point_strs(...)"""
+    datetimeoper = idt_dtoper.DateTimeOperator(
+        ref_point_str='20150106')
+    assert duration_out == datetimeoper.diff_time_point_strs(
+        time_point_str1,
+        time_point_str2,
+        offsets1,
+        offsets2,
+        print_format,
+        duration_print_format)
