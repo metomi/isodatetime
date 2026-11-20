@@ -339,28 +339,6 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             id='unix-date',
         ),
         pytest.param(
-            # Use (3.1 - 3.0) to bypass str(float) precision issue
-            '20190101T010203',
-            '20190101T010203.1',
-            None,
-            None,
-            None,
-            None,
-            'PT%sS' % (str(3.1 - 3.0).replace('.', ',')),
-            id='fractional-duration',
-        ),
-        pytest.param(
-            # Use (3.1 - 3.0) to bypass str(float) precision issue
-            '20190101T010203',
-            '20190101T010203.1',
-            None,
-            None,
-            's',
-            None,
-            str(3.1 - 3.0),
-            id='fractional-seconds',
-        ),
-        pytest.param(
             '20140101',
             'ref',
             ['P11M24D'],
@@ -475,3 +453,39 @@ def test_diff_time_point_strs(
         )
         == expected
     )
+
+
+@pytest.mark.parametrize(
+    "time_point_str1,time_point_str2,print_format,expected,xfail_expected",
+    [
+        pytest.param(
+            '20190101T010203',
+            '20190101T010203.1',
+            None,
+            'PT0,1S',
+            'PT%sS' % (str(3.1 - 3.0).replace('.', ',')),
+            id='fractional-duration',
+        ),
+        pytest.param(
+            '20190101T010203',
+            '20190101T010203.1',
+            's',
+            '0.1',
+            str(3.1 - 3.0),
+            id='fractional-seconds',
+        ),
+    ]
+)
+def test_diff_time_point_strs_decimals(
+    time_point_str1, time_point_str2, print_format, expected, xfail_expected
+):
+    """Test decimal seconds which is currently flawed due to floating
+    point precision issues.
+    """
+    datetimeoper = idt_dtoper.DateTimeOperator(ref_point_str='20150106')
+    result = datetimeoper.diff_time_point_strs(
+        time_point_str1, time_point_str2, print_format=print_format
+    )
+    if result == xfail_expected:
+        pytest.xfail("floating point precision")
+    assert result == expected
