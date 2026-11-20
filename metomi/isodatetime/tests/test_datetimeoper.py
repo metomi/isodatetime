@@ -95,58 +95,87 @@ def test_process_time_point_str_ref_2():
         )
 
 
-def test_process_time_point_str_x():
+@pytest.mark.parametrize(
+    'point_str, offsets, print_format, expected', [
+        pytest.param(
+            'Fri 11 Jan 10:40:15 UTC 2019',
+            None,
+            idt_dtoper.DateTimeOperator.CURRENT_TIME_DUMP_FORMAT_Z,
+            '2019-01-11T10:40:15Z',
+            id='unix-time',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', None, None,
+            '2009-02-13T23:31:30Z',
+            id='basic',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['PT1H'], None,
+            '2009-02-14T00:31:30Z',
+            id='positive-offset',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['P0000-00-00T01'], None,
+            '2009-02-14T00:31:30Z',
+            id='duration-offset',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['-P1D'], None,
+            '2009-02-12T23:31:30Z',
+            id='negative-offset',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['PT1H', '-PT60M'], None,
+            '2009-02-13T23:31:30Z',
+            id='offsets-cancel-out',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['-P1DT1H'], None,
+            '2009-02-12T22:31:30Z',
+            id='combined-offset',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['-P1D', '-PT1H'], None,
+            '2009-02-12T22:31:30Z',
+            id='multiple-offsets',
+        ),
+    ])
+def test_process_time_point_str_x(
+    point_str, offsets, print_format, expected
+):
     """DateTimeOperator.process_time_point_str(...)
 
     Basic parse and dump of a time point string.
     """
-    # 2009-02-13T23:31:30Z
-    point_str = str(seconds2point(1234567890))
+    d = idt_dtoper.DateTimeOperator()
+    assert (
+        d.process_time_point_str(point_str, offsets, print_format) == expected
+    )
+
+
+@pytest.mark.parametrize(
+    'point_str, offsets, exception, message', [
+        pytest.param(
+            'teatime', None, ValueError, None,
+            id='bad-time-point',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['ages'], OffsetValueError,
+            'ages: bad offset value',
+            id='bad-offset',
+        ),
+        pytest.param(
+            '2009-02-13T23:31:30Z', ['P0000-W01-1'], OffsetValueError,
+            'P0000-W01-1: bad offset value',
+            id='unsupported-duration-offset',
+        ),
+    ])
+def test_process_time_point_str_x_bad(point_str, offsets, exception, message):
     datetimeoper = idt_dtoper.DateTimeOperator()
-    # Unix time
-    assert datetimeoper.process_time_point_str(
-        'Fri 11 Jan 10:40:15 UTC 2019',
-        print_format=datetimeoper.CURRENT_TIME_DUMP_FORMAT_Z
-    ) == '2019-01-11T10:40:15Z'
-    # Basic
-    assert point_str == datetimeoper.process_time_point_str(point_str)
-    # +ve offset
-    point_str_1 = str(seconds2point(1234567890 + 3600))
-    assert point_str_1 == datetimeoper.process_time_point_str(
-        point_str, ['PT1H'])
-    # +ve offset, time point like duration
-    point_str_1 = str(seconds2point(1234567890 + 3600))
-    assert point_str_1 == datetimeoper.process_time_point_str(
-        point_str, ['P0000-00-00T01'])
-    # -ve offset
-    point_str_2 = str(seconds2point(1234567890 - 86400))
-    assert point_str_2 == datetimeoper.process_time_point_str(
-        point_str, ['-P1D'])
-    # offsets that cancel out
-    assert point_str == datetimeoper.process_time_point_str(
-        point_str, ['PT1H', '-PT60M'])
-    # Multiple offsets in 1 string
-    point_str_3 = str(seconds2point(1234567890 - 86400 - 3600))
-    assert point_str_3 == datetimeoper.process_time_point_str(
-        point_str, ['-P1DT1H'])
-    # Multiple offsets
-    assert point_str_3 == datetimeoper.process_time_point_str(
-        point_str, ['-P1D', '-PT1H'])
-    # Bad time point string
-    with pytest.raises(ValueError):
-        datetimeoper.process_time_point_str('teatime')
-    # Bad offset string
-    with pytest.raises(
-        OffsetValueError,
-    ) as ctxmgr:
-        datetimeoper.process_time_point_str(point_str, ['ages'])
-    assert str(ctxmgr.value) == 'ages: bad offset value'
-    # Bad offset string, unsupported time point like duration
-    with pytest.raises(
-        OffsetValueError,
-    ) as ctxmgr:
-        datetimeoper.process_time_point_str(point_str, ['P0000-W01-1'])
-    assert str(ctxmgr.value) == 'P0000-W01-1: bad offset value'
+    with pytest.raises(exception) as ctxmgr:
+        datetimeoper.process_time_point_str(point_str, offsets)
+    if message is not None:
+        assert str(ctxmgr.value) == message
 
 
 @pytest.mark.parametrize(
@@ -268,8 +297,8 @@ def test_format_duration_str_bad(print_format, duration_str_in):
 
 @pytest.mark.parametrize(
     'time_point_str1,time_point_str2,offsets1,offsets2,print_format,'
-    'duration_print_format,duration_out', [
-        (   # Positive
+    'duration_print_format,expected', [
+        pytest.param(
             '20130101T12',
             '20130301',
             None,
@@ -277,8 +306,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             'P58DT12H',
+            id='positive',
         ),
-        (   # Positive, non integer seconds
+        pytest.param(
             # Use (3.1 - 3.0) to bypass str(float) precision issue
             '20190101T010203',
             '20190101T010203.1',
@@ -287,8 +317,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             'PT%sS' % (str(3.1 - 3.0).replace('.', ',')),
+            id='fractional-duration',
         ),
-        (   # Positive, non integer seconds, print format
+        pytest.param(
             # Use (3.1 - 3.0) to bypass str(float) precision issue
             '20190101T010203',
             '20190101T010203.1',
@@ -297,8 +328,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             's',
             None,
             str(3.1 - 3.0),
+            id='fractional-seconds',
         ),
-        (   # Offset 1, reference time 2, positive
+        pytest.param(
             '20140101',
             'ref',
             ['P11M24D'],
@@ -306,8 +338,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             'P12D',
+            id='reference-offset',
         ),
-        (   # Offset 2, positive
+        pytest.param(
             '20100101T00',
             '20100201T00',
             None,
@@ -315,8 +348,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             'P32D',
+            id='second-offset',
         ),
-        (   # Neutral
+        pytest.param(
             '20151225T00',
             '20151225',
             None,
@@ -324,8 +358,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             'P0Y',
+            id='neutral',
         ),
-        (   # Negative
+        pytest.param(
             '20150101T12',
             '20130301',
             None,
@@ -333,8 +368,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             None,
             '-P671DT12H',
+            id='negative',
         ),
-        (   # Alternate format
+        pytest.param(
             '20130101T12',
             '20130301',
             None,
@@ -342,8 +378,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             'y,m,d,h,M,s',
             None,
             '0,0,58,12,0,0',
+            id='alternate-format',
         ),
-        (   # Offset 2, alternate format
+        pytest.param(
             '0000',
             '0000',
             ['-PT2M'],
@@ -351,8 +388,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             'y,m,d,h,M,s',
             None,
             '0,0,0,0,2,0',
+            id='alternate-offset',
         ),
-        (   # As seconds, positive
+        pytest.param(
             '2000-01-01T00:00:00',
             '2000-01-01T01:00:00',
             None,
@@ -360,8 +398,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             's',
             3600.0,
+            id='seconds-positive',
         ),
-        (   # As seconds, neutral
+        pytest.param(
             '2000-01-01T00:00:00',
             '2000-01-01T00:00:00',
             None,
@@ -369,8 +408,9 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             's',
             0.0,
+            id='seconds-neutral',
         ),
-        (   # As seconds, negative
+        pytest.param(
             '2000-01-01T00:00:00',
             '1999-12-31T23:00:00',
             None,
@@ -378,6 +418,7 @@ def test_format_duration_str_bad(print_format, duration_str_in):
             None,
             's',
             -3600.0,
+            id='seconds-negative',
         ),
     ])
 def test_diff_time_point_strs(
@@ -387,15 +428,18 @@ def test_diff_time_point_strs(
     offsets2,
     print_format,
     duration_print_format,
-    duration_out,
+    expected,
 ):
     """DateTimeOperator.diff_time_point_strs(...)"""
-    datetimeoper = idt_dtoper.DateTimeOperator(
-        ref_point_str='20150106')
-    assert duration_out == datetimeoper.diff_time_point_strs(
-        time_point_str1,
-        time_point_str2,
-        offsets1,
-        offsets2,
-        print_format,
-        duration_print_format)
+    datetimeoper = idt_dtoper.DateTimeOperator(ref_point_str='20150106')
+    assert (
+        datetimeoper.diff_time_point_strs(
+            time_point_str1,
+            time_point_str2,
+            offsets1,
+            offsets2,
+            print_format,
+            duration_print_format,
+        )
+        == expected
+    )
