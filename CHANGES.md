@@ -8,7 +8,14 @@ creating a new release entry be sure to copy & paste the span tag with the
 `actions:bind` attribute, which is used by a regex to find the text to be
 updated. Only the first match gets replaced, so it's fine to leave the old
 ones in. -->
-## isodatetime 3.2.0 (<span actions:bind='release-date'>Released 2026-09-30</span>)
+## 3.2.1 (<span actions:bind='release-date'>Upcoming</span>)
+
+### Fixes
+
+[#295](https://github.com/metomi/isodatetime/pull/295):
+Fixed a time point parsing bug in the command line interface.
+
+## 3.2.0 (<span actions:bind='release-date'>Released 2026-09-30</span>)
 
 Requires Python 3.10+
 
@@ -31,7 +38,7 @@ malformed time-point containing >1 letter "T".
 Fixed behaviour of adding a truncated TimePoint to a normal TimePoint.
 
 
-## isodatetime 3.1.0 (<span actions:bind='release-date'>Released 2023-10-05</span>)
+## 3.1.0 (<span actions:bind='release-date'>Released 2023-10-05</span>)
 
 Requires Python 3.7+
 
@@ -41,7 +48,7 @@ Requires Python 3.7+
 Fixed mistakes in the CLI help text.
 
 
-## isodatetime 3.0.0 (<span actions:bind='release-date'>Released 2022-03-31</span>)
+## 3.0.0 (<span actions:bind='release-date'>Released 2022-03-31</span>)
 
 Requires Python 3.6+
 
@@ -65,7 +72,7 @@ Fixed a bug where the `timezone` functions would return incorrect results
 for certain non-standard/unusual system time zones.
 
 
-## isodatetime 2.0.2 (Released 2020-07-01)
+## 2.0.2 (Released 2020-07-01)
 
 This is the 14th release of isodatetime. Requires Python 3.5+.
 
@@ -82,7 +89,7 @@ TimePoints can no longer be created with out-of-bounds values, e.g.
 `2020-00-00`, `2020-13-32T25:60`, `--02-30` are not valid.
 
 
-## isodatetime 2.0.1 (Released 2019-07-23)
+## 2.0.1 (Released 2019-07-23)
 
 This is the 13th release of isodatetime.
 
@@ -105,7 +112,7 @@ Support the CF compatible calendar mode strings `360_day`, `365_day` & `366_day`
 Change namespace of `isodatetime` to `metomi.isodatetime`
 
 
-## isodatetime 2.0.0 (Released 2019-01-22)
+## 2.0.0 (Released 2019-01-22)
 
 This is the 12th release of isodatetime.
 
@@ -137,7 +144,7 @@ Fixed time point dumper time zone inconsistency.
 Fixed time point dumper date type inconsistency.
 
 
-## isodatetime 2018.11.0 (Released 2018-11-05)
+## 2018.11.0 (Released 2018-11-05)
 
 This is the 11th release of isodatetime.
 
@@ -160,7 +167,7 @@ Fix for timezone offsets where minutes are not 0.
 Add `setup.py`.
 
 
-## isodatetime 2018.09.0 (Released 2018-09-11)
+## 2018.09.0 (Released 2018-09-11)
 
 This is the 10th release of isodatetime.
 
@@ -171,7 +178,7 @@ New TimePoint method to find the next smallest property that is missing from a
 truncated representation.
 
 
-## isodatetime 2018.02.0 (Released 2018-02-06)
+## 2018.02.0 (Released 2018-02-06)
 
 This is the 9th release of isodatetime.
 
@@ -181,7 +188,7 @@ This is the 9th release of isodatetime.
 Fix subtracting a later timepoint from an earlier one.
 
 
-## isodatetime 2017.08.0 (Released 2017-08-09)
+## 2017.08.0 (Released 2017-08-09)
 
 This is the 8th release of isodatetime.
 
@@ -194,12 +201,12 @@ Fix error string for bad conversion for strftime/strptime.
 Slotted the data classes to improve memory footprint.
 
 
-## isodatetime 2017.02.1 (Released 2017-02-21)
+## 2017.02.1 (Released 2017-02-21)
 
 This is the 7th release of isodatetime. Admin only release.
 
 
-## isodatetime 2017.02.0 (Released 2017-02-20)
+## 2017.02.0 (Released 2017-02-20)
 
 This is the 6th release of isodatetime.
 
@@ -209,7 +216,7 @@ This is the 6th release of isodatetime.
 Fix adding duration not in weeks and duration in weeks.
 
 
-## isodatetime 2014.10.0 (Released 2014-10-01)
+## 2014.10.0 (Released 2014-10-01)
 
 This is the 5th release of isodatetime.
 
@@ -227,7 +234,7 @@ Fix `date1 - date2` where `date2` is greater than `date1` and `date1` and
 Stricter dumper year bounds checking.
 
 
-## isodatetime 2014.08.0 (Released 2014-08-11)
+## 2014.08.0 (Released 2014-08-11)
 
 This is the 4th release of isodatetime.
 
@@ -245,7 +252,7 @@ Speeds up calculations involving counting the days over a number of consecutive
 years.
 
 
-## isodatetime 2014.07.0 (Released 2014-07-29)
+## 2014.07.0 (Released 2014-07-29)
 
 This is the 3rd release of isodatetime.
 
@@ -262,7 +269,7 @@ More flexible API for calendar mode.
 `TimeInterval` class: add `get_seconds` method and input prettifying.
 
 
-## isodatetime 2014.06.0 (Released 2014-06-19)
+## 2014.06.0 (Released 2014-06-19)
 
 This is the 2nd release of isodatetime. Enjoy!
 
@@ -287,6 +294,6 @@ Implement subset of strftime/strptime POSIX standard.
 Fix get next point for single-repetition recurrences.
 
 
-## isodatetime 2014-03 (Released 2014-03-13)
+## 2014-03 (Released 2014-03-13)
 
 This is the 1st release of isodatetime. Enjoy!
